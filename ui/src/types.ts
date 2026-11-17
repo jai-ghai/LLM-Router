@@ -48,6 +48,27 @@ export interface QualityResponse {
   ratings?: { model_id: string; metadata: Record<string, string>; rating: number; judged_by: string }[]
 }
 
+// P0 — Auth (PLAN-v2.md §4). Mirrors the backend's `User.public()` shape; never carries
+// the password hash (the server never puts it on the wire).
+export type UserRole = 'admin' | 'member'
+
+export interface User {
+  id: string
+  username: string
+  role: UserRole
+  created_at: string
+  disabled: boolean
+  notes: string
+}
+
+export interface AuthResponse {
+  user: User
+}
+
+export interface UsersListResponse {
+  users: User[]
+}
+
 export interface RulesResponse {
   rules: RuleEntry[]
 }

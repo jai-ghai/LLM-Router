@@ -15,6 +15,7 @@ import {
 } from '@mui/material'
 import { useEffect, useState, type MouseEvent } from 'react'
 import { api, describeError } from './api'
+import { AuthProvider, useAuth } from './auth'
 import { Nav, type PageKey } from './Nav'
 import { PageTransition, StateTag } from './components/Primitives'
 import { Catalog } from './screens/Catalog'
@@ -22,11 +23,13 @@ import { Evaluate } from './screens/Evaluate'
 import { Examples } from './screens/Examples'
 import { History } from './screens/History'
 import { HumanJudging } from './screens/HumanJudging'
+import { Login } from './screens/Login'
 import { Overview } from './screens/Overview'
 import { Resolve } from './screens/Resolve'
 import { Rules } from './screens/Rules'
 import { Tiers } from './screens/Tiers'
 import { Train } from './screens/Train'
+import { Users } from './screens/Users'
 import { PALETTE } from './theme'
 import type { Status, TiersResponse, TrainResult } from './types'
 
@@ -43,16 +46,40 @@ const PAGE_TITLES: Record<PageKey, string> = {
   evaluate: 'Evaluate',
   history: 'Request logs',
   resolve: 'Playground',
+  users: 'Operators',
 }
 
 /**
- * Sidebar-routed console: one full page per nav item (see Nav.tsx). Matches the Figma
- * reference layout — persistent left drawer with a workspace selector + grouped sections
- * + status footer; top app bar with breadcrumb + environment pill + search/notifications
- * + user menu. Page-shared state (the tier table, catalog selection, last training
- * result, history badge count) is lifted here and threaded down.
+ * Entry component — wraps everything in AuthProvider so every screen can call useAuth().
+ * Rendering is split: anonymous state renders Login, authenticated renders the main shell.
  */
 export default function App() {
+  return (
+    <AuthProvider>
+      <AuthGate />
+    </AuthProvider>
+  )
+}
+
+function AuthGate() {
+  const { state } = useAuth()
+  if (state.status === 'loading') {
+    return (
+      <Box sx={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: PALETTE.canvas }}>
+        <Typography sx={{ fontSize: 13, color: PALETTE.textMuted }}>Loading…</Typography>
+      </Box>
+    )
+  }
+  if (state.status === 'anonymous') return <Login />
+  return <AuthenticatedShell />
+}
+
+/**
+ * Sidebar-routed console shown once the user is authenticated.
+ */
+function AuthenticatedShell() {
+  const { state, logout } = useAuth()
+  const user = state.status === 'authenticated' ? state.user : null
   const [active, setActive] = useState<PageKey>('overview')
   const [online, setOnline] = useState<'checking' | 'online' | 'offline'>('checking')
   const [error, setError] = useState('')
@@ -148,6 +175,7 @@ export default function App() {
             historyCount={historyCount}
             workspaceName="Acme AI"
             workspaceTag={online === 'offline' ? 'Service offline' : 'Sample workspace'}
+            role={user?.role ?? null}
           />
         </Box>
 
@@ -252,9 +280,11 @@ export default function App() {
               aria-expanded={Boolean(userMenuAnchor)}
             >
               <Avatar sx={{ width: 22, height: 22, bgcolor: PALETTE.brandSoft, color: PALETTE.brand, fontSize: 11, fontWeight: 700 }}>
-                A
+                {(user?.username ?? '?').slice(0, 1).toUpperCase()}
               </Avatar>
-              <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: PALETTE.text }}>ACME</Typography>
+              <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: PALETTE.text }}>
+                {user?.username ?? '—'}
+              </Typography>
             </Stack>
             <Menu
               anchorEl={userMenuAnchor}
@@ -262,18 +292,41 @@ export default function App() {
               onClose={() => setUserMenuAnchor(null)}
               anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
               transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-              slotProps={{ paper: { sx: { minWidth: 180, mt: 0.5 } } }}
+              slotProps={{ paper: { sx: { minWidth: 200, mt: 0.5 } } }}
             >
+              <Box sx={{ px: 2, py: 1 }}>
+                <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: PALETTE.text }}>
+                  {user?.username ?? '—'}
+                </Typography>
+                <Typography sx={{ fontSize: 11, color: PALETTE.textMuted }}>
+                  {user?.role ?? 'unknown role'}
+                </Typography>
+              </Box>
+              <Divider />
+              {user?.role === 'admin' && (
+                <MenuItem
+                  onClick={() => {
+                    setActive('users')
+                    setUserMenuAnchor(null)
+                  }}
+                  sx={{ fontSize: 13 }}
+                >
+                  <GearSix size={14} style={{ marginRight: 8 }} />
+                  Operators
+                </MenuItem>
+              )}
               <MenuItem onClick={() => setUserMenuAnchor(null)} sx={{ fontSize: 13 }}>
                 <BookOpen size={14} style={{ marginRight: 8 }} />
                 Documentation
               </MenuItem>
-              <MenuItem onClick={() => setUserMenuAnchor(null)} sx={{ fontSize: 13 }}>
-                <GearSix size={14} style={{ marginRight: 8 }} />
-                Settings
-              </MenuItem>
               <Divider />
-              <MenuItem onClick={() => setUserMenuAnchor(null)} sx={{ fontSize: 13 }}>
+              <MenuItem
+                onClick={() => {
+                  setUserMenuAnchor(null)
+                  void logout()
+                }}
+                sx={{ fontSize: 13 }}
+              >
                 <SignOut size={14} style={{ marginRight: 8 }} />
                 Sign out
               </MenuItem>
@@ -299,6 +352,7 @@ export default function App() {
             {active === 'evaluate' && <Evaluate result={lastTrainResult} />}
             {active === 'history' && <History refreshKey={historyRefresh} />}
             {active === 'resolve' && <Resolve tiers={tiers} selectedModels={selectedModels} onResolved={onResolved} />}
+            {active === 'users' && <Users />}
           </PageTransition>
         </Box>
       </Box>

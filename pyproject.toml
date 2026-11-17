@@ -1,3 +1,13 @@
+# Read by: pip install -e . (local dev), pytest (test deps via the `dev` extra), and
+# anyone installing the `service` extra to run the FastAPI app.
+# This edit adds two runtime deps to the `service` extra only — no change to the core
+# library's dep set. No secrets are stored in this file: passwords live in users.jsonl
+# as bcrypt hashes (see src/tierrouter/service/auth.py); the session signing secret lives
+# in the TIERROUTER_SESSION_SECRET env var and is never persisted here.
+# Driven by PLAN-v2.md §4 (P0 — Auth, Level B), operator-approved 2026-11-17 verbatim: "create
+# auth or required things because maybe user have different workflow and they can create
+# difference judgments". Duplicates checked: no other pyproject.toml in the tree (confirmed
+# via Glob). Schema: PEP 621 pyproject.
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
@@ -22,7 +32,17 @@ embeddings = ["sentence-transformers>=3.0"]
 # model card carries no license tag at all — the same ambiguous-license exclusion this project
 # already applied to Arch-Router (ADR-0006 in the earlier R&D project).
 images = ["transformers>=4.40", "torch>=2.2", "pillow>=10"]
-service = ["fastapi>=0.111", "uvicorn>=0.30", "python-multipart>=0.0.9"]
+service = [
+  "fastapi>=0.111",
+  "uvicorn>=0.30",
+  "python-multipart>=0.0.9",
+  # P0 (PLAN-v2.md §4): session auth + bcrypt password hashes.
+  # bcrypt directly (not via passlib) because passlib 1.7.4 is unmaintained and has a known
+  # incompatibility with bcrypt>=4 (`error reading bcrypt version` + an init-time password-
+  # length ValueError). One scheme, one small dep, no middle layer to break.
+  "bcrypt>=4.0,<6",
+  "itsdangerous>=2.1",
+]
 dev = ["pytest>=8", "ruff>=0.5", "mypy>=1.10", "types-PyYAML", "httpx>=0.27"]
 
 [tool.setuptools.packages.find]
@@ -35,6 +55,13 @@ pythonpath = ["src", "."]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.ruff.lint.per-file-ignores]
+# FastAPI's dependency-injection idiom (`param: T = Depends(...)`) is exactly what B008
+# flags as "function call in default argument". It's the framework's documented way to wire
+# a dependency, and lifting every one to a module-level singleton would clutter the service
+# module without changing behaviour. Scoped to service modules only.
+"src/tierrouter/service/*.py" = ["B008"]
 
 [tool.mypy]
 python_version = "3.11"
