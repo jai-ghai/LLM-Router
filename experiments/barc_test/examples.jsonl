@@ -1,0 +1,15 @@
+{"example_id": "barc-synth-001", "metadata": {"task": "video_analysis", "channel_flow": "news"}, "text": "Anchor introduces the budget session segment before cutting to the finance ministry report."}
+{"example_id": "barc-synth-002", "metadata": {"task": "video_analysis", "channel_flow": "sports"}, "text": "Visual segment shows the match-winning goal replay with the commentator's call over it."}
+{"example_id": "barc-synth-003", "metadata": {"task": "video_analysis", "channel_flow": "playout"}, "text": "A thirty second product advertisement airs between two news bulletin segments."}
+{"example_id": "barc-synth-004", "metadata": {"task": "video_analysis", "channel_flow": "news"}, "text": "A weather report segment with a graphic showing tomorrow's forecast for three cities."}
+{"example_id": "barc-synth-005", "metadata": {"task": "qc_review", "channel_flow": "news"}, "text": "Review flags a mismatched bulletin counter between the second and third news segment."}
+{"example_id": "barc-synth-006", "metadata": {"task": "qc_review", "channel_flow": "sports"}, "text": "Review checks whether the on-screen match score graphic matches the spoken commentary."}
+{"example_id": "barc-synth-007", "metadata": {"task": "qc_review", "channel_flow": "playout"}, "text": "Review checks whether a promo was miscoded as a news story block in the log."}
+{"example_id": "barc-synth-008", "metadata": {"task": "qc_review", "channel_flow": "news"}, "text": "Review audits whether a political news story was fused across two separate bulletin items."}
+{"example_id": "barc-synth-009", "metadata": {"task": "headline_similarity", "channel_flow": "news"}, "text": "Compare the generated headline against the anchor's spoken introduction for the same story."}
+{"example_id": "barc-synth-010", "metadata": {"task": "headline_similarity", "channel_flow": "sports"}, "text": "Compare the generated headline for the tournament story against the on-screen ticker text."}
+{"example_id": "barc-synth-011", "metadata": {"task": "text_validation", "channel_flow": "news"}, "text": "Spell-check pass over the generated substory text before it is stored."}
+{"example_id": "barc-synth-012", "metadata": {"task": "text_validation", "channel_flow": "news"}, "text": "Hinglish check over a story summary mixing English and transliterated Hindi words."}
+{"example_id": "barc-synth-013", "metadata": {"task": "social_media_clip", "channel_flow": "sports"}, "text": "Pick the most shareable fifteen-second moment from a sports segment for a social post."}
+{"example_id": "barc-synth-014", "metadata": {"task": "social_media_clip", "channel_flow": "news"}, "text": "Pick the most shareable fifteen-second moment from a political news segment for a social post."}
+{"example_id": "barc-synth-015", "metadata": {"channel_flow": "news"}, "text": "A segment with no declared task at all, to check that a missing field is handled, not an error."}

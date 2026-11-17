@@ -1,0 +1,13 @@
+rules:
+- when:
+    task: headline_similarity
+  tier: small
+- when:
+    task: text_validation
+  tier: small
+- when:
+    task: video_analysis
+  tier: medium
+- when:
+    task: qc_review
+  tier: large

@@ -1,0 +1,13 @@
+# Strategy 1 (PLAN.md): today's known production behaviour, turned into rules for free.
+# Keyed on `task` (what the call is for), NOT on channel_type/genre — see README.md: that is
+# what the real code actually keys its model choice on. There is no evidence in the production
+# code of a content-type-based model choice to encode here.
+rules:
+  - when: {task: headline_similarity}
+    tier: small
+  - when: {task: text_validation}
+    tier: small
+  - when: {task: video_analysis}
+    tier: medium
+  - when: {task: qc_review}
+    tier: large
