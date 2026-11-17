@@ -1,0 +1,31 @@
+# Tier -> model name per provider. Copy to tiers.yaml and fill every REPLACE_ME.
+# The classifier predicts a tier name only (small/medium/large). It never sees a model name,
+# so the same trained classifier works for any provider lineup: change this file, not the model.
+# Company- and provider-agnostic on purpose: no BARC-specific or Gemini-only assumption here.
+tiers:
+  - name: small
+    description: Cheapest tier. Simple, low-ambiguity requests.
+    models:
+      gemini: REPLACE_ME
+      anthropic: REPLACE_ME
+      bedrock: REPLACE_ME
+  - name: medium
+    description: Default tier when uncertain.
+    models:
+      gemini: REPLACE_ME
+      anthropic: REPLACE_ME
+      bedrock: REPLACE_ME
+  - name: large
+    description: Hard or ambiguous requests.
+    models:
+      gemini: REPLACE_ME
+      anthropic: REPLACE_ME
+      bedrock: REPLACE_ME
+
+# Which provider column to read when a model name is requested. A consumer with only one
+# provider just repeats it in every tier above and sets that name here.
+default_provider: REPLACE_ME
+
+# Tier to use when the classifier's confidence is below its threshold, or when nothing has been
+# trained yet. Must be one of the tier names above.
+low_confidence_fallback: medium

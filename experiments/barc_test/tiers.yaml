@@ -1,0 +1,22 @@
+# Real model names, read from Minfy BARC's tabson-python-inferencing on 2026-11-16:
+#   small  <- gemini/client.py:68            self.model_name = 'gemini-3.1-flash-lite'
+#   medium <- gemini/client.py:1297 etc.      os.getenv("MODEL_ID", "gemini-3-flash-preview")
+#   large  <- agentic_qc/core.py:92           os.getenv("QC_MODEL_ID", "gemini-3.5-flash")
+# No fourth, larger "pro" tier was found wired into any default anywhere in that codebase as
+# of this date — "large" here is the most capable model actually seen in use, not a confirmed
+# ceiling. See README.md in this folder for the full provenance and caveats.
+tiers:
+  - name: small
+    description: Cheap text-only checks (headline similarity, hinglish/spell validation).
+    models:
+      gemini: gemini-3.1-flash-lite
+  - name: medium
+    description: The main per-clip video analysis call (production's MODEL_ID default).
+    models:
+      gemini: gemini-3-flash-preview
+  - name: large
+    description: The QC / grounding review pass (production's QC_MODEL_ID default).
+    models:
+      gemini: gemini-3.5-flash
+default_provider: gemini
+low_confidence_fallback: medium

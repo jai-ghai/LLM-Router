@@ -1,0 +1,42 @@
+# Demo catalog for the UI's "model catalog / selective models" feature. See README.md in this
+# folder for what's real vs. synthetic in this test overall.
+#
+# REAL (same 3 models as tiers.yaml, same provenance — gemini/client.py and agentic_qc/core.py's
+# os.getenv(..., "default") calls, read 2026-11-16):
+#   gemini-3.1-flash-lite, gemini-3-flash-preview, gemini-3.5-flash
+#
+# ILLUSTRATIVE (NOT found anywhere in BARC's codebase — added only so this demo has more than
+# one candidate per tier to actually exercise "selective subset" and "cheapest match" in the
+# UI; a second real alternative per tier was not available from the code read):
+#   claude-haiku-5-5, claude-sonnet-5-5 — relative costs are made up for this demo only.
+catalog:
+  - id: gemini-3.1-flash-lite
+    provider: gemini
+    tier: small
+    cost: 1
+    supports_image: false
+    label: Gemini 3.1 Flash Lite (real — BARC's small-tier default)
+  - id: claude-haiku-5-5
+    provider: anthropic
+    tier: small
+    cost: 1.2
+    supports_image: true
+    label: Claude Haiku 5.5 (illustrative — not from BARC)
+  - id: gemini-3-flash-preview
+    provider: gemini
+    tier: medium
+    cost: 4
+    supports_image: true
+    label: Gemini 3 Flash Preview (real — BARC's medium-tier default)
+  - id: gemini-3.5-flash
+    provider: gemini
+    tier: large
+    cost: 10
+    supports_image: true
+    label: Gemini 3.5 Flash (real — BARC's large-tier default)
+  - id: claude-sonnet-5-5
+    provider: anthropic
+    tier: large
+    cost: 8
+    supports_image: true
+    label: Claude Sonnet 5.5 (illustrative — not from BARC, cheaper than the real large model)

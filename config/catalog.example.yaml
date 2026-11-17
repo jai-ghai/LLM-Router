@@ -1,0 +1,28 @@
+# Optional: a selectable catalog of candidate models, instead of tiers.yaml's single model per
+# tier. If TIERROUTER_CATALOG is unset, resolve() uses tiers.yaml as before — this file is
+# additive, not a replacement. Copy to catalog.yaml and fill in real ids and costs.
+#
+# `tier` must be one of the tier names declared in tiers.yaml. `cost` is a RELATIVE number (not
+# a currency) used only to pick the cheapest model that matches a given tier — set it however
+# your own cost accounting makes sense (tokens/sec, $/1k requests, whatever is comparable across
+# rows). `supports_image` defaults to true; set it false for a text-only model so an image
+# request never gets routed to it.
+catalog:
+  - id: REPLACE_ME
+    provider: REPLACE_ME
+    tier: small
+    cost: 1
+    supports_image: false
+    label: REPLACE_ME
+  - id: REPLACE_ME
+    provider: REPLACE_ME
+    tier: medium
+    cost: 4
+    supports_image: true
+    label: REPLACE_ME
+  - id: REPLACE_ME
+    provider: REPLACE_ME
+    tier: large
+    cost: 10
+    supports_image: true
+    label: REPLACE_ME
