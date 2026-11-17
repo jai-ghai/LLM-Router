@@ -1,3 +1,11 @@
+# [Fact-Forcing preamble]
+# Behaviour and module under test: FastAPI app from `src/tierrouter/service/app.py`
+# (routes /v1/rules, /v1/examples, /v1/judgments, /v1/train, /v1/resolve, /v1/catalog,
+# /v1/quality, /v1/history, plus new /v1/auth/* + /v1/users* in P0).
+# Existing test files for it: this file. No other test file targets `app.py`.
+# User's verbatim instruction: "create auth or required things because maybe user have
+# different workflow and they can create difference judgments" — PLAN-v2.md §4 (P0 — Auth,
+# Level B). "tests_too" chosen in follow-up: tests included with every PR.
 from __future__ import annotations
 
 import io
@@ -9,7 +17,9 @@ from fastapi.testclient import TestClient
 
 from tierrouter.catalog import CatalogEntry, ModelCatalog
 from tierrouter.service.app import create_app
+from tierrouter.service.auth import SessionConfig, hash_password
 from tierrouter.service.store import Store, guess_image_ext
+from tierrouter.service.users_store import UsersStore
 from tierrouter.tiers import TierSpec, TierTable
 
 TIERS = TierTable(
@@ -23,10 +33,40 @@ TIERS = TierTable(
 )
 
 
+def _authed_client(
+    tmp_path: Path,
+    *,
+    role: str = "admin",
+    catalog: ModelCatalog | None = None,
+    quality_field: str | None = None,
+    allow_read_without_auth: bool = False,
+) -> TestClient:
+    """A TestClient with a session cookie for a freshly-created `tester` user.
+
+    Cost-12 bcrypt is fine per fixture (one hash). If this test suite grows into the
+    hundreds of fixtures, swap `hash_password` for a stubbed scheme here.
+    """
+    store = Store(tmp_path / "data")
+    users = UsersStore(path=store.root / "users.jsonl")
+    users.add("tester", hash_password("tester-pw"), role)  # type: ignore[arg-type]
+    app = create_app(
+        TIERS,
+        store,
+        users,
+        SessionConfig(secret="test-secret-does-not-matter-as-long-as-it-is-set"),
+        catalog=catalog,
+        quality_field=quality_field,
+        allow_read_without_auth=allow_read_without_auth,
+    )
+    client = TestClient(app)
+    login = client.post("/v1/auth/login", json={"username": "tester", "password": "tester-pw"})
+    assert login.status_code == 200, login.text
+    return client
+
+
 @pytest.fixture
 def client(tmp_path: Path) -> TestClient:
-    store = Store(tmp_path / "data")
-    return TestClient(create_app(TIERS, store))
+    return _authed_client(tmp_path)
 
 
 CATALOG = ModelCatalog(
@@ -39,14 +79,12 @@ CATALOG = ModelCatalog(
 
 @pytest.fixture
 def catalog_client(tmp_path: Path) -> TestClient:
-    store = Store(tmp_path / "data")
-    return TestClient(create_app(TIERS, store, catalog=CATALOG))
+    return _authed_client(tmp_path, catalog=CATALOG)
 
 
 @pytest.fixture
 def quality_client(tmp_path: Path) -> TestClient:
-    store = Store(tmp_path / "data")
-    return TestClient(create_app(TIERS, store, catalog=CATALOG, quality_field="task"))
+    return _authed_client(tmp_path, catalog=CATALOG, quality_field="task")
 
 
 def test_guess_image_ext() -> None:
@@ -254,13 +292,16 @@ def test_resolve_calls_are_recorded_in_history(client: TestClient) -> None:
 
 def test_quality_rating_round_trip_and_validation(client: TestClient) -> None:
     assert client.get("/v1/quality").json() == {"field": None, "ratings": []}
+    # P0: client-supplied `judged_by` is ignored; the server records the session user
+    # (`tester`, set up in the fixture). Covered as its own regression in test_auth.py; here
+    # we just assert the stored field matches the session, not the request body.
     good = client.post(
         "/v1/quality",
         json={"model_id": "cheap-small", "metadata": {"task": "news"}, "rating": 4, "judged_by": "alex"},
     )
     assert good.status_code == 200
     ratings = client.get("/v1/quality").json()["ratings"]
-    assert ratings == [{"model_id": "cheap-small", "metadata": {"task": "news"}, "rating": 4, "judged_by": "alex"}]
+    assert ratings == [{"model_id": "cheap-small", "metadata": {"task": "news"}, "rating": 4, "judged_by": "tester"}]
 
     bad = client.post(
         "/v1/quality",

@@ -1,8 +1,32 @@
-"""FastAPI app: tiers, rules, examples, human judgments, train, evaluate, resolve.
+# [Fact-Forcing preamble]
+#
+# The file(s) and line(s) that will call it: `src/tierrouter/service/main.py` line 49
+# (`return create_app(...)`); `tests/test_service.py` fixtures `client`, `catalog_client`,
+# `quality_client`; new `tests/test_auth.py` and `tests/test_users.py` also import
+# `create_app`.
+#
+# No existing file serves the same purpose: this IS the FastAPI app module.
+#
+# The data schemas it reads or writes: same JSONL files via `Store` (examples, judgments,
+# rules, history, quality), plus `users.jsonl` via `UsersStore` and a signed session cookie
+# set/read via `SessionMiddleware`.
+#
+# No secrets stored in plaintext: session signing secret comes from `SessionConfig.secret`
+# (populated from TIERROUTER_SESSION_SECRET in `main.py`, never persisted here); user
+# passwords only land as bcrypt hashes via `auth.hash_password`.
+#
+# The user's verbatim instruction driving this file: "create auth or required things because
+# maybe user have different workflow and they can create difference judgments" — PLAN-v2.md
+# §4 (P0 — Auth, Level B).
 
-No authentication anywhere in this file. It is built for one trusted local user testing this
-project themselves (see __init__.py) — not for exposing to a network or to other people. Put it
-behind your own auth layer before that, the same way the earlier R&D project's service did.
+"""FastAPI app: tiers, rules, examples, human judgments, train, evaluate, resolve, plus
+session-based auth with admin/member roles (PLAN-v2.md §4).
+
+Every mutating endpoint requires an authenticated session via `Depends(require_user)`;
+`/v1/users*` additionally requires the admin role. Read endpoints require auth by default;
+set `allow_read_without_auth=True` at construction to relax them (driven by
+`TIERROUTER_ALLOW_READ_WITHOUT_AUTH` in `main.py`). `judged_by` on ratings/judgments is
+taken from the session user — client-supplied values are ignored, not trusted.
 """
 
 from __future__ import annotations
@@ -11,9 +35,11 @@ import threading
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from starlette.middleware.sessions import SessionMiddleware
+from starlette.requests import Request as StarletteRequest
 
 from tierrouter.catalog import ModelCatalog
 from tierrouter.classifier import ClassifierError, EvalReport, TierClassifier, evaluate_classifier
@@ -22,7 +48,17 @@ from tierrouter.labels import LabelError, labels_from_rules, merge_labels, uncov
 from tierrouter.quality import QualityError, quality_lookup
 from tierrouter.resolve import Decision, resolve, validate_setup
 from tierrouter.rules import Rule, RuleError, RuleSet
+from tierrouter.service.auth import (
+    AuthError,
+    SessionConfig,
+    hash_password,
+    login_user,
+    optional_user,
+    require_admin,
+    require_user,
+)
 from tierrouter.service.store import Store, guess_image_ext
+from tierrouter.service.users_store import User, UserError, UsersStore
 from tierrouter.tiers import TierTable
 
 
@@ -39,7 +75,10 @@ class RulesUpdate(BaseModel):
 class JudgmentIn(BaseModel):
     example_id: str
     tier: str
-    judged_by: str
+    # `judged_by` is accepted for back-compat but IGNORED — the server writes the session
+    # user's username (anti-impersonation; see test
+    # `test_post_quality_ignores_client_supplied_judged_by_and_uses_session`).
+    judged_by: str = ""
     notes: str = ""
 
 
@@ -47,8 +86,24 @@ class QualityIn(BaseModel):
     model_id: str
     metadata: dict[str, str]
     rating: int
-    judged_by: str
+    judged_by: str = ""  # same treatment as JudgmentIn.judged_by
     notes: str = ""
+
+
+class LoginIn(BaseModel):
+    username: str
+    password: str
+
+
+class UserCreateIn(BaseModel):
+    username: str
+    password: str
+    role: str = "member"
+    notes: str = ""
+
+
+class UserUpdateIn(BaseModel):
+    disabled: bool
 
 
 class TrainResult(BaseModel):
@@ -76,15 +131,22 @@ def _infer_fields(examples: list[Any]) -> dict[str, list[str]]:
 
 class AppState:
     """Everything that must survive between requests: the tier table, the editable rules, the
-
-    lazily-loaded image embedder, and the trained classifier (None until the first /v1/train).
+    lazily-loaded image embedder, the trained classifier, and the users store.
     """
 
     def __init__(
-        self, tiers: TierTable, store: Store, catalog: ModelCatalog | None = None, quality_field: str | None = None
+        self,
+        tiers: TierTable,
+        store: Store,
+        users: UsersStore,
+        allow_read_without_auth: bool,
+        catalog: ModelCatalog | None = None,
+        quality_field: str | None = None,
     ) -> None:
         self.tiers = tiers
         self.store = store
+        self.users = users
+        self.allow_read_without_auth = allow_read_without_auth
         self.catalog = catalog
         self.quality_field = quality_field
         self.classifier: TierClassifier | None = None
@@ -95,9 +157,7 @@ class AppState:
 
     def image_embedder(self) -> Dinov2Embedder:
         """Loaded once, on first use, so server startup does not pay for it when no example has
-
-        an image yet. A real download/load the first time it is called (see README's note on
-        the `images` extra); cached after that for the life of the process.
+        an image yet.
         """
         with self._image_lock:
             if self._image_embedder is None:
@@ -108,34 +168,131 @@ class AppState:
 def create_app(
     tiers: TierTable,
     store: Store,
+    users: UsersStore,
+    session_config: SessionConfig,
     cors_origins: list[str] | None = None,
     catalog: ModelCatalog | None = None,
     quality_field: str | None = None,
+    allow_read_without_auth: bool = False,
 ) -> FastAPI:
-    app = FastAPI(title="llm-tier-router", version="0.4.0")
+    app = FastAPI(title="llm-tier-router", version="0.5.0")
+
+    # CORS first so preflights never reach route handlers; then SessionMiddleware so routes
+    # can read `request.session`. `https_only` is off because the service is intended to run
+    # behind a trusted reverse proxy that terminates TLS; the operator's deployment docs
+    # call this out.
     if cors_origins:
         app.add_middleware(
             CORSMiddleware,
             allow_origins=cors_origins,
+            allow_credentials=True,  # so the signed session cookie flows cross-origin
             allow_methods=["GET", "POST", "PUT"],
             allow_headers=["Content-Type"],
         )
-    state = AppState(tiers, store, catalog, quality_field)
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=session_config.secret,
+        session_cookie=session_config.cookie_name,
+        max_age=session_config.max_age_seconds,
+        same_site="lax",
+        https_only=False,
+    )
+
+    state = AppState(tiers, store, users, allow_read_without_auth, catalog, quality_field)
+    # The auth dependency reads `request.app.state.users` to look up sessions.
+    app.state.users = users
+
+    def _require_read(user: User | None = Depends(optional_user)) -> User | None:
+        """Policy for read endpoints: an authenticated user if present; None allowed only
+        when `allow_read_without_auth` is set."""
+        if user is None and not state.allow_read_without_auth:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="authentication required"
+            )
+        return user
+
+    # ---- health + auth -----------------------------------------------------------------
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:
+        """Unauthenticated: load balancers and monitoring hit this before anyone logs in."""
         return {"status": "ok"}
 
+    @app.post("/v1/auth/login")
+    def do_login(payload: LoginIn, request: StarletteRequest) -> dict[str, Any]:
+        if users.is_empty():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="no users exist yet; run `python -m tierrouter.service.bootstrap "
+                "--username <name>` before anyone can log in",
+            )
+        try:
+            user = login_user(users, payload.username, payload.password)
+        except AuthError as exc:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
+        request.session["user_id"] = user.id
+        return {"user": user.public()}
+
+    @app.post("/v1/auth/logout")
+    def do_logout(request: StarletteRequest) -> dict[str, str]:
+        request.session.clear()
+        return {"status": "ok"}
+
+    @app.get("/v1/auth/me")
+    def whoami(user: User = Depends(require_user)) -> dict[str, Any]:
+        return {"user": user.public()}
+
+    # ---- users (admin only) ------------------------------------------------------------
+
+    @app.get("/v1/users")
+    def list_users_endpoint(_: User = Depends(require_admin)) -> dict[str, Any]:
+        return {"users": [u.public() for u in users.list_users()]}
+
+    @app.post("/v1/users")
+    def create_user_endpoint(payload: UserCreateIn, _: User = Depends(require_admin)) -> dict[str, Any]:
+        if payload.role not in ("admin", "member"):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="role must be 'admin' or 'member'",
+            )
+        # The string literal check above narrows `payload.role` to the Role Literal, but
+        # mypy doesn't flow-type it through a str param — explicit assertion keeps it strict.
+        role: Any = payload.role
+        try:
+            created = users.add(
+                payload.username, hash_password(payload.password), role, notes=payload.notes
+            )
+        except (AuthError, UserError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+            ) from exc
+        return {"user": created.public()}
+
+    @app.put("/v1/users/{user_id}")
+    def update_user_endpoint(
+        user_id: str, payload: UserUpdateIn, _: User = Depends(require_admin)
+    ) -> dict[str, Any]:
+        try:
+            updated = users.set_disabled(user_id, payload.disabled)
+        except UserError as exc:
+            if "no user with id" in str(exc):
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+            ) from exc
+        return {"user": updated.public()}
+
+    # ---- tiers / rules -----------------------------------------------------------------
+
     @app.get("/v1/tiers")
-    def get_tiers() -> dict[str, Any]:
+    def get_tiers(_: User | None = Depends(_require_read)) -> dict[str, Any]:
         return {
             "tiers": [{"name": t.name, "description": t.description, "models": t.models} for t in tiers.tiers],
             "default_provider": tiers.default_provider,
             "low_confidence_fallback": tiers.low_confidence_fallback,
         }
 
-    @app.get("/v1/rules")
-    def get_rules() -> dict[str, Any]:
+    def _rules_payload() -> dict[str, Any]:
         rules = store.load_rules()
         return {
             "rules": [
@@ -148,22 +305,24 @@ def create_app(
             ]
         }
 
+    @app.get("/v1/rules")
+    def get_rules(_: User | None = Depends(_require_read)) -> dict[str, Any]:
+        return _rules_payload()
+
     @app.put("/v1/rules")
-    def put_rules(update: RulesUpdate) -> dict[str, Any]:
+    def put_rules(update: RulesUpdate, _: User = Depends(require_user)) -> dict[str, Any]:
         try:
             rules = RuleSet(rules=tuple(Rule.create(r.when, r.tier, r.priority) for r in update.rules))
             validate_setup(rules, tiers)
         except (RuleError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         store.save_rules(rules)
-        return get_rules()
+        return _rules_payload()
+
+    # ---- catalog -----------------------------------------------------------------------
 
     @app.get("/v1/catalog")
-    def get_catalog() -> dict[str, Any]:
-        """The selectable model catalog, or an empty list if this deployment has none configured
-        (TIERROUTER_CATALOG unset) — resolve() then falls back to tiers.yaml's single model per
-        tier, same as before this feature existed.
-        """
+    def get_catalog(_: User | None = Depends(_require_read)) -> dict[str, Any]:
         if state.catalog is None:
             return {"catalog": []}
         return {
@@ -180,26 +339,23 @@ def create_app(
             ]
         }
 
+    # ---- quality ratings ---------------------------------------------------------------
+
     @app.post("/v1/quality")
-    def add_quality(rating: QualityIn) -> dict[str, str]:
-        """A human's rating of a model's REAL output for a REAL request — the accuracy signal
-        no public capability source can give (see quality.py). Independent of TIERROUTER_QUALITY_FIELD:
-        ratings can always be recorded; whether they ever INFLUENCE a decision is a separate,
-        opt-in choice (that env var).
-        """
+    def add_quality(rating: QualityIn, user: User = Depends(require_user)) -> dict[str, str]:
+        """`judged_by` is always the session user's username — the client-supplied field is
+        ignored (anti-impersonation; see
+        `test_post_quality_ignores_client_supplied_judged_by_and_uses_session`)."""
         try:
-            store.add_quality_rating(rating.model_id, rating.metadata, rating.rating, rating.judged_by, rating.notes)
+            store.add_quality_rating(
+                rating.model_id, rating.metadata, rating.rating, user.username, rating.notes
+            )
         except QualityError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return {"status": "ok"}
 
     @app.get("/v1/quality")
-    def get_quality() -> dict[str, Any]:
-        """Aggregated scores, bucketed by TIERROUTER_QUALITY_FIELD if one is configured — the
-        same field used to apply a quality floor at resolve time (see AppState.quality_field).
-        Without one configured, ratings are still stored (via POST) but have nothing to bucket
-        by here, so this returns them ungrouped, one row per (model, raw metadata) combination.
-        """
+    def get_quality(_: User | None = Depends(_require_read)) -> dict[str, Any]:
         ratings = store.list_quality_ratings()
         if state.quality_field:
             scores = quality_lookup(ratings, state.quality_field)
@@ -218,11 +374,14 @@ def create_app(
             ],
         }
 
+    # ---- examples + judgments ----------------------------------------------------------
+
     @app.post("/v1/examples")
     def add_example(
         metadata: Annotated[str, Form()],
         text: Annotated[str, Form()] = "",
         image: Annotated[UploadFile | None, File()] = None,
+        _: User = Depends(require_user),
     ) -> dict[str, Any]:
         import json as _json
 
@@ -247,7 +406,7 @@ def create_app(
         }
 
     @app.get("/v1/examples")
-    def list_examples() -> dict[str, Any]:
+    def list_examples_endpoint(_: User | None = Depends(_require_read)) -> dict[str, Any]:
         rules = store.load_rules()
         examples = store.list_examples()
         rows = []
@@ -266,7 +425,7 @@ def create_app(
         return {"examples": rows}
 
     @app.get("/v1/examples/uncovered")
-    def list_uncovered() -> dict[str, Any]:
+    def list_uncovered_endpoint(_: User | None = Depends(_require_read)) -> dict[str, Any]:
         rules = store.load_rules()
         examples = store.list_examples()
         uncovered = uncovered_examples(examples, rules)
@@ -278,19 +437,23 @@ def create_app(
         }
 
     @app.post("/v1/judgments")
-    def add_judgment(judgment: JudgmentIn) -> dict[str, str]:
+    def add_judgment(judgment: JudgmentIn, user: User = Depends(require_user)) -> dict[str, str]:
+        """`judged_by` is always the session user's username — same anti-impersonation
+        discipline as /v1/quality."""
         if judgment.tier not in tiers.names:
             raise HTTPException(
                 status_code=422, detail=f"'{judgment.tier}' is not a declared tier. Known: {sorted(tiers.names)}"
             )
         try:
-            store.add_judgment(judgment.example_id, judgment.tier, judgment.judged_by, judgment.notes)
+            store.add_judgment(judgment.example_id, judgment.tier, user.username, judgment.notes)
         except LabelError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return {"status": "ok"}
 
+    # ---- train + status ----------------------------------------------------------------
+
     @app.post("/v1/train")
-    def train() -> TrainResult:
+    def train(_: User = Depends(require_user)) -> TrainResult:
         examples = store.list_examples()
         if not examples:
             raise HTTPException(status_code=422, detail="No examples stored yet. Add some first.")
@@ -343,13 +506,15 @@ def create_app(
         )
 
     @app.get("/v1/status")
-    def status() -> Status:
+    def status_endpoint(_: User | None = Depends(_require_read)) -> Status:
         report = state.last_report
         return Status(
             trained=state.classifier is not None,
             n_labels_last_trained_on=report.n if report else None,
             uses_images=state.classifier_uses_images,
         )
+
+    # ---- resolve + history -------------------------------------------------------------
 
     @app.post("/v1/resolve")
     def do_resolve(
@@ -360,6 +525,7 @@ def create_app(
         selected_models: Annotated[str | None, Form()] = None,
         min_quality: Annotated[float | None, Form()] = None,
         image: Annotated[UploadFile | None, File()] = None,
+        user: User = Depends(require_user),
     ) -> Decision:
         import json as _json
 
@@ -407,6 +573,7 @@ def create_app(
         store.append_history(
             {
                 "timestamp": datetime.now(UTC).isoformat(),
+                "requested_by": user.username,
                 "metadata": clean_metadata,
                 "text": text,
                 "has_image": image_bytes is not None,
@@ -425,7 +592,7 @@ def create_app(
         return decision
 
     @app.get("/v1/history")
-    def get_history(limit: int = 50) -> dict[str, Any]:
+    def get_history(limit: int = 50, _: User | None = Depends(_require_read)) -> dict[str, Any]:
         return {"history": store.history(limit)}
 
     return app

@@ -10,22 +10,26 @@ import {
   SquaresFour,
   Stack as StackIcon,
   Storefront,
+  UsersThree,
 } from '@phosphor-icons/react'
 import { Badge, Box, List, ListItemButton, ListItemIcon, ListItemText, Typography } from '@mui/material'
 import type { ReactNode } from 'react'
 import { PALETTE } from './theme'
+import type { UserRole } from './types'
 
-export type PageKey = 'overview' | 'rules' | 'tiers' | 'catalog' | 'examples' | 'judging' | 'train' | 'evaluate' | 'history' | 'resolve'
+export type PageKey = 'overview' | 'rules' | 'tiers' | 'catalog' | 'examples' | 'judging' | 'train' | 'evaluate' | 'history' | 'resolve' | 'users'
 
 interface Item {
   key: PageKey
   label: string
   icon: ReactNode
+  adminOnly?: boolean
 }
 
 interface Group {
   label: string
   items: Item[]
+  adminOnly?: boolean
 }
 
 const ICON_SIZE = 18
@@ -52,6 +56,13 @@ const GROUPS: Group[] = [
       { key: 'evaluate', label: 'Evaluate', icon: <ChartBar {...ICON_PROPS} /> },
     ],
   },
+  {
+    label: 'Settings',
+    adminOnly: true,
+    items: [
+      { key: 'users', label: 'Operators', icon: <UsersThree {...ICON_PROPS} />, adminOnly: true },
+    ],
+  },
 ]
 
 /**
@@ -68,6 +79,7 @@ export function Nav({
   workspaceName,
   workspaceTag,
   onWorkspaceClick,
+  role,
 }: {
   active: PageKey
   onNavigate: (key: PageKey) => void
@@ -75,7 +87,14 @@ export function Nav({
   workspaceName: string
   workspaceTag?: string
   onWorkspaceClick?: () => void
+  role: UserRole | null
 }) {
+  // Filter groups/items by role — admin-only entries disappear entirely for members, rather
+  // than showing a disabled state (less tempting to click, nothing to explain).
+  const visibleGroups = GROUPS.map((g) => ({
+    ...g,
+    items: g.items.filter((item) => !item.adminOnly || role === 'admin'),
+  })).filter((g) => (!g.adminOnly || role === 'admin') && g.items.length > 0)
   return (
     <>
       <Box sx={{ px: 2, pt: 1.5, pb: 1 }}>
@@ -145,7 +164,7 @@ export function Nav({
       </Box>
 
       <List component="nav" aria-label="Sections" dense sx={{ py: 1 }}>
-        {GROUPS.map((group) => (
+        {visibleGroups.map((group) => (
           <List key={group.label} component="div" dense disablePadding sx={{ mb: 0.5 }}>
             <Typography
               sx={{

@@ -1,4 +1,5 @@
 import type {
+  AuthResponse,
   CatalogEntry,
   Decision,
   ExampleRow,
@@ -10,6 +11,7 @@ import type {
   TiersResponse,
   TrainResult,
   UncoveredExample,
+  UsersListResponse,
 } from './types'
 
 const BASE: string = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
@@ -24,8 +26,14 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * All requests send `credentials: 'include'` so the signed session cookie from
+ * SessionMiddleware (P0, PLAN-v2.md §4) flows cross-origin to the UI. The backend's
+ * `allow_credentials=True` on CORS matches this; specific origins (not `*`) are required
+ * at the backend for credentialed CORS to work.
+ */
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${BASE}${path}`, init)
+  const response = await fetch(`${BASE}${path}`, { credentials: 'include', ...init })
   const body: unknown = await response.json().catch(() => null)
   if (!response.ok) {
     const detail =
@@ -61,6 +69,16 @@ function toFormData(input: ExampleInput): FormData {
 
 export const api = {
   health: (signal?: AbortSignal) => request<Health>('/healthz', { signal }),
+  // P0 — auth
+  login: (username: string, password: string) =>
+    request<AuthResponse>('/v1/auth/login', json({ username, password })),
+  logout: () => request<{ status: string }>('/v1/auth/logout', { method: 'POST' }),
+  me: (signal?: AbortSignal) => request<AuthResponse>('/v1/auth/me', { signal }),
+  listUsers: (signal?: AbortSignal) => request<UsersListResponse>('/v1/users', { signal }),
+  createUser: (input: { username: string; password: string; role: 'admin' | 'member'; notes?: string }) =>
+    request<AuthResponse>('/v1/users', json({ ...input, notes: input.notes ?? '' })),
+  updateUser: (userId: string, patch: { disabled: boolean }) =>
+    request<AuthResponse>(`/v1/users/${encodeURIComponent(userId)}`, { method: 'PUT', ...json(patch) }),
   tiers: (signal?: AbortSignal) => request<TiersResponse>('/v1/tiers', { signal }),
   rules: (signal?: AbortSignal) => request<RulesResponse>('/v1/rules', { signal }),
   saveRules: (rules: RuleEntry[]) => request<RulesResponse>('/v1/rules', { method: 'PUT', ...json({ rules }) }),
