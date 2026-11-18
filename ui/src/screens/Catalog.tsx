@@ -252,7 +252,18 @@ export function Catalog({
                     <DetailRow label="Provider key" value={activeEntry.provider} />
                     <DetailRow label="Suggested tier" value={<StateTag label={activeEntry.tier} tone={tierTone(activeEntry.tier)} size="small" />} />
                     <DetailRow label="Relative cost" value={<Mono>{activeEntry.cost}</Mono>} />
-                    <DetailRow label="Accepts an image" value={activeEntry.supports_image ? 'Yes' : 'No'} />
+                    <DetailRow
+                      label="Modalities"
+                      value={
+                        <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                          {/* Text is always implicit; image/video/audio come from catalog flags (P3). */}
+                          <StateTag label="text" tone="default" size="small" />
+                          {activeEntry.supports_image && <StateTag label="image" tone="brand" size="small" />}
+                          {activeEntry.supports_video && <StateTag label="video" tone="brand" size="small" />}
+                          {activeEntry.supports_audio && <StateTag label="audio" tone="brand" size="small" />}
+                        </Stack>
+                      }
+                    />
                     <DetailRow label="Current mapping" value={activeIds.has(activeEntry.id) ? 'Selectable' : 'Not assigned'} />
                   </Stack>
 

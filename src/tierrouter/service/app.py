@@ -358,6 +358,9 @@ def create_app(
                     "tier": e.tier,
                     "cost": e.cost,
                     "supports_image": e.supports_image,
+                    # P3 — PLAN-v2.md §6: modality booleans for the Catalog UI chips.
+                    "supports_video": e.supports_video,
+                    "supports_audio": e.supports_audio,
                     "label": e.label,
                 }
                 for e in state.catalog.entries
@@ -365,6 +368,13 @@ def create_app(
         }
 
     # ---- quality ratings ---------------------------------------------------------------
+
+    @app.get("/v1/quality/field")
+    def get_quality_field(_: User | None = Depends(_require_read)) -> dict[str, str | None]:
+        """The configured quality-bucket field name (e.g. "task"), or null when quality
+        flooring is not enabled for this deployment. The History rating modal uses this to
+        decide whether to show the field chip; judged_by is never a client concern (P0)."""
+        return {"field": state.quality_field}
 
     @app.post("/v1/quality")
     def add_quality(rating: QualityIn, user: User = Depends(require_user)) -> dict[str, str]:

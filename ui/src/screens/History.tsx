@@ -22,6 +22,7 @@ import {
 } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
 import { api, describeError } from '../api'
+import { useUser } from '../auth'
 import { InfoBanner, Mono, PageHead, Panel, ResolutionPath, StateTag } from '../components/Primitives'
 import { PALETTE, tierTone } from '../theme'
 import type { HistoryEntry } from '../types'
@@ -31,17 +32,22 @@ import type { HistoryEntry } from '../types'
  * the table is the list, the right panel is the full trace for whichever row is selected.
  * Rating a row's output is how this project's only "accuracy" signal gets created (see
  * quality.py) — a model nobody has rated is never penalized at resolve time.
+ *
+ * P3 (PLAN-v2.md §6): the Rate modal no longer asks for a name — judged_by is the session
+ * user (P0). When TIERROUTER_QUALITY_FIELD is configured, the modal shows that field's
+ * value from the row's metadata (read-only; Q5.5.b = no re-tag at rating time).
  */
 export function History({ refreshKey }: { refreshKey: number }) {
+  const user = useUser()
   const [entries, setEntries] = useState<HistoryEntry[] | null>(null)
   const [error, setError] = useState('')
   const [selected, setSelected] = useState<HistoryEntry | null>(null)
   const [rateOpen, setRateOpen] = useState(false)
   const [rating, setRating] = useState<number | null>(null)
-  const [judgedBy, setJudgedBy] = useState('')
   const [notes, setNotes] = useState('')
   const [rateError, setRateError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [qualityField, setQualityField] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [tierFilter, setTierFilter] = useState('')
   const [pathFilter, setPathFilter] = useState('')
@@ -63,9 +69,19 @@ export function History({ refreshKey }: { refreshKey: number }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey])
 
+  useEffect(() => {
+    void (async () => {
+      try {
+        setQualityField((await api.qualityField()).field)
+      } catch {
+        // Quality field is optional — leave hidden if the endpoint is unreachable.
+        setQualityField(null)
+      }
+    })()
+  }, [])
+
   function openRate() {
     setRating(null)
-    setJudgedBy('')
     setNotes('')
     setRateError('')
     setRateOpen(true)
@@ -73,11 +89,10 @@ export function History({ refreshKey }: { refreshKey: number }) {
 
   async function submitRating() {
     if (!selected || !rating) return
-    if (!judgedBy.trim()) return setRateError('Enter your name.')
     setSaving(true)
     setRateError('')
     try {
-      await api.rateQuality({ modelId: selected.model_name, metadata: selected.metadata, rating, judgedBy: judgedBy.trim(), notes })
+      await api.rateQuality({ modelId: selected.model_name, metadata: selected.metadata, rating, notes })
       setRateOpen(false)
     } catch (err) {
       setRateError(describeError(err))
@@ -349,7 +364,21 @@ export function History({ refreshKey }: { refreshKey: number }) {
                   <Typography sx={{ fontSize: 12, color: PALETTE.textMuted }}>Quality (1 = wrong, 5 = correct)</Typography>
                   <Rating value={rating} onChange={(_, v) => setRating(v)} />
                 </Stack>
-                <TextField label="Your name" value={judgedBy} onChange={(e) => setJudgedBy(e.target.value)} fullWidth />
+                {/* P3: quality-field chip is read-only from the row's metadata (Q5.5.b = no re-tag).
+                    Hidden entirely when the deployment has no TIERROUTER_QUALITY_FIELD. */}
+                {qualityField && (
+                  <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Typography sx={{ fontSize: 12, color: PALETTE.textMuted }}>{qualityField}:</Typography>
+                    <StateTag
+                      label={selected.metadata[qualityField] || '(not set on this request)'}
+                      tone="default"
+                      size="small"
+                    />
+                  </Stack>
+                )}
+                <Typography sx={{ fontSize: 11.5, color: PALETTE.textFaint }}>
+                  Rating as {user?.username ?? 'you'} — recorded from your session.
+                </Typography>
                 <TextField label="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} multiline rows={2} fullWidth />
               </Stack>
             </DialogContent>

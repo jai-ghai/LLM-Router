@@ -49,7 +49,7 @@ blocks for commands and file lists, no emoji.
 
 # Plan v2: Auth, dynamic catalog, accuracy-first routing, modality QC loop
 
-Builds on `PLAN.md` and `ARCHITECTURE.md`. Status: **P0 shipped; P2 shipped; next is P3**.
+Builds on `PLAN.md` and `ARCHITECTURE.md`. Status: **P0 + P2 + P3 shipped; next is P1**.
 All six operator decisions in §11 are confirmed. Each piece (P0, P2, P3, P1) ships as its
 own focused commit.
 
@@ -551,5 +551,5 @@ End-to-end smoke on each piece (manual, documented in the PR body, not a CI job)
 | Q6.5.b | Allow demote back to UNREVIEWED via UI? | **Yes** |
 | Q6.5.c | Default provider filter on import when none passed? | **Error** with a helpful usage listing common providers |
 
-Status: **P0 shipped** (commit `deb2fc5`). **P2 shipped** (`optimize_for`
-cost/accuracy/balanced). Next: **P3 — Modality expansion + human QC loop**.
+Status: **P0 shipped** (`deb2fc5`). **P2 shipped** (`8043cd9`). **P3 shipped**
+(modality flags + History Rate modal). Next: **P1 — Dynamic OpenRouter import + UNREVIEWED**.

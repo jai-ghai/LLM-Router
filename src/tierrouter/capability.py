@@ -1,5 +1,5 @@
 """Live model capability facts from OpenRouter's public model list — cost, context length, and
-image-support, for any model OpenRouter knows about, across providers.
+modality support (image / video / audio), for any model OpenRouter knows about, across providers.
 
 This is metadata only: fetching a models LIST is one GET request against a public catalog page,
 not "calling a model" — ARCHITECTURE.md §1's "no model is ever called" is about an inference
@@ -12,6 +12,10 @@ What this does NOT give you: which capability TIER (small/medium/large) a model 
 YOUR use case, or whether it is actually any good at YOUR tasks. Both of those stay a human
 judgment — see catalog.py (`tier` is set by hand in catalog.yaml) and quality.py (a human rates
 real output). A public models list can tell you facts; it cannot tell you what you need.
+
+P3 (PLAN-v2.md §6): `supports_video` / `supports_audio` are parsed from the same
+`architecture.input_modalities` list that already drives `supports_image`. Absent tokens
+default to False — never a crash.
 """
 
 from __future__ import annotations
@@ -38,6 +42,8 @@ class ModelCapability:
     supports_image: bool
     cost_per_1k_prompt: float | None
     cost_per_1k_completion: float | None
+    supports_video: bool = False
+    supports_audio: bool = False
 
 
 def fetch_openrouter_capabilities(timeout: float = 10.0) -> list[ModelCapability]:
@@ -59,16 +65,24 @@ def _parse_entry(entry: dict[str, object]) -> ModelCapability:
     provider = model_id.split("/", 1)[0] if "/" in model_id else ""
     architecture = entry.get("architecture")
     architecture = architecture if isinstance(architecture, dict) else {}
-    input_modalities = architecture.get("input_modalities") or []
+    raw_modalities = architecture.get("input_modalities") or []
+    # Normalise to a lowercase string set so "Video" / "VIDEO" still match; a non-list
+    # (malformed payload) becomes an empty set rather than crashing the whole fetch.
+    modalities = {
+        str(m).strip().lower()
+        for m in (raw_modalities if isinstance(raw_modalities, list) else [])
+    }
     pricing = entry.get("pricing")
     pricing = pricing if isinstance(pricing, dict) else {}
     return ModelCapability(
         id=model_id,
         provider=provider,
         context_length=_as_int(entry.get("context_length")),
-        supports_image="image" in input_modalities,
+        supports_image="image" in modalities,
         cost_per_1k_prompt=_as_cost(pricing.get("prompt")),
         cost_per_1k_completion=_as_cost(pricing.get("completion")),
+        supports_video="video" in modalities,
+        supports_audio="audio" in modalities,
     )
 
 

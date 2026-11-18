@@ -444,3 +444,53 @@ def test_rules_endpoint_roundtrips_optimize_for(client: TestClient) -> None:
     )
     assert bad.status_code == 422
     assert client.get("/v1/rules").json()["rules"] == body
+
+
+# -----------------------------------------------------------------------------------------
+# P3 — modality booleans + quality/field + rating session user (PLAN-v2.md §6.4).
+# -----------------------------------------------------------------------------------------
+
+
+def test_catalog_endpoint_exposes_modality_booleans(catalog_client: TestClient) -> None:
+    body = catalog_client.get("/v1/catalog").json()
+    assert body["catalog"]
+    for entry in body["catalog"]:
+        assert "supports_image" in entry
+        assert "supports_video" in entry
+        assert "supports_audio" in entry
+        # Defaults for the fixture entries (no video/audio declared).
+        assert entry["supports_video"] is False
+        assert entry["supports_audio"] is False
+
+
+def test_quality_field_endpoint_returns_configured_field_or_null(tmp_path: Path) -> None:
+    # Two separate store roots — sharing tmp_path would collide on the bootstrap user.
+    bare = _authed_client(tmp_path / "bare")
+    assert bare.get("/v1/quality/field").json() == {"field": None}
+    with_field = _authed_client(tmp_path / "with", catalog=CATALOG, quality_field="task")
+    assert with_field.get("/v1/quality/field").json() == {"field": "task"}
+
+
+def test_rating_modal_judged_by_is_session_user(catalog_client: TestClient) -> None:
+    # P3 History-modal shape: client may omit judged_by (or forge one); server always
+    # records the session user. catalog_client has no quality_field so GET returns the
+    # raw ratings list with judged_by visible.
+    ok = catalog_client.post(
+        "/v1/quality",
+        json={"model_id": "cheap-small", "metadata": {"task": "news"}, "rating": 4, "notes": "ok"},
+    )
+    assert ok.status_code == 200
+    forged = catalog_client.post(
+        "/v1/quality",
+        json={
+            "model_id": "pricey-small",
+            "metadata": {"task": "news"},
+            "rating": 5,
+            "judged_by": "NOT-THE-SESSION-USER",
+            "notes": "",
+        },
+    )
+    assert forged.status_code == 200
+    ratings = catalog_client.get("/v1/quality").json()["ratings"]
+    assert {r["judged_by"] for r in ratings} == {"tester"}
+    assert all(r["judged_by"] != "NOT-THE-SESSION-USER" for r in ratings)

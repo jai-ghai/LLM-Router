@@ -99,10 +99,15 @@ export const api = {
   history: (limit = 50, signal?: AbortSignal) =>
     request<{ history: HistoryEntry[] }>(`/v1/history?limit=${limit}`, { signal }),
   quality: (signal?: AbortSignal) => request<QualityResponse>('/v1/quality', { signal }),
-  rateQuality: (input: { modelId: string; metadata: Record<string, string>; rating: number; judgedBy: string; notes?: string }) =>
+  // P3 — PLAN-v2.md §6. Returns the configured quality-bucket field name, or null.
+  qualityField: (signal?: AbortSignal) =>
+    request<{ field: string | null }>('/v1/quality/field', { signal }),
+  // judged_by is intentionally omitted — the server records the session user (P0 anti-
+  // impersonation). Passing it would be ignored anyway.
+  rateQuality: (input: { modelId: string; metadata: Record<string, string>; rating: number; notes?: string }) =>
     request<{ status: string }>(
       '/v1/quality',
-      json({ model_id: input.modelId, metadata: input.metadata, rating: input.rating, judged_by: input.judgedBy, notes: input.notes ?? '' }),
+      json({ model_id: input.modelId, metadata: input.metadata, rating: input.rating, notes: input.notes ?? '' }),
     ),
   resolve: (
     input: ExampleInput & {

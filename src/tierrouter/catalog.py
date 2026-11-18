@@ -119,10 +119,17 @@ class CatalogEntry:
     tier: str
     cost: float
     supports_image: bool = True
+    supports_video: bool = False
+    supports_audio: bool = False
     label: str = ""
     context_length: int | None = None
     """Informational only (tokens) — not used in `pick()`. Refreshable from a live source via
-    `experiments/refresh_catalog.py`; see capability.py."""
+    `experiments/refresh_catalog.py`; see capability.py.
+
+    P3 (PLAN-v2.md §6): `supports_video` / `supports_audio` default False — most catalog
+    rows today are text/image; video/audio is opt-in so an absent YAML key never silently
+    claims a modality the model doesn't have.
+    """
 
 
 @dataclass(frozen=True)
@@ -142,13 +149,19 @@ class ModelCatalog:
         selected: set[str] | None = None,
         provider: str | None = None,
         needs_image: bool = False,
+        needs_video: bool = False,
+        needs_audio: bool = False,
         quality: Mapping[tuple[str, str], float] | None = None,
         quality_value: str | None = None,
         min_quality: float | None = None,
         optimize_for: OptimizeFor = "cost",
     ) -> tuple[CatalogEntry, str | None]:
-        """One entry from `tier`, chosen by `optimize_for` from the selection/provider/image
+        """One entry from `tier`, chosen by `optimize_for` from the selection/provider/modality
         filter, with an optional quality floor layered on top.
+
+        `needs_image` / `needs_video` / `needs_audio` (P3 — PLAN-v2.md §6) each drop candidates
+        that don't declare the matching `supports_*` flag. Same filter shape for all three —
+        a request that needs video never lands on a text-only model.
 
         `quality`/`quality_value`/`min_quality` are an optional human-reviewed quality floor
         (see quality.py) — cost matters, but for some use cases (PLAN-v2.md §1's video-QC
@@ -181,12 +194,14 @@ class ModelCatalog:
             if (selected is None or e.id in selected)
             and (provider is None or e.provider == provider)
             and (not needs_image or e.supports_image)
+            and (not needs_video or e.supports_video)
+            and (not needs_audio or e.supports_audio)
         ]
         if not candidates:
             raise RuleError(
-                "no catalog model matches the current selection/provider/image requirement "
+                "no catalog model matches the current selection/provider/modality requirement "
                 f"(selected={sorted(selected) if selected else 'all'}, provider={provider or 'any'}, "
-                f"needs_image={needs_image})"
+                f"needs_image={needs_image}, needs_video={needs_video}, needs_audio={needs_audio})"
             )
 
         quality_note: str | None = None
@@ -225,7 +240,7 @@ class ModelCatalog:
             return chosen, _compose_note(tier_note, quality_note, mode_note)
         raise RuleError(
             f"no catalog model at tier '{tier}' or above is available in the current "
-            "selection/provider/image filters"
+            "selection/provider/modality filters"
         )
 
 
@@ -257,6 +272,10 @@ def load_catalog(path: str | Path) -> ModelCatalog:
                 tier=str(entry["tier"]).strip(),
                 cost=cost,
                 supports_image=bool(entry.get("supports_image", True)),
+                # Video/audio default False: an absent key must not claim a modality the
+                # operator never declared (unlike image, which historically defaulted True).
+                supports_video=bool(entry.get("supports_video", False)),
+                supports_audio=bool(entry.get("supports_audio", False)),
                 label=str(entry.get("label") or entry["id"]).strip(),
                 context_length=context_length,
             )
