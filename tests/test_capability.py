@@ -87,3 +87,64 @@ def test_match_by_suffix_exact_then_suffix_then_none() -> None:
     assert match_by_suffix("GEMINI-3.5-FLASH", caps) is caps[0]  # case-insensitive
     assert match_by_suffix("google/gemini-3.5-flash", caps) is caps[0]  # exact id also matches
     assert match_by_suffix("does-not-exist", caps) is None
+
+
+# -----------------------------------------------------------------------------------------
+# P3 — video + audio modality parsing (PLAN-v2.md §6.4).
+# -----------------------------------------------------------------------------------------
+
+
+def test_parses_video_and_audio_from_input_modalities() -> None:
+    payload = {
+        "data": [
+            {
+                "id": "google/gemini-video",
+                "context_length": 128000,
+                "architecture": {"input_modalities": ["text", "image", "video"]},
+                "pricing": {"prompt": "0.000001", "completion": "0.000002"},
+            },
+            {
+                "id": "openai/gpt-audio",
+                "context_length": 32000,
+                "architecture": {"input_modalities": ["text", "AUDIO"]},  # case-insensitive
+                "pricing": {"prompt": "0.000001", "completion": "0.000002"},
+            },
+        ]
+    }
+    with patch("tierrouter.capability.urllib.request.urlopen", return_value=_FakeResponse(payload)):
+        caps = fetch_openrouter_capabilities()
+    video = next(c for c in caps if c.id == "google/gemini-video")
+    assert video.supports_image is True
+    assert video.supports_video is True
+    assert video.supports_audio is False
+    audio = next(c for c in caps if c.id == "openai/gpt-audio")
+    assert audio.supports_image is False
+    assert audio.supports_video is False
+    assert audio.supports_audio is True
+
+
+def test_absent_modalities_default_to_false() -> None:
+    # No architecture block at all, and an empty modalities list — both must default
+    # video/audio (and image) to False rather than crashing the fetch.
+    payload = {
+        "data": [
+            {"id": "plain/no-arch", "context_length": 1000, "pricing": {}},
+            {
+                "id": "plain/empty-modalities",
+                "architecture": {"input_modalities": []},
+                "pricing": {},
+            },
+            {
+                "id": "plain/bad-modalities",
+                "architecture": {"input_modalities": "not-a-list"},
+                "pricing": {},
+            },
+        ]
+    }
+    with patch("tierrouter.capability.urllib.request.urlopen", return_value=_FakeResponse(payload)):
+        caps = fetch_openrouter_capabilities()
+    assert len(caps) == 3
+    for cap in caps:
+        assert cap.supports_image is False
+        assert cap.supports_video is False
+        assert cap.supports_audio is False

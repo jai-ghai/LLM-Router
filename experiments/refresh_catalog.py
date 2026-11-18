@@ -1,5 +1,5 @@
-"""Refresh a catalog.yaml's cost/context-length/image-support facts from OpenRouter's live
-model list.
+"""Refresh a catalog.yaml's cost/context-length/modality-support facts from OpenRouter's live
+model list (image + video + audio — P3 / PLAN-v2.md §6).
 
 Does NOT add new models or change any model's `tier` automatically — `tier` is a business
 judgment (how much capability THIS deployment's use cases need from this model), which no public
@@ -50,6 +50,12 @@ def main() -> int:
         updates: dict[str, object] = {}
         if match.supports_image != entry.get("supports_image", True):
             updates["supports_image"] = match.supports_image
+        # P3 — PLAN-v2.md §6: sync video/audio the same way as image. Defaults match
+        # CatalogEntry (video/audio False) so an absent YAML key is treated as False.
+        if match.supports_video != bool(entry.get("supports_video", False)):
+            updates["supports_video"] = match.supports_video
+        if match.supports_audio != bool(entry.get("supports_audio", False)):
+            updates["supports_audio"] = match.supports_audio
         if match.cost_per_1k_prompt is not None and round(match.cost_per_1k_prompt, 6) != entry.get("cost"):
             updates["cost"] = round(match.cost_per_1k_prompt, 6)
         if match.context_length is not None and match.context_length != entry.get("context_length"):

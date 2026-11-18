@@ -273,3 +273,41 @@ def test_pick_rejects_unknown_optimize_for_values() -> None:
     catalog = ModelCatalog(entries=(CatalogEntry("a", "gemini", "small", cost=1),))
     with pytest.raises(RuleError, match="optimize_for must be one of"):
         catalog.pick("small", RANK, optimize_for="speed")  # type: ignore[arg-type]
+
+
+# -----------------------------------------------------------------------------------------
+# P3 — needs_video / needs_audio filters (PLAN-v2.md §6.4).
+# -----------------------------------------------------------------------------------------
+
+
+def test_pick_filters_out_entries_without_video_when_needs_video() -> None:
+    # Two medium candidates; only the dearer one declares video. needs_video must drop the
+    # cheaper text-only model even though cost mode would otherwise prefer it.
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("text-only", "gemini", "medium", cost=1, supports_video=False),
+            CatalogEntry("video-ok", "gemini", "medium", cost=5, supports_video=True),
+        )
+    )
+    entry, note = catalog.pick("medium", RANK, needs_video=True)
+    assert entry.id == "video-ok"
+    assert note is None
+
+
+def test_pick_raises_rule_error_when_no_video_candidate_in_filter() -> None:
+    catalog = ModelCatalog(
+        entries=(CatalogEntry("text-only", "gemini", "medium", cost=1, supports_video=False),)
+    )
+    with pytest.raises(RuleError, match="needs_video=True"):
+        catalog.pick("medium", RANK, needs_video=True)
+
+
+def test_pick_filters_out_entries_without_audio_when_needs_audio() -> None:
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("silent", "gemini", "small", cost=1, supports_audio=False),
+            CatalogEntry("hears", "gemini", "small", cost=3, supports_audio=True),
+        )
+    )
+    entry, _ = catalog.pick("small", RANK, needs_audio=True)
+    assert entry.id == "hears"

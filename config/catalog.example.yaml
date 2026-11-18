@@ -6,23 +6,31 @@
 # a currency) used only to pick the cheapest model that matches a given tier — set it however
 # your own cost accounting makes sense (tokens/sec, $/1k requests, whatever is comparable across
 # rows). `supports_image` defaults to true; set it false for a text-only model so an image
-# request never gets routed to it.
+# request never gets routed to it. `supports_video` / `supports_audio` default to false
+# (P3 — PLAN-v2.md §6); set them true only when the model actually accepts that modality.
+# resolve() treats metadata.modality == "video"|"audio" as needing that flag.
 catalog:
   - id: REPLACE_ME
     provider: REPLACE_ME
     tier: small
     cost: 1
     supports_image: false
+    supports_video: false
+    supports_audio: false
     label: REPLACE_ME
   - id: REPLACE_ME
     provider: REPLACE_ME
     tier: medium
     cost: 4
     supports_image: true
+    supports_video: false
+    supports_audio: false
     label: REPLACE_ME
   - id: REPLACE_ME
     provider: REPLACE_ME
     tier: large
     cost: 10
     supports_image: true
+    supports_video: true
+    supports_audio: false
     label: REPLACE_ME

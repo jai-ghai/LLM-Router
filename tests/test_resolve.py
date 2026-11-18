@@ -196,3 +196,45 @@ def test_rule_optimize_for_overrides_request_optimize_for() -> None:
     )
     assert decision.model_name == "good-small"
     assert decision.optimize_for == "accuracy"
+
+
+# -----------------------------------------------------------------------------------------
+# P3 — metadata.modality → needs_video / needs_audio (PLAN-v2.md §6.4).
+# -----------------------------------------------------------------------------------------
+
+
+_P3_CATALOG = ModelCatalog(
+    entries=(
+        CatalogEntry("text-small", "gemini", "small", cost=1, supports_video=False, supports_audio=False),
+        CatalogEntry("video-small", "gemini", "small", cost=5, supports_video=True, supports_audio=False),
+        CatalogEntry("audio-small", "gemini", "small", cost=4, supports_video=False, supports_audio=True),
+    )
+)
+
+
+def test_metadata_modality_video_sets_needs_video_on_pick() -> None:
+    # Convention: metadata["modality"] == "video" → catalog.pick(needs_video=True).
+    # Without that filter, cost mode would pick text-small; with it, video-small wins.
+    rules = RuleSet(rules=(Rule.create({"channel_type": "sports"}, "small"),))
+    plain = resolve({"channel_type": "sports"}, "x", rules, TIERS, catalog=_P3_CATALOG)
+    assert plain.model_name == "text-small"
+    video = resolve(
+        {"channel_type": "sports", "modality": "video"},
+        "x",
+        rules,
+        TIERS,
+        catalog=_P3_CATALOG,
+    )
+    assert video.model_name == "video-small"
+
+
+def test_metadata_modality_audio_sets_needs_audio_on_pick() -> None:
+    rules = RuleSet(rules=(Rule.create({"channel_type": "sports"}, "small"),))
+    decision = resolve(
+        {"channel_type": "sports", "modality": "AUDIO"},  # case-insensitive via canonical_value
+        "x",
+        rules,
+        TIERS,
+        catalog=_P3_CATALOG,
+    )
+    assert decision.model_name == "audio-small"

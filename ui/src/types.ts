@@ -28,6 +28,9 @@ export interface CatalogEntry {
   tier: string
   cost: number
   supports_image: boolean
+  // P3 — PLAN-v2.md §6. Absent on older servers → treat as false in the UI.
+  supports_video?: boolean
+  supports_audio?: boolean
   label: string
 }
 

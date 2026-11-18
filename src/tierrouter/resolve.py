@@ -81,6 +81,13 @@ def resolve(
     heuristic). A matching rule's own `optimize_for` takes precedence over this argument — an
     operator pinning "qc_review on video → accuracy" wins even if a caller forgot to ask for
     it.
+
+    Modality (P3 — PLAN-v2.md §6): when a catalog is in play, `needs_video` / `needs_audio`
+    are inferred from a CONVENTION on metadata — `metadata["modality"] == "video"` (case-
+    insensitive via `canonical_value`) sets `needs_video=True`, and likewise for `"audio"`.
+    Operators who use a different key pass those flags to `catalog.pick()` from their own
+    glue; this function only documents and applies the one convention above. `needs_image`
+    still comes from whether `image_bytes` was supplied (unchanged).
     """
     effective_optimize_for: OptimizeFor = optimize_for
     matched_rule = rules.match(metadata)
@@ -121,12 +128,15 @@ def resolve(
 
     if catalog is not None:
         quality_value = canonical_value(metadata.get(quality_field, "")) if quality_field else None
+        modality = canonical_value(metadata.get("modality", ""))
         entry, note = catalog.pick(
             tier,
             tiers.rank(),
             selected=selected_models,
             provider=provider,
             needs_image=image_bytes is not None,
+            needs_video=modality == "video",
+            needs_audio=modality == "audio",
             quality=quality,
             quality_value=quality_value or None,
             min_quality=min_quality,
