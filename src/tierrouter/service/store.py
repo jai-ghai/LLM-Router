@@ -12,6 +12,7 @@ from pathlib import Path
 
 import yaml
 
+from tierrouter.catalog import CatalogEntry, entry_to_yaml_dict, load_catalog, replace_entry
 from tierrouter.labels import (
     LabelError,
     RawExample,
@@ -20,11 +21,11 @@ from tierrouter.labels import (
     load_human_judgments,
 )
 from tierrouter.quality import QualityError, QualityRating
-from tierrouter.rules import RuleSet, rules_from_file
+from tierrouter.rules import RuleError, RuleSet, rules_from_file
 
 
 class Store:
-    def __init__(self, root: str | Path) -> None:
+    def __init__(self, root: str | Path, *, catalog_path: str | Path | None = None) -> None:
         self.root = Path(root)
         self.images_dir = self.root / "images"
         self.root.mkdir(parents=True, exist_ok=True)
@@ -35,6 +36,9 @@ class Store:
         self.classifier_path = self.root / "classifier.joblib"
         self.history_path = self.root / "history.jsonl"
         self.quality_path = self.root / "quality.jsonl"
+        # Optional path to the live catalog.yaml (TIERROUTER_CATALOG). Needed so
+        # PUT /v1/catalog/{id} can persist tier assignments (P1).
+        self.catalog_path = Path(catalog_path) if catalog_path else None
         if not self.examples_path.exists():
             self.examples_path.write_text("", encoding="utf-8")
         if not self.judgments_path.exists():
@@ -100,6 +104,41 @@ class Store:
             ]
         }
         self.rules_path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
+
+    # ---- catalog tier assignment (P1) -----------------------------------------------------
+
+    def update_catalog_tier(self, model_id: str, tier: str, assigned_by: str) -> CatalogEntry:
+        """Set one catalog entry's tier (+ assigned_by) and rewrite catalog.yaml.
+
+        Raises RuleError when no catalog path is configured, the file is missing, or the
+        model id is unknown. Does not validate that `tier` is a declared tier — the
+        service layer does that (and also allows UNREVIEWED for demotion).
+        """
+        if self.catalog_path is None:
+            raise RuleError("no catalog is configured for this deployment (TIERROUTER_CATALOG unset)")
+        if not self.catalog_path.exists():
+            raise RuleError(f"catalog file {self.catalog_path} does not exist")
+        catalog = load_catalog(self.catalog_path)
+        try:
+            current = next(e for e in catalog.entries if e.id == model_id)
+        except StopIteration as exc:
+            raise RuleError(f"no catalog entry with id '{model_id}'") from exc
+        updated = CatalogEntry(
+            id=current.id,
+            provider=current.provider,
+            tier=tier,
+            cost=current.cost,
+            supports_image=current.supports_image,
+            supports_video=current.supports_video,
+            supports_audio=current.supports_audio,
+            label=current.label,
+            context_length=current.context_length,
+            assigned_by=assigned_by,
+        )
+        new_catalog = replace_entry(catalog, updated)
+        document = {"catalog": [entry_to_yaml_dict(e) for e in new_catalog.entries]}
+        self.catalog_path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
+        return updated
 
     # ---- request history ------------------------------------------------------------------
 

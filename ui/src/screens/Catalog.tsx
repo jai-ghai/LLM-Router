@@ -17,9 +17,10 @@ import {
 } from '@mui/material'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { api, describeError } from '../api'
-import { MetricStrip, Mono, PageHead, Panel, StateTag, type Metric } from '../components/Primitives'
+import { useUser } from '../auth'
+import { InfoBanner, MetricStrip, Mono, PageHead, Panel, StateTag, type Metric } from '../components/Primitives'
 import { PALETTE, tierTone } from '../theme'
-import type { CatalogEntry, QualityResponse } from '../types'
+import { UNREVIEWED_TIER, type CatalogEntry, type QualityResponse } from '../types'
 
 /**
  * The selectable model catalog: every candidate model this deployment knows about. The
@@ -28,14 +29,21 @@ import type { CatalogEntry, QualityResponse } from '../types'
  * master-detail layout. Checking a row is kept from the original design because Playground
  * reads from this selection — it was more of a developer tool than a visual element, so it
  * is now folded into the details panel.
+ *
+ * P1 (PLAN-v2.md §7): pending-review banner for UNREVIEWED rows; admins can assign a real
+ * tier or demote back to UNREVIEWED via PUT /v1/catalog/{id}.
  */
 export function Catalog({
   selected,
   onChange,
+  tierNames = [],
 }: {
   selected: Set<string> | null
   onChange: (next: Set<string> | null) => void
+  tierNames?: string[]
 }) {
+  const user = useUser()
+  const isAdmin = user?.role === 'admin'
   const [entries, setEntries] = useState<CatalogEntry[] | null>(null)
   const [error, setError] = useState('')
   const [quality, setQuality] = useState<QualityResponse | null>(null)
@@ -43,6 +51,8 @@ export function Catalog({
   const [search, setSearch] = useState('')
   const [providerFilter, setProviderFilter] = useState<string>('')
   const [tierFilter, setTierFilter] = useState<string>('')
+  const [assignTier, setAssignTier] = useState('')
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     void (async () => {
@@ -58,6 +68,11 @@ export function Catalog({
     })()
   }, [])
 
+  useEffect(() => {
+    // Reset the assign picker when the active row changes.
+    setAssignTier(activeEntry && activeEntry.tier !== UNREVIEWED_TIER ? activeEntry.tier : tierNames[0] ?? '')
+  }, [activeEntry, tierNames])
+
   const allIds = (entries ?? []).map((e) => e.id)
   const usingAll = selected === null
   const activeIds = usingAll ? new Set(allIds) : new Set(selected ?? [])
@@ -69,8 +84,27 @@ export function Catalog({
     onChange(base.size === allIds.length ? null : base)
   }
 
+  async function assign(tier: string) {
+    if (!activeEntry || !tier) return
+    setSaving(true)
+    setError('')
+    try {
+      const next = (await api.updateCatalogTier(activeEntry.id, tier)).catalog
+      setEntries(next)
+      setActiveEntry(next.find((e) => e.id === activeEntry.id) ?? null)
+    } catch (err) {
+      setError(describeError(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const providers = useMemo(() => Array.from(new Set((entries ?? []).map((e) => e.provider))), [entries])
   const tiers = useMemo(() => Array.from(new Set((entries ?? []).map((e) => e.tier))), [entries])
+  const pendingCount = useMemo(
+    () => (entries ?? []).filter((e) => e.tier === UNREVIEWED_TIER).length,
+    [entries],
+  )
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
@@ -112,6 +146,23 @@ export function Catalog({
       )}
 
       <Stack spacing={2}>
+        {pendingCount > 0 && (
+          <InfoBanner
+            tone="warning"
+            badge={`${pendingCount}`}
+            title={`${pendingCount} model${pendingCount === 1 ? '' : 's'} pending review`}
+            note="Imported with tier=UNREVIEWED — they will not be routed until an admin assigns a real tier."
+            actions={
+              <Button
+                size="small"
+                onClick={() => setTierFilter(UNREVIEWED_TIER)}
+                endIcon={<ArrowRight size={12} />}
+              >
+                Show pending
+              </Button>
+            }
+          />
+        )}
         <MetricStrip metrics={metrics} />
 
         {entries === null ? (
@@ -265,7 +316,74 @@ export function Catalog({
                       }
                     />
                     <DetailRow label="Current mapping" value={activeIds.has(activeEntry.id) ? 'Selectable' : 'Not assigned'} />
+                    {activeEntry.assigned_by ? (
+                      <DetailRow label="Last assigned by" value={<Mono size={12}>{activeEntry.assigned_by}</Mono>} />
+                    ) : null}
                   </Stack>
+
+                  {/* P1 — admin tier assignment / demotion (PLAN-v2.md §7). Members see the
+                      current tier but cannot mutate it. */}
+                  {isAdmin && (
+                    <Stack spacing={1} sx={{ pt: 0.5 }}>
+                      {activeEntry.tier === UNREVIEWED_TIER ? (
+                        <>
+                          <Typography sx={{ fontSize: 12, color: PALETTE.textMuted }}>
+                            Assign a routable tier to make this model eligible for resolve().
+                          </Typography>
+                          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                            <TextField
+                              select
+                              size="small"
+                              label="Tier"
+                              value={assignTier}
+                              onChange={(e) => setAssignTier(e.target.value)}
+                              sx={{ minWidth: 140 }}
+                            >
+                              {tierNames.map((name) => (
+                                <MenuItem key={name} value={name}>{name}</MenuItem>
+                              ))}
+                            </TextField>
+                            <Button
+                              variant="contained"
+                              disabled={saving || !assignTier}
+                              onClick={() => void assign(assignTier)}
+                            >
+                              Assign
+                            </Button>
+                          </Stack>
+                        </>
+                      ) : (
+                        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+                          <TextField
+                            select
+                            size="small"
+                            label="Reassign tier"
+                            value={assignTier}
+                            onChange={(e) => setAssignTier(e.target.value)}
+                            sx={{ minWidth: 140 }}
+                          >
+                            {tierNames.map((name) => (
+                              <MenuItem key={name} value={name}>{name}</MenuItem>
+                            ))}
+                          </TextField>
+                          <Button
+                            variant="outlined"
+                            disabled={saving || !assignTier || assignTier === activeEntry.tier}
+                            onClick={() => void assign(assignTier)}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            color="warning"
+                            disabled={saving}
+                            onClick={() => void assign(UNREVIEWED_TIER)}
+                          >
+                            Demote to UNREVIEWED
+                          </Button>
+                        </Stack>
+                      )}
+                    </Stack>
+                  )}
 
                   <Box sx={{ p: 1.25, borderRadius: '10px', bgcolor: PALETTE.warningSoft, border: `1px solid ${PALETTE.warningEdge}` }}>
                     <Typography sx={{ fontSize: 12, fontWeight: 650, color: PALETTE.warningText }}>Reference only</Typography>
@@ -279,8 +397,13 @@ export function Catalog({
                     endIcon={<ArrowRight size={14} />}
                     onClick={() => toggle(activeEntry.id)}
                     fullWidth
+                    disabled={activeEntry.tier === UNREVIEWED_TIER}
                   >
-                    {activeIds.has(activeEntry.id) ? 'Remove from selection' : 'Configure tier mapping'}
+                    {activeEntry.tier === UNREVIEWED_TIER
+                      ? 'Not selectable until reviewed'
+                      : activeIds.has(activeEntry.id)
+                        ? 'Remove from selection'
+                        : 'Configure tier mapping'}
                   </Button>
 
                   {quality?.field && (

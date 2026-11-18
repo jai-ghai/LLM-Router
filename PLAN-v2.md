@@ -49,7 +49,7 @@ blocks for commands and file lists, no emoji.
 
 # Plan v2: Auth, dynamic catalog, accuracy-first routing, modality QC loop
 
-Builds on `PLAN.md` and `ARCHITECTURE.md`. Status: **P0 + P2 + P3 shipped; next is P1**.
+Builds on `PLAN.md` and `ARCHITECTURE.md`. Status: **P0 + P2 + P3 + P1 shipped**.
 All six operator decisions in §11 are confirmed. Each piece (P0, P2, P3, P1) ships as its
 own focused commit.
 

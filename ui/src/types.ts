@@ -32,7 +32,12 @@ export interface CatalogEntry {
   supports_video?: boolean
   supports_audio?: boolean
   label: string
+  // P1 — PLAN-v2.md §7. Empty until an admin assigns a tier via PUT /v1/catalog/{id}.
+  assigned_by?: string
 }
+
+/** Catalog-only sentinel — never routable until an admin assigns a real tier. */
+export const UNREVIEWED_TIER = 'UNREVIEWED'
 
 export interface HistoryEntry {
   timestamp: string

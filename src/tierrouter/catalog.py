@@ -35,6 +35,7 @@ from typing import Literal
 import yaml
 
 from tierrouter.rules import RuleError
+from tierrouter.tiers import UNREVIEWED_TIER
 
 OptimizeFor = Literal["cost", "accuracy", "balanced"]
 VALID_OPTIMIZE_FOR: tuple[OptimizeFor, ...] = ("cost", "accuracy", "balanced")
@@ -123,12 +124,17 @@ class CatalogEntry:
     supports_audio: bool = False
     label: str = ""
     context_length: int | None = None
+    assigned_by: str = ""
     """Informational only (tokens) — not used in `pick()`. Refreshable from a live source via
-    `experiments/refresh_catalog.py`; see capability.py.
+    `experiments/sync_catalog.py`; see capability.py.
 
     P3 (PLAN-v2.md §6): `supports_video` / `supports_audio` default False — most catalog
     rows today are text/image; video/audio is opt-in so an absent YAML key never silently
     claims a modality the model doesn't have.
+
+    P1 (PLAN-v2.md §7): `assigned_by` records which admin last set this entry's tier via
+    PUT /v1/catalog/{id}. Empty for rows that have never been reviewed through the UI.
+    `tier == UNREVIEWED` means the entry is never a pick() candidate (G5).
     """
 
 
@@ -180,6 +186,10 @@ class ModelCatalog:
             missing — honest rather than silent.
           - "balanced": `rating / log1p(cost + 1)` on the rated subset; same fallback.
 
+        P1 (PLAN-v2.md §7 / G5): entries with `tier == UNREVIEWED` are **always** excluded,
+        even when listed in `selected`. An admin must assign a real tier before resolve()
+        will pick them.
+
         Returns `(entry, note)`. `note` is `None` when nothing needed explaining; otherwise it
         describes the tier substitution and/or quality-floor effect and/or optimize_for
         fall-back, joined by `; ` — never silently combined, never silently dropped.
@@ -191,7 +201,8 @@ class ModelCatalog:
         candidates = [
             e
             for e in self.entries
-            if (selected is None or e.id in selected)
+            if e.tier != UNREVIEWED_TIER
+            and (selected is None or e.id in selected)
             and (provider is None or e.provider == provider)
             and (not needs_image or e.supports_image)
             and (not needs_video or e.supports_video)
@@ -278,6 +289,43 @@ def load_catalog(path: str | Path) -> ModelCatalog:
                 supports_audio=bool(entry.get("supports_audio", False)),
                 label=str(entry.get("label") or entry["id"]).strip(),
                 context_length=context_length,
+                assigned_by=str(entry.get("assigned_by") or "").strip(),
             )
         )
+    return ModelCatalog(entries=tuple(entries))
+
+
+def entry_to_yaml_dict(entry: CatalogEntry) -> dict[str, object]:
+    """Serialize one CatalogEntry for catalog.yaml — omit empty optional fields so older
+    files stay tidy when rewritten by PUT /v1/catalog/{id} or sync_catalog."""
+    row: dict[str, object] = {
+        "id": entry.id,
+        "provider": entry.provider,
+        "tier": entry.tier,
+        "cost": entry.cost,
+        "supports_image": entry.supports_image,
+        "supports_video": entry.supports_video,
+        "supports_audio": entry.supports_audio,
+        "label": entry.label or entry.id,
+    }
+    if entry.context_length is not None:
+        row["context_length"] = entry.context_length
+    if entry.assigned_by:
+        row["assigned_by"] = entry.assigned_by
+    return row
+
+
+def replace_entry(catalog: ModelCatalog, updated: CatalogEntry) -> ModelCatalog:
+    """Return a new ModelCatalog with `updated` swapped in by id. Raises RuleError if the
+    id is unknown — callers must not invent rows through the tier-assignment endpoint."""
+    found = False
+    entries: list[CatalogEntry] = []
+    for entry in catalog.entries:
+        if entry.id == updated.id:
+            entries.append(updated)
+            found = True
+        else:
+            entries.append(entry)
+    if not found:
+        raise RuleError(f"no catalog entry with id '{updated.id}'")
     return ModelCatalog(entries=tuple(entries))

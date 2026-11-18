@@ -238,3 +238,16 @@ def test_metadata_modality_audio_sets_needs_audio_on_pick() -> None:
         catalog=_P3_CATALOG,
     )
     assert decision.model_name == "audio-small"
+
+
+def test_resolve_reports_when_every_candidate_is_unreviewed() -> None:
+    # P1 / G5: if the only catalog entries at (or above) the decided tier are UNREVIEWED,
+    # resolve must raise — never silently pick an unreviewed model.
+    from tierrouter.tiers import UNREVIEWED_TIER
+
+    catalog = ModelCatalog(
+        entries=(CatalogEntry("pending", "gemini", UNREVIEWED_TIER, cost=1),)
+    )
+    rules = RuleSet(rules=(Rule.create({"channel_type": "sports"}, "small"),))
+    with pytest.raises(RuleError, match="no catalog model"):
+        resolve({"channel_type": "sports"}, "x", rules, TIERS, catalog=catalog)

@@ -79,13 +79,14 @@ def create() -> FastAPI:
     session_config = SessionConfig(secret=session_secret.strip())
 
     data_dir = os.environ.get("TIERROUTER_DATA") or "data"
-    store = Store(data_dir)
+    catalog_path = os.environ.get("TIERROUTER_CATALOG")
+    # Pass catalog_path into Store so PUT /v1/catalog/{id} can persist tier assignments (P1).
+    store = Store(data_dir, catalog_path=catalog_path)
     users = UsersStore(path=store.root / "users.jsonl")
     seed_path = os.environ.get("TIERROUTER_RULES_SEED")
     if seed_path and store.load_rules().is_empty():
         store.save_rules(rules_from_file(seed_path))
 
-    catalog_path = os.environ.get("TIERROUTER_CATALOG")
     catalog = load_catalog(catalog_path) if catalog_path else None
     quality_field = os.environ.get("TIERROUTER_QUALITY_FIELD") or None
 

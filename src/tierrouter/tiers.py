@@ -2,6 +2,10 @@
 
 No model is called from here or anywhere else in this package (ARCHITECTURE.md §1) — this module
 only resolves a tier name to a model name string.
+
+P1 (PLAN-v2.md §7): `UNREVIEWED_TIER` is a catalog-only sentinel for newly imported models.
+It is never a declared tier in tiers.yaml and never a valid `Rule.tier` — `catalog.pick()`
+excludes every entry with this tier until an admin assigns a real one.
 """
 
 from __future__ import annotations
@@ -12,6 +16,9 @@ from pathlib import Path
 import yaml
 
 from tierrouter.rules import RuleError
+
+# Catalog-only sentinel (P1). Not part of TierTable.names; never routable.
+UNREVIEWED_TIER = "UNREVIEWED"
 
 
 @dataclass(frozen=True)

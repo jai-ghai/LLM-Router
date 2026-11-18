@@ -38,6 +38,7 @@ def _authed_client(
     *,
     role: str = "admin",
     catalog: ModelCatalog | None = None,
+    catalog_path: Path | None = None,
     quality_field: str | None = None,
     allow_read_without_auth: bool = False,
 ) -> TestClient:
@@ -46,7 +47,7 @@ def _authed_client(
     Cost-12 bcrypt is fine per fixture (one hash). If this test suite grows into the
     hundreds of fixtures, swap `hash_password` for a stubbed scheme here.
     """
-    store = Store(tmp_path / "data")
+    store = Store(tmp_path / "data", catalog_path=catalog_path)
     users = UsersStore(path=store.root / "users.jsonl")
     users.add("tester", hash_password("tester-pw"), role)  # type: ignore[arg-type]
     app = create_app(
@@ -62,6 +63,17 @@ def _authed_client(
     login = client.post("/v1/auth/login", json={"username": "tester", "password": "tester-pw"})
     assert login.status_code == 200, login.text
     return client
+
+
+def _write_catalog_yaml(path: Path, catalog: ModelCatalog) -> None:
+    import yaml
+
+    from tierrouter.catalog import entry_to_yaml_dict
+
+    path.write_text(
+        yaml.safe_dump({"catalog": [entry_to_yaml_dict(e) for e in catalog.entries]}, sort_keys=False),
+        encoding="utf-8",
+    )
 
 
 @pytest.fixture
@@ -469,6 +481,63 @@ def test_quality_field_endpoint_returns_configured_field_or_null(tmp_path: Path)
     assert bare.get("/v1/quality/field").json() == {"field": None}
     with_field = _authed_client(tmp_path / "with", catalog=CATALOG, quality_field="task")
     assert with_field.get("/v1/quality/field").json() == {"field": "task"}
+
+
+def _seed_catalog_yaml(path: Path) -> ModelCatalog:
+    """Write a tiny catalog.yaml and return the matching in-memory ModelCatalog (P1 tests)."""
+    path.write_text(
+        "catalog:\n"
+        "  - id: cheap-small\n    provider: gemini\n    tier: small\n    cost: 1\n"
+        "    supports_image: true\n    label: Cheap Small\n"
+        "  - id: pending-model\n    provider: openai\n    tier: UNREVIEWED\n    cost: 2\n"
+        "    supports_image: true\n    label: Pending\n",
+        encoding="utf-8",
+    )
+    from tierrouter.catalog import load_catalog
+
+    return load_catalog(path)
+
+
+def test_put_catalog_tier_as_admin_updates_and_persists(tmp_path: Path) -> None:
+    catalog_path = tmp_path / "catalog.yaml"
+    catalog = _seed_catalog_yaml(catalog_path)
+    client = _authed_client(tmp_path / "admin", role="admin", catalog=catalog, catalog_path=catalog_path)
+    response = client.put("/v1/catalog/pending-model", json={"tier": "medium"})
+    assert response.status_code == 200
+    body = response.json()["catalog"]
+    pending = next(e for e in body if e["id"] == "pending-model")
+    assert pending["tier"] == "medium"
+    assert pending["assigned_by"] == "tester"
+    # Persisted to disk.
+    from tierrouter.catalog import load_catalog
+
+    reloaded = load_catalog(catalog_path)
+    assert next(e for e in reloaded.entries if e.id == "pending-model").tier == "medium"
+    assert next(e for e in reloaded.entries if e.id == "pending-model").assigned_by == "tester"
+
+
+def test_put_catalog_tier_as_member_returns_403(tmp_path: Path) -> None:
+    catalog_path = tmp_path / "catalog.yaml"
+    catalog = _seed_catalog_yaml(catalog_path)
+    client = _authed_client(tmp_path / "member", role="member", catalog=catalog, catalog_path=catalog_path)
+    response = client.put("/v1/catalog/pending-model", json={"tier": "medium"})
+    assert response.status_code == 403
+
+
+def test_put_catalog_tier_unknown_id_returns_404(tmp_path: Path) -> None:
+    catalog_path = tmp_path / "catalog.yaml"
+    catalog = _seed_catalog_yaml(catalog_path)
+    client = _authed_client(tmp_path / "admin", role="admin", catalog=catalog, catalog_path=catalog_path)
+    response = client.put("/v1/catalog/does-not-exist", json={"tier": "small"})
+    assert response.status_code == 404
+
+
+def test_put_catalog_tier_invalid_tier_returns_422(tmp_path: Path) -> None:
+    catalog_path = tmp_path / "catalog.yaml"
+    catalog = _seed_catalog_yaml(catalog_path)
+    client = _authed_client(tmp_path / "admin", role="admin", catalog=catalog, catalog_path=catalog_path)
+    response = client.put("/v1/catalog/pending-model", json={"tier": "giant"})
+    assert response.status_code == 422
 
 
 def test_rating_modal_judged_by_is_session_user(catalog_client: TestClient) -> None:
