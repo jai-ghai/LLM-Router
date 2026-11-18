@@ -106,3 +106,47 @@ def test_coverage_counts_matching_attribute_sets() -> None:
     rules = RuleSet(rules=(Rule.create({"task": "qc_review"}, "large"),))
     attrs = [{"task": "qc_review"}, {"task": "headline_similarity"}, {"task": "qc_review"}]
     assert rules.coverage(attrs) == 2
+
+
+# -----------------------------------------------------------------------------------------
+# P2 — Rule.optimize_for (PLAN-v2.md §5). Two tests enumerated in §5.4, plus one for
+# YAML rejecting an unknown mode.
+# -----------------------------------------------------------------------------------------
+
+
+def test_rule_carries_optimize_for_and_create_rejects_unknown() -> None:
+    # Happy path: create() accepts a valid mode and stores it; match() returns the same
+    # Rule so resolve() can read it. Bad mode: create() raises RuleError rather than
+    # silently accepting a typo that would then fail later at pick() time.
+    rule = Rule.create({"task": "qc_review"}, "large", optimize_for="accuracy")
+    assert rule.optimize_for == "accuracy"
+    assert Rule.create({"task": "qc_review"}, "large").optimize_for is None
+    with pytest.raises(RuleError, match="optimize_for must be one of"):
+        Rule.create({"task": "qc_review"}, "large", optimize_for="speed")  # type: ignore[arg-type]
+
+
+def test_rules_from_file_parses_optimize_for(tmp_path: Path) -> None:
+    # YAML round-trip: a rule with optimize_for loads correctly; a rule without it stays
+    # None (so older rules.yaml files keep working without an upgrade migration).
+    path = tmp_path / "rules.yaml"
+    path.write_text(
+        "rules:\n"
+        "  - when: {task: qc_review}\n    tier: large\n    optimize_for: accuracy\n"
+        "  - when: {task: headline}\n    tier: small\n",
+        encoding="utf-8",
+    )
+    rules = rules_from_file(path)
+    matched = rules.match({"task": "qc_review"})
+    assert matched is not None and matched.optimize_for == "accuracy"
+    matched_plain = rules.match({"task": "headline"})
+    assert matched_plain is not None and matched_plain.optimize_for is None
+
+
+def test_rules_from_file_rejects_unknown_optimize_for(tmp_path: Path) -> None:
+    path = tmp_path / "rules.yaml"
+    path.write_text(
+        "rules:\n  - when: {task: qc_review}\n    tier: large\n    optimize_for: speed\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(RuleError, match="optimize_for"):
+        rules_from_file(path)

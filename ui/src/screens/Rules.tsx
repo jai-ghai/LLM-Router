@@ -22,7 +22,7 @@ import { api, describeError } from '../api'
 import { MetadataFieldsEditor } from '../components/MetadataFieldsEditor'
 import { InfoBanner, Mono, PageHead, Panel, SectionHead, StateTag, StepFlow } from '../components/Primitives'
 import { PALETTE, tierTone } from '../theme'
-import type { RuleEntry } from '../types'
+import type { OptimizeFor, RuleEntry } from '../types'
 
 function describeWhen(when: Record<string, string | string[]>): string {
   return Object.entries(when)
@@ -56,6 +56,10 @@ export function Rules({ tierNames }: { tierNames: string[] }) {
   const [when, setWhen] = useState<Record<string, string>>({})
   const [tier, setTier] = useState('')
   const [priority, setPriority] = useState('0')
+  // P2 — PLAN-v2.md §5. "" (empty string) is the form-level representation of "no per-rule
+  // preference"; it gets translated to null before sending to the backend so the rule round-
+  // trips without an `optimize_for` field at all.
+  const [optimizeFor, setOptimizeFor] = useState<OptimizeFor | ''>('')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -76,6 +80,7 @@ export function Rules({ tierNames }: { tierNames: string[] }) {
     setWhen({})
     setTier('')
     setPriority('0')
+    setOptimizeFor('')
   }
 
   function selectRule(index: number) {
@@ -85,6 +90,7 @@ export function Rules({ tierNames }: { tierNames: string[] }) {
     setWhen(Object.fromEntries(Object.entries(rule.when).map(([k, v]) => [k, fromWhenValue(v)])))
     setTier(rule.tier)
     setPriority(String(rule.priority ?? 0))
+    setOptimizeFor(rule.optimize_for ?? '')
   }
 
   async function save(next: RuleEntry[]) {
@@ -103,7 +109,12 @@ export function Rules({ tierNames }: { tierNames: string[] }) {
     if (Object.keys(when).length === 0 || !tier) return
     const whenWithOr = Object.fromEntries(Object.entries(when).map(([k, v]) => [k, toWhenValue(v)]))
     const parsedPriority = Number.parseInt(priority, 10) || 0
-    const entry: RuleEntry = { when: whenWithOr, tier, priority: parsedPriority }
+    const entry: RuleEntry = {
+      when: whenWithOr,
+      tier,
+      priority: parsedPriority,
+      optimize_for: optimizeFor === '' ? null : optimizeFor,
+    }
     const current = rules ?? []
     const next = editingIndex === null ? [...current, entry] : current.map((r, i) => (i === editingIndex ? entry : r))
     await save(next)
@@ -188,6 +199,7 @@ export function Rules({ tierNames }: { tierNames: string[] }) {
                   <TableCell>#</TableCell>
                   <TableCell>Rule / condition</TableCell>
                   <TableCell>Target tier</TableCell>
+                  <TableCell>Optimise for</TableCell>
                   <TableCell align="right">Priority</TableCell>
                   <TableCell align="center">Status</TableCell>
                   <TableCell align="right" />
@@ -197,14 +209,14 @@ export function Rules({ tierNames }: { tierNames: string[] }) {
                 {rules === null &&
                   [0, 1, 2, 3].map((i) => (
                     <TableRow key={i}>
-                      <TableCell colSpan={6}>
+                      <TableCell colSpan={7}>
                         <Skeleton variant="text" height={28} />
                       </TableCell>
                     </TableRow>
                   ))}
                 {rules !== null && filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6}>
+                    <TableCell colSpan={7}>
                       <Typography sx={{ fontSize: 13, color: PALETTE.textMuted, p: 1 }}>
                         {rules.length === 0 ? 'No rules yet — add one on the right to steer traffic deterministically.' : 'No rules match this filter.'}
                       </Typography>
@@ -232,6 +244,13 @@ export function Rules({ tierNames }: { tierNames: string[] }) {
                     </TableCell>
                     <TableCell>
                       <StateTag label={rule.tier} tone={tierTone(rule.tier)} size="small" />
+                    </TableCell>
+                    <TableCell>
+                      {rule.optimize_for ? (
+                        <StateTag label={rule.optimize_for} tone="default" size="small" />
+                      ) : (
+                        <Mono size={11.5} muted>—</Mono>
+                      )}
                     </TableCell>
                     <TableCell align="right">
                       <Mono size={12} muted={!rule.priority}>
@@ -307,6 +326,21 @@ export function Rules({ tierNames }: { tierNames: string[] }) {
                 slotProps={{ htmlInput: { min: 0 } }}
                 helperText="Breaks a tie between equally specific rules. Default 0."
               />
+              {/* P2 — per-rule optimize_for (PLAN-v2.md §5). "No preference" is the default so
+                  rules created before P2 keep round-tripping without this field at all. */}
+              <TextField
+                select
+                label="Optimise for"
+                value={optimizeFor}
+                onChange={(e) => setOptimizeFor(e.target.value as OptimizeFor | '')}
+                sx={{ maxWidth: 260 }}
+                helperText="Overrides the per-request setting when this rule matches."
+              >
+                <MenuItem value="">No preference (use request's)</MenuItem>
+                <MenuItem value="cost">Cost (cheapest)</MenuItem>
+                <MenuItem value="balanced">Balanced</MenuItem>
+                <MenuItem value="accuracy">Accuracy (highest rated)</MenuItem>
+              </TextField>
               <Typography sx={{ fontSize: 12, color: PALETTE.textMuted }}>
                 Rule matches bypass the classifier.
               </Typography>

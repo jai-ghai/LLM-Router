@@ -127,3 +127,72 @@ def test_resolve_with_a_catalog_honours_the_caller_s_selection() -> None:
         {"channel_type": "sports"}, "x", rules, TIERS, catalog=CATALOG, selected_models={"pricey-small"}
     )
     assert decision.model_name == "pricey-small"
+
+
+# -----------------------------------------------------------------------------------------
+# P2 — optimize_for threading (PLAN-v2.md §5). Two tests enumerated in §5.4.
+# -----------------------------------------------------------------------------------------
+
+
+_P2_CATALOG = ModelCatalog(
+    entries=(
+        CatalogEntry("cheap-small", "gemini", "small", cost=1),
+        CatalogEntry("good-small", "gemini", "small", cost=5),
+    )
+)
+
+
+def test_resolve_threads_optimize_for_through_to_catalog() -> None:
+    # quality_lookup keys are (model_id, metadata[quality_field] value) — here quality_field
+    # is "channel_type", so the second tuple element is "sports" (the value), not the field
+    # name. Accuracy mode must actually pick the higher-rated model; if resolve() silently
+    # drops optimize_for, this assertion fails.
+    rules = RuleSet(rules=(Rule.create({"channel_type": "sports"}, "small"),))
+    quality = {("cheap-small", "sports"): 2.0, ("good-small", "sports"): 4.5}
+    cost_decision = resolve(
+        {"channel_type": "sports"},
+        "x",
+        rules,
+        TIERS,
+        catalog=_P2_CATALOG,
+        quality=quality,
+        quality_field="channel_type",
+        optimize_for="cost",
+    )
+    assert cost_decision.model_name == "cheap-small"
+    assert cost_decision.optimize_for == "cost"
+    accuracy_decision = resolve(
+        {"channel_type": "sports"},
+        "x",
+        rules,
+        TIERS,
+        catalog=_P2_CATALOG,
+        quality=quality,
+        quality_field="channel_type",
+        optimize_for="accuracy",
+    )
+    assert accuracy_decision.model_name == "good-small"
+    assert accuracy_decision.optimize_for == "accuracy"
+
+
+def test_rule_optimize_for_overrides_request_optimize_for() -> None:
+    # Operator pinned this rule to "accuracy" (e.g. qc_review on video). The caller asks for
+    # "cost" anyway — the rule's pin wins. Decision.optimize_for reflects what actually ran,
+    # so a UI can show "rule overrode your request" without parsing the reason string.
+    rule = Rule.create(
+        {"channel_type": "sports"}, "small", optimize_for="accuracy"
+    )
+    rules = RuleSet(rules=(rule,))
+    quality = {("cheap-small", "sports"): 2.0, ("good-small", "sports"): 4.5}
+    decision = resolve(
+        {"channel_type": "sports"},
+        "x",
+        rules,
+        TIERS,
+        catalog=_P2_CATALOG,
+        quality=quality,
+        quality_field="channel_type",
+        optimize_for="cost",  # ignored because the rule pins "accuracy"
+    )
+    assert decision.model_name == "good-small"
+    assert decision.optimize_for == "accuracy"

@@ -49,9 +49,9 @@ blocks for commands and file lists, no emoji.
 
 # Plan v2: Auth, dynamic catalog, accuracy-first routing, modality QC loop
 
-Builds on `PLAN.md` and `ARCHITECTURE.md`. Status: **approved to start coding P0**. All six
-operator decisions in §11 are confirmed. No source changes are made by writing this plan
-itself; each piece (P0, P2, P3, P1) ships as its own focused commit.
+Builds on `PLAN.md` and `ARCHITECTURE.md`. Status: **P0 shipped; P2 shipped; next is P3**.
+All six operator decisions in §11 are confirmed. Each piece (P0, P2, P3, P1) ships as its
+own focused commit.
 
 ## 1. Why this plan exists
 
@@ -551,4 +551,5 @@ End-to-end smoke on each piece (manual, documented in the PR body, not a CI job)
 | Q6.5.b | Allow demote back to UNREVIEWED via UI? | **Yes** |
 | Q6.5.c | Default provider filter on import when none passed? | **Error** with a helpful usage listing common providers |
 
-Status: ready to start **P0 — Auth (Level B)**.
+Status: **P0 shipped** (commit `deb2fc5`). **P2 shipped** (`optimize_for`
+cost/accuracy/balanced). Next: **P3 — Modality expansion + human QC loop**.

@@ -41,7 +41,7 @@ from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.requests import Request as StarletteRequest
 
-from tierrouter.catalog import ModelCatalog
+from tierrouter.catalog import VALID_OPTIMIZE_FOR, ModelCatalog, OptimizeFor
 from tierrouter.classifier import ClassifierError, EvalReport, TierClassifier, evaluate_classifier
 from tierrouter.features import Dinov2Embedder, HashingEmbedder, MetadataEncoder
 from tierrouter.labels import LabelError, labels_from_rules, merge_labels, uncovered_examples
@@ -66,6 +66,9 @@ class RuleIn(BaseModel):
     when: dict[str, str | list[str]]
     tier: str
     priority: int = 0
+    optimize_for: str | None = None
+    """None means "no per-rule preference". When set, it must be one of 'cost', 'accuracy', or
+    'balanced' (validated in `put_rules`); a bad value yields 422."""
 
 
 class RulesUpdate(BaseModel):
@@ -300,6 +303,7 @@ def create_app(
                     "when": {k: (list(v) if len(v) > 1 else v[0]) for k, v in r.when.items()},
                     "tier": r.tier,
                     "priority": r.priority,
+                    "optimize_for": r.optimize_for,
                 }
                 for r in rules.rules
             ]
@@ -311,8 +315,29 @@ def create_app(
 
     @app.put("/v1/rules")
     def put_rules(update: RulesUpdate, _: User = Depends(require_user)) -> dict[str, Any]:
+        for index, r in enumerate(update.rules):
+            if r.optimize_for is not None and r.optimize_for not in VALID_OPTIMIZE_FOR:
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        f"rules[{index}].optimize_for must be one of "
+                        f"{list(VALID_OPTIMIZE_FOR)!r} or null; got '{r.optimize_for}'"
+                    ),
+                )
         try:
-            rules = RuleSet(rules=tuple(Rule.create(r.when, r.tier, r.priority) for r in update.rules))
+            rules = RuleSet(
+                rules=tuple(
+                    Rule.create(
+                        r.when,
+                        r.tier,
+                        r.priority,
+                        # Narrowed by the membership check above; mypy can't flow-type this
+                        # through a str param so it needs the Any hop.
+                        optimize_for=(r.optimize_for or None),  # type: ignore[arg-type]
+                    )
+                    for r in update.rules
+                )
+            )
             validate_setup(rules, tiers)
         except (RuleError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -524,6 +549,7 @@ def create_app(
         min_confidence: Annotated[float, Form()] = 0.0,
         selected_models: Annotated[str | None, Form()] = None,
         min_quality: Annotated[float | None, Form()] = None,
+        optimize_for: Annotated[str, Form()] = "cost",
         image: Annotated[UploadFile | None, File()] = None,
         user: User = Depends(require_user),
     ) -> Decision:
@@ -533,6 +559,16 @@ def create_app(
             parsed = _json.loads(metadata)
         except _json.JSONDecodeError as exc:
             raise HTTPException(status_code=422, detail=f"'metadata' is not valid JSON: {exc}") from exc
+        if optimize_for not in VALID_OPTIMIZE_FOR:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"'optimize_for' must be one of {list(VALID_OPTIMIZE_FOR)!r}; "
+                    f"got '{optimize_for}'"
+                ),
+            )
+        # Membership check above is enough for mypy to narrow the form field to OptimizeFor.
+        optimize_for_literal: OptimizeFor = optimize_for
         selected: list[str] | None = None
         if selected_models:
             try:
@@ -567,6 +603,7 @@ def create_app(
                 quality=quality_scores,
                 quality_field=state.quality_field,
                 min_quality=min_quality,
+                optimize_for=optimize_for_literal,
             )
         except (RuleError, ClassifierError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -580,6 +617,10 @@ def create_app(
                 "provider": provider,
                 "selected_models": selected,
                 "min_quality": min_quality,
+                # Record what the caller asked for AND what actually drove the pick (a rule's
+                # own optimize_for can override the request's — see decision.optimize_for).
+                "optimize_for_requested": optimize_for_literal,
+                "optimize_for": decision.optimize_for,
                 "tier": decision.tier,
                 "model_name": decision.model_name,
                 "confidence": decision.confidence,

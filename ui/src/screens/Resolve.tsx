@@ -9,6 +9,8 @@ import {
   Tab,
   Tabs,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from '@mui/material'
 import { useEffect, useState } from 'react'
@@ -17,7 +19,7 @@ import { ImagePicker } from '../components/ImagePicker'
 import { MetadataFieldsEditor } from '../components/MetadataFieldsEditor'
 import { InfoBanner, Mono, PageHead, Panel, ResolutionPath, SectionHead, StateTag, StepFlow } from '../components/Primitives'
 import { PALETTE, TONE_SOFT, tierTone } from '../theme'
-import type { Decision, TiersResponse } from '../types'
+import type { Decision, OptimizeFor, TiersResponse } from '../types'
 
 export function Resolve({
   tiers,
@@ -36,6 +38,7 @@ export function Resolve({
   const [minConfidence, setMinConfidence] = useState(0)
   const [minQuality, setMinQuality] = useState(0)
   const [qualityField, setQualityField] = useState<string | null>(null)
+  const [optimizeFor, setOptimizeFor] = useState<OptimizeFor>('cost')
   const [decision, setDecision] = useState<Decision | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -61,6 +64,7 @@ export function Resolve({
     setProvider('')
     setMinConfidence(0)
     setMinQuality(0)
+    setOptimizeFor('cost')
     setDecision(null)
     setError('')
   }
@@ -80,6 +84,7 @@ export function Resolve({
           minConfidence,
           selectedModels: selectedModels ? Array.from(selectedModels) : null,
           minQuality: qualityField ? minQuality : undefined,
+          optimizeFor,
         }),
       )
       onResolved()
@@ -206,6 +211,33 @@ export function Resolve({
                 />
               </Stack>
 
+              {/* P2 — three-way selection mode (PLAN-v2.md §5). "Cost" keeps the original
+                  behaviour so this is safe to default to; "Accuracy" and "Balanced" use
+                  recorded human ratings and fall back to cost with a visible note if no
+                  ratings exist. A matching rule's own optimize_for overrides this. */}
+              <Stack spacing={0.5}>
+                <Typography sx={{ fontSize: 12, color: PALETTE.textMuted }}>
+                  Optimise for
+                </Typography>
+                <ToggleButtonGroup
+                  size="small"
+                  exclusive
+                  value={optimizeFor}
+                  onChange={(_, v: OptimizeFor | null) => {
+                    if (v) setOptimizeFor(v)
+                  }}
+                  aria-label="Selection mode"
+                  sx={{ '& .MuiToggleButton-root': { fontSize: 11.5, textTransform: 'none', px: 1.5 } }}
+                >
+                  <ToggleButton value="cost" aria-label="Cost">Cost (cheapest)</ToggleButton>
+                  <ToggleButton value="balanced" aria-label="Balanced">Balanced</ToggleButton>
+                  <ToggleButton value="accuracy" aria-label="Accuracy">Accuracy (highest rated)</ToggleButton>
+                </ToggleButtonGroup>
+                <Typography sx={{ fontSize: 11, color: PALETTE.textFaint }}>
+                  Accuracy / Balanced need human ratings for your metadata value. If none exist, the request silently uses Cost and the decision will say so.
+                </Typography>
+              </Stack>
+
               <Typography sx={{ fontSize: 11.5, color: PALETTE.textFaint }}>
                 Candidate models: {selectedModels ? `${selectedModels.size} selected in Model catalog` : 'all models in the catalog (or tiers.yaml, if none is configured)'}
               </Typography>
@@ -292,6 +324,20 @@ export function Resolve({
                     Why this tier
                   </Typography>
                   <Typography sx={{ fontSize: 12.5, color: PALETTE.textSecondary }}>{decision.reason}</Typography>
+                </Box>
+
+                <Box>
+                  <Typography sx={{ fontSize: 11, fontWeight: 650, letterSpacing: '0.04em', textTransform: 'uppercase', color: PALETTE.textMuted, mb: 0.5 }}>
+                    Selection mode
+                  </Typography>
+                  <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                    <StateTag label={decision.optimize_for} tone="default" size="small" />
+                    {decision.optimize_for !== optimizeFor && (
+                      <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted }}>
+                        (rule overrode your request of "{optimizeFor}")
+                      </Typography>
+                    )}
+                  </Stack>
                 </Box>
 
                 <Box>

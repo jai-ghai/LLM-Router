@@ -1,26 +1,43 @@
 """Model catalog: multiple candidate models per tier, each with a declared cost and whether it
-accepts an image.
+accepts an image, plus a selection mode ("cost" / "accuracy" / "balanced").
 
 Optional layer on top of tiers.yaml's simple "one model per tier per provider" mapping
-(tiers.py). When a catalog is supplied, resolve() picks from it instead: the cheapest catalog
-model that matches the tier a rule or the classifier decided on, filtered to whatever subset of
-the catalog the caller selected (or all of it), the requested provider, and whether the request
-has an image. It never substitutes a model BELOW the decided tier — only at or above it, if the
-exact tier has no match in the current selection.
+(tiers.py). When a catalog is supplied, resolve() picks from it instead: the best catalog
+model that matches the tier a rule or the classifier decided on, filtered to whatever subset
+of the catalog the caller selected (or all of it), the requested provider, and the modalities
+the request needs. It never substitutes a model BELOW the decided tier — only at or above it,
+if the exact tier has no match in the current selection (G2 in PLAN-v2.md §3).
 
-No model is called from here or anywhere else in this package (ARCHITECTURE.md §1) — this module
-only picks a model id string from a config file, same discipline as tiers.py.
+`optimize_for` (P2) decides which of the matching candidates wins:
+  - "cost": cheapest (the original behaviour; stays the default so nothing changes for
+    callers that don't opt in).
+  - "accuracy": the candidate with the highest human quality rating for this request's
+    (model_id, metadata-field value) pair, cost as tiebreaker. Falls back to "cost" with a
+    visible note when no ratings exist for any candidate — honest about why.
+  - "balanced": `quality / log1p(cost + 1)` as a bluntly-labelled heuristic; same
+    fall-back-to-cost behaviour when ratings are missing.
+
+Unreviewed models (G4) stay eligible in every mode — accuracy mode just can't score them, so
+if the pool is all unreviewed, the mode falls back to cost with a note.
+
+No model is called from here or anywhere else in this package (ARCHITECTURE.md §1) — this
+module only picks a model id string from a config file, same discipline as tiers.py.
 """
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 import yaml
 
 from tierrouter.rules import RuleError
+
+OptimizeFor = Literal["cost", "accuracy", "balanced"]
+VALID_OPTIMIZE_FOR: tuple[OptimizeFor, ...] = ("cost", "accuracy", "balanced")
 
 
 def _passes_quality(
@@ -28,6 +45,71 @@ def _passes_quality(
 ) -> bool:
     score = quality.get((entry.id, quality_value))
     return score is None or score >= min_quality
+
+
+def _choose_by_mode(
+    candidates: list[CatalogEntry],
+    mode: OptimizeFor,
+    quality: Mapping[tuple[str, str], float] | None,
+    quality_value: str | None,
+) -> tuple[CatalogEntry, str | None]:
+    """Pick one entry from a non-empty candidate list using the chosen mode.
+
+    Cost mode is the original behaviour: cheapest, with model id as a stable tiebreaker.
+    Accuracy mode maximises the recorded human rating for (id, quality_value) — cost is the
+    tiebreaker (cheapest wins among equally-rated), then id. Balanced mode maximises
+    `rating / log1p(cost + 1)` on the same rated subset.
+
+    Accuracy and balanced modes need ratings. If the caller didn't supply any, or none of the
+    candidates has a rating for this quality_value, both modes fall back to cost and return a
+    note that says exactly why — rather than silently pretending the request was ranked by
+    quality when it wasn't.
+    """
+    if not candidates:  # defensive; callers already guard this
+        raise RuleError("no candidates to choose from")
+    if mode == "cost":
+        return min(candidates, key=lambda e: (e.cost, e.id)), None
+
+    # accuracy / balanced both need ratings for THIS request's quality_value.
+    # Distinguish "caller didn't pass a quality map at all" (None) from "caller passed
+    # an empty map" ({}) — both mean no ratings, but the note should say so honestly.
+    # Using `is None` (not `not quality`) so an empty dict still reaches the
+    # "no candidate has a rating" branch below.
+    if quality is None or not quality_value:
+        chosen = min(candidates, key=lambda e: (e.cost, e.id))
+        return chosen, (
+            f"optimize_for='{mode}' requested but no quality ratings were provided; "
+            "used cost instead"
+        )
+    scored = [(e, quality.get((e.id, quality_value))) for e in candidates]
+    rated = [(e, r) for e, r in scored if r is not None]
+    if not rated:
+        chosen = min(candidates, key=lambda e: (e.cost, e.id))
+        return chosen, (
+            f"optimize_for='{mode}' requested but no candidate has a rating for "
+            f"value='{quality_value}'; used cost instead"
+        )
+    # Sort by (primary score DESC, cost ASC, id ASC) so the first entry is the winner.
+    # Using sorted() for the id tiebreak because negating a string is awkward in a max() key.
+    if mode == "accuracy":
+        ordered = sorted(rated, key=lambda pair: (-pair[1], pair[0].cost, pair[0].id))
+        return ordered[0][0], None
+    # balanced
+    ordered = sorted(
+        rated,
+        key=lambda pair: (
+            -(pair[1] / math.log1p(pair[0].cost + 1.0)),
+            pair[0].cost,
+            pair[0].id,
+        ),
+    )
+    return ordered[0][0], None
+
+
+def _compose_note(*notes: str | None) -> str | None:
+    """Join non-empty notes with '; '. Returns None when nothing had to be explained."""
+    parts = [n for n in notes if n]
+    return "; ".join(parts) if parts else None
 
 
 @dataclass(frozen=True)
@@ -63,21 +145,36 @@ class ModelCatalog:
         quality: Mapping[tuple[str, str], float] | None = None,
         quality_value: str | None = None,
         min_quality: float | None = None,
+        optimize_for: OptimizeFor = "cost",
     ) -> tuple[CatalogEntry, str | None]:
-        """The cheapest entry at `tier`, from the given selection/provider/image/quality filter.
+        """One entry from `tier`, chosen by `optimize_for` from the selection/provider/image
+        filter, with an optional quality floor layered on top.
 
         `quality`/`quality_value`/`min_quality` are an optional human-reviewed quality floor
-        (see quality.py) — cost matters, but for some use cases (ARCHITECTURE.md's video-QC
+        (see quality.py) — cost matters, but for some use cases (PLAN-v2.md §1's video-QC
         example) a wrong answer costs more than a cheap model saves. A candidate is excluded
         only if it HAS a recorded average rating for `quality_value` and that rating is below
         `min_quality`; a model nobody has reviewed yet is never excluded for failing a check
-        that was never run on it. If the floor would leave nothing to choose from at all, it is
-        dropped (noted) rather than failing the request outright — a stale catalog shouldn't be
+        that was never run on it (G4). If the floor would leave nothing to choose from at all,
+        it is dropped (noted) rather than failing the request — a stale catalog shouldn't be
         able to block every request.
 
-        Returns `(entry, note)`. `note` is `None` when nothing needed explaining, or describes a
-        tier substitution and/or a quality-floor effect — never both silently.
+        `optimize_for` controls which of the candidates wins (P2 — PLAN-v2.md §5):
+          - "cost" (default): cheapest. Unchanged behaviour, so existing callers see no
+            difference.
+          - "accuracy": candidate with the highest human rating for (id, quality_value); cost
+            is the tiebreaker, id for determinism. Fall back to cost + note when ratings are
+            missing — honest rather than silent.
+          - "balanced": `rating / log1p(cost + 1)` on the rated subset; same fallback.
+
+        Returns `(entry, note)`. `note` is `None` when nothing needed explaining; otherwise it
+        describes the tier substitution and/or quality-floor effect and/or optimize_for
+        fall-back, joined by `; ` — never silently combined, never silently dropped.
         """
+        if optimize_for not in VALID_OPTIMIZE_FOR:
+            raise RuleError(
+                f"optimize_for must be one of {VALID_OPTIMIZE_FOR!r}; got '{optimize_for}'"
+            )
         candidates = [
             e
             for e in self.entries
@@ -111,15 +208,21 @@ class ModelCatalog:
             raise RuleError(f"'{tier}' is not a declared tier")
         exact = [e for e in candidates if e.tier == tier]
         if exact:
-            return min(exact, key=lambda e: e.cost), quality_note
+            chosen, mode_note = _choose_by_mode(exact, optimize_for, quality, quality_value)
+            return chosen, _compose_note(quality_note, mode_note)
         above = [e for e in candidates if tier_rank.get(e.tier, -1) > wanted_rank]
         if above:
-            chosen = min(above, key=lambda e: (tier_rank.get(e.tier, 0), e.cost))
+            # Pick the lowest-rank tier that's still above the decided one (G2: never
+            # downgrade), then apply the chosen mode WITHIN that bucket — so accuracy mode
+            # doesn't jump to a much larger tier just because something there is rated higher.
+            lowest_above = min(tier_rank.get(e.tier, 0) for e in above)
+            at_lowest = [e for e in above if tier_rank.get(e.tier, -1) == lowest_above]
+            chosen, mode_note = _choose_by_mode(at_lowest, optimize_for, quality, quality_value)
             tier_note = (
                 f"no '{tier}' model in the current selection; used '{chosen.tier}' model "
                 f"'{chosen.id}' instead — never downgraded below the decided tier"
             )
-            return chosen, f"{tier_note}; {quality_note}" if quality_note else tier_note
+            return chosen, _compose_note(tier_note, quality_note, mode_note)
         raise RuleError(
             f"no catalog model at tier '{tier}' or above is available in the current "
             "selection/provider/image filters"
