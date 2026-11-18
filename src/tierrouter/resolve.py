@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 
-from tierrouter.catalog import ModelCatalog
+from tierrouter.catalog import ModelCatalog, OptimizeFor
 from tierrouter.classifier import TierClassifier
 from tierrouter.rules import RuleSet, canonical_value
 from tierrouter.tiers import TierTable
@@ -30,6 +30,9 @@ class Decision:
     """None means "not used". The structured counterpart to `reason`'s prose, one entry per
     precedence step (rule, then classifier, then fallback) — a UI can render this as a trace
     instead of parsing the sentence in `reason`."""
+    optimize_for: OptimizeFor = "cost"
+    """Which mode actually drove the catalog pick: the request's value, unless a matching rule
+    pinned its own — then the rule's wins (so a UI can show the operator what really ran)."""
 
 
 def validate_setup(rules: RuleSet, tiers: TierTable) -> None:
@@ -51,6 +54,7 @@ def resolve(
     quality: Mapping[tuple[str, str], float] | None = None,
     quality_field: str | None = None,
     min_quality: float | None = None,
+    optimize_for: OptimizeFor = "cost",
 ) -> Decision:
     """Precedence: a matching rule wins outright, then the classifier, then the fallback tier.
 
@@ -71,14 +75,24 @@ def resolve(
     reviews by (e.g. "task"); this request's own `metadata[quality_field]` is looked up
     automatically. Omit `min_quality` (the default) to ignore quality entirely and pick on cost
     alone, as before this existed.
+
+    `optimize_for` (P2 — PLAN-v2.md §5) picks which candidate wins at the decided tier: "cost"
+    (cheapest, default), "accuracy" (highest human rating), or "balanced" (quality/cost
+    heuristic). A matching rule's own `optimize_for` takes precedence over this argument — an
+    operator pinning "qc_review on video → accuracy" wins even if a caller forgot to ask for
+    it.
     """
-    hit = rules.resolve(metadata)
-    if hit is not None:
-        tier, reason = hit
+    effective_optimize_for: OptimizeFor = optimize_for
+    matched_rule = rules.match(metadata)
+    if matched_rule is not None:
+        tier = matched_rule.tier
+        reason = f"rule {matched_rule.describe()}"
         confidence: float | None = 1.0
         rule_outcome = reason
         classifier_outcome: str | None = None
         fallback_outcome: str | None = None
+        if matched_rule.optimize_for is not None:
+            effective_optimize_for = matched_rule.optimize_for
     elif classifier is not None:
         predicted_tier, predicted_confidence = classifier.predict(metadata, text, image_bytes)
         rule_outcome = "no matching rule"
@@ -116,6 +130,7 @@ def resolve(
             quality=quality,
             quality_value=quality_value or None,
             min_quality=min_quality,
+            optimize_for=effective_optimize_for,
         )
         model_name = entry.id
         if note:
@@ -130,4 +145,5 @@ def resolve(
         rule_outcome=rule_outcome,
         classifier_outcome=classifier_outcome,
         fallback_outcome=fallback_outcome,
+        optimize_for=effective_optimize_for,
     )

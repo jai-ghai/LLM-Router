@@ -122,3 +122,154 @@ def test_quality_floor_is_ignored_rather_than_failing_the_request_if_nothing_pas
     entry, note = catalog.pick("medium", RANK, quality=quality, quality_value="qc_review", min_quality=4.0)
     assert entry.id == "weak"
     assert note is not None and "ignored the bar" in note
+
+
+# -----------------------------------------------------------------------------------------
+# P2 — optimize_for selection mode (PLAN-v2.md §5). Six tests enumerated in §5.4, plus one
+# defence-in-depth test for an invalid mode string.
+# -----------------------------------------------------------------------------------------
+
+
+def test_pick_accuracy_picks_highest_rated_when_ratings_exist() -> None:
+    # Two medium candidates; the pricier one has a better human rating. Accuracy mode should
+    # prefer the rated-higher model even though it's dearer — the whole point of P2.
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("cheap-medium", "gemini", "medium", cost=1),
+            CatalogEntry("good-medium", "gemini", "medium", cost=5),
+        )
+    )
+    quality = {("cheap-medium", "qc_review"): 2.5, ("good-medium", "qc_review"): 4.5}
+    entry, note = catalog.pick(
+        "medium",
+        RANK,
+        quality=quality,
+        quality_value="qc_review",
+        optimize_for="accuracy",
+    )
+    assert entry.id == "good-medium"
+    assert note is None  # cleanest path — no fall-back, no floor, nothing to explain
+
+
+def test_pick_accuracy_falls_back_to_cost_with_note_when_no_ratings() -> None:
+    # No ratings exist for this (model, qc_review) pair at all. Accuracy mode has nothing to
+    # rank with, so it must fall back to cost AND say so — silent fall-back would be dishonest.
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("a", "gemini", "medium", cost=1),
+            CatalogEntry("b", "gemini", "medium", cost=5),
+        )
+    )
+    entry, note = catalog.pick(
+        "medium",
+        RANK,
+        quality={},
+        quality_value="qc_review",
+        optimize_for="accuracy",
+    )
+    assert entry.id == "a"  # cheapest
+    assert note is not None and "accuracy" in note and "no candidate has a rating" in note
+
+
+def test_pick_accuracy_respects_min_quality_floor() -> None:
+    # A rated 4.5, B rated 2.0, C unrated (cheapest). Floor=3.0: B is dropped, A and C stay.
+    # Accuracy mode then picks A (highest rating). Note must mention the floor exclusion.
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("a", "gemini", "medium", cost=5),
+            CatalogEntry("b", "gemini", "medium", cost=3),
+            CatalogEntry("c", "gemini", "medium", cost=1),
+        )
+    )
+    quality = {("a", "qc_review"): 4.5, ("b", "qc_review"): 2.0}
+    entry, note = catalog.pick(
+        "medium",
+        RANK,
+        quality=quality,
+        quality_value="qc_review",
+        min_quality=3.0,
+        optimize_for="accuracy",
+    )
+    assert entry.id == "a"
+    assert note is not None and "excluded" in note and "3.0" in note
+
+
+def test_pick_accuracy_unreviewed_model_still_eligible() -> None:
+    # G4 regression: an unreviewed model must stay a candidate. When it's the only choice,
+    # accuracy mode falls back to cost (there's nothing to rank), but it does NOT filter the
+    # unreviewed model out of the pool.
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("rated", "gemini", "medium", cost=5),
+            CatalogEntry("unrated", "gemini", "medium", cost=1),
+        )
+    )
+    quality = {("rated", "qc_review"): 4.0}
+    # Both available: rated wins on accuracy.
+    entry, _ = catalog.pick(
+        "medium", RANK, quality=quality, quality_value="qc_review", optimize_for="accuracy"
+    )
+    assert entry.id == "rated"
+    # Only unrated in the selection: it still gets returned (not dropped as "no accuracy score").
+    entry, note = catalog.pick(
+        "medium",
+        RANK,
+        selected={"unrated"},
+        quality=quality,
+        quality_value="qc_review",
+        optimize_for="accuracy",
+    )
+    assert entry.id == "unrated"
+    assert note is not None and "no candidate has a rating" in note
+
+
+def test_pick_balanced_prefers_cheap_when_quality_ties() -> None:
+    # Two candidates with identical ratings: balanced mode breaks the tie by preferring the
+    # cheaper model (higher rating/cost ratio). Cost mode would pick cheap too; this confirms
+    # balanced is at least as cost-aware as cost on a quality-tie.
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("cheap", "gemini", "medium", cost=1),
+            CatalogEntry("pricey", "gemini", "medium", cost=10),
+        )
+    )
+    quality = {("cheap", "qc_review"): 4.0, ("pricey", "qc_review"): 4.0}
+    entry, note = catalog.pick(
+        "medium",
+        RANK,
+        quality=quality,
+        quality_value="qc_review",
+        optimize_for="balanced",
+    )
+    assert entry.id == "cheap"
+    assert note is None
+
+
+def test_pick_never_downgrades_below_decided_tier_in_any_mode() -> None:
+    # G2 regression: even when accuracy mode would "prefer" a higher-rated larger model, the
+    # per-tier scope keeps the pick at the DECIDED tier. We decide "small"; there is a small
+    # candidate rated 2.0 and a large candidate rated 5.0 — small must still win in every mode.
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("ok-small", "gemini", "small", cost=1),
+            CatalogEntry("great-large", "gemini", "large", cost=10),
+        )
+    )
+    quality = {("ok-small", "qc_review"): 2.0, ("great-large", "qc_review"): 5.0}
+    for mode in ("cost", "accuracy", "balanced"):
+        entry, _ = catalog.pick(
+            "small",
+            RANK,
+            quality=quality,
+            quality_value="qc_review",
+            optimize_for=mode,  # type: ignore[arg-type]
+        )
+        assert entry.id == "ok-small", f"mode={mode} downgraded/upgraded unexpectedly"
+
+
+def test_pick_rejects_unknown_optimize_for_values() -> None:
+    # Defence in depth: the service layer validates optimize_for too (422), but this guards
+    # anyone who passes raw strings in to pick() directly from a script or test.
+    catalog = ModelCatalog(entries=(CatalogEntry("a", "gemini", "small", cost=1),))
+    with pytest.raises(RuleError, match="optimize_for must be one of"):
+        catalog.pick("small", RANK, optimize_for="speed")  # type: ignore[arg-type]

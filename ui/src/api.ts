@@ -4,6 +4,7 @@ import type {
   Decision,
   ExampleRow,
   HistoryEntry,
+  OptimizeFor,
   QualityResponse,
   RuleEntry,
   RulesResponse,
@@ -109,6 +110,7 @@ export const api = {
       minConfidence?: number
       selectedModels?: string[] | null
       minQuality?: number
+      optimizeFor?: OptimizeFor
     },
   ) => {
     const form = toFormData(input)
@@ -116,6 +118,7 @@ export const api = {
     if (input.minConfidence !== undefined) form.set('min_confidence', String(input.minConfidence))
     if (input.selectedModels) form.set('selected_models', JSON.stringify(input.selectedModels))
     if (input.minQuality !== undefined) form.set('min_quality', String(input.minQuality))
+    if (input.optimizeFor) form.set('optimize_for', input.optimizeFor)
     return request<Decision>('/v1/resolve', { method: 'POST', body: form })
   },
 }

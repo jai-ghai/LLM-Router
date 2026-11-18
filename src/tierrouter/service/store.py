@@ -92,6 +92,9 @@ class Store:
                     "when": {k: (list(v) if len(v) > 1 else v[0]) for k, v in rule.when.items()},
                     "tier": rule.tier,
                     **({"priority": rule.priority} if rule.priority else {}),
+                    # Only emit optimize_for when the rule actually sets one, so rules created
+                    # before P2 keep round-tripping unchanged (no silent "cost" injection).
+                    **({"optimize_for": rule.optimize_for} if rule.optimize_for else {}),
                 }
                 for rule in rules.rules
             ]

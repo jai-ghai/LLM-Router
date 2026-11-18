@@ -10,10 +10,16 @@ export interface TiersResponse {
   low_confidence_fallback: string
 }
 
+// P2 — accuracy-first selection mode (PLAN-v2.md §5). `null` on a rule means "no per-rule
+// preference"; a string value forces that mode when the rule matches, overriding whatever the
+// request asked for.
+export type OptimizeFor = 'cost' | 'accuracy' | 'balanced'
+
 export interface RuleEntry {
   when: Record<string, string | string[]>
   tier: string
   priority?: number
+  optimize_for?: OptimizeFor | null
 }
 
 export interface CatalogEntry {
@@ -33,6 +39,8 @@ export interface HistoryEntry {
   provider: string | null
   selected_models: string[] | null
   min_quality: number | null
+  optimize_for_requested?: OptimizeFor
+  optimize_for?: OptimizeFor
   tier: string
   model_name: string
   confidence: number | null
@@ -118,4 +126,5 @@ export interface Decision {
   rule_outcome: string
   classifier_outcome: string | null
   fallback_outcome: string | null
+  optimize_for: OptimizeFor
 }

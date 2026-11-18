@@ -106,7 +106,8 @@ def test_rules_round_trip_and_validation(client: TestClient) -> None:
     good = {"rules": [{"when": {"task": "news"}, "tier": "small"}]}
     response = client.put("/v1/rules", json=good)
     assert response.status_code == 200
-    expected = [{"when": {"task": "news"}, "tier": "small", "priority": 0}]
+    # P2 adds optimize_for to the wire shape; absent on the put means null on the get.
+    expected = [{"when": {"task": "news"}, "tier": "small", "priority": 0, "optimize_for": None}]
     assert client.get("/v1/rules").json()["rules"] == expected
 
     bad = {"rules": [{"when": {"task": "news"}, "tier": "giant"}]}
@@ -345,3 +346,101 @@ def test_resolve_min_quality_has_no_effect_without_quality_field(catalog_client:
         data={"metadata": json.dumps({"task": "news"}), "text": "", "min_quality": "3.0"},
     ).json()
     assert decision["model_name"] == "cheap-small"  # no TIERROUTER_QUALITY_FIELD configured -> ignored
+
+
+# -----------------------------------------------------------------------------------------
+# P2 — /v1/resolve optimize_for form field (PLAN-v2.md §5.4).
+# -----------------------------------------------------------------------------------------
+
+
+def test_resolve_endpoint_accepts_optimize_for_cost_accuracy_balanced(
+    quality_client: TestClient,
+) -> None:
+    # Seed a rule + two ratings so accuracy mode has something to rank. Cost → cheapest,
+    # accuracy → highest-rated. Decision.optimize_for echoes what actually drove the pick.
+    quality_client.put("/v1/rules", json={"rules": [{"when": {"task": "news"}, "tier": "small"}]})
+    quality_client.post(
+        "/v1/quality",
+        json={"model_id": "cheap-small", "metadata": {"task": "news"}, "rating": 2, "judged_by": "a"},
+    )
+    quality_client.post(
+        "/v1/quality",
+        json={"model_id": "pricey-small", "metadata": {"task": "news"}, "rating": 5, "judged_by": "a"},
+    )
+    cost = quality_client.post(
+        "/v1/resolve",
+        data={
+            "metadata": json.dumps({"task": "news"}),
+            "text": "",
+            "optimize_for": "cost",
+        },
+    ).json()
+    assert cost["model_name"] == "cheap-small"
+    assert cost["optimize_for"] == "cost"
+    accuracy = quality_client.post(
+        "/v1/resolve",
+        data={
+            "metadata": json.dumps({"task": "news"}),
+            "text": "",
+            "optimize_for": "accuracy",
+        },
+    ).json()
+    assert accuracy["model_name"] == "pricey-small"
+    assert accuracy["optimize_for"] == "accuracy"
+    # balanced is accepted (doesn't 422) and returns a Decision with optimize_for echoed.
+    balanced = quality_client.post(
+        "/v1/resolve",
+        data={
+            "metadata": json.dumps({"task": "news"}),
+            "text": "",
+            "optimize_for": "balanced",
+        },
+    )
+    assert balanced.status_code == 200
+    assert balanced.json()["optimize_for"] == "balanced"
+
+
+def test_resolve_endpoint_rejects_invalid_optimize_for_with_422(client: TestClient) -> None:
+    response = client.post(
+        "/v1/resolve",
+        data={
+            "metadata": json.dumps({"task": "news"}),
+            "text": "",
+            "optimize_for": "speed",
+        },
+    )
+    assert response.status_code == 422
+    assert "optimize_for" in str(response.json()["detail"])
+
+
+def test_rules_endpoint_roundtrips_optimize_for(client: TestClient) -> None:
+    # Operators can pin a mode on a rule; it round-trips through PUT → GET → disk.
+    put = client.put(
+        "/v1/rules",
+        json={
+            "rules": [
+                {
+                    "when": {"task": "qc_review"},
+                    "tier": "large",
+                    "optimize_for": "accuracy",
+                }
+            ]
+        },
+    )
+    assert put.status_code == 200
+    body = client.get("/v1/rules").json()["rules"]
+    assert body == [
+        {
+            "when": {"task": "qc_review"},
+            "tier": "large",
+            "priority": 0,
+            "optimize_for": "accuracy",
+        }
+    ]
+    # Bad mode → 422, previous rules unchanged.
+    bad = client.put(
+        "/v1/rules",
+        json={"rules": [{"when": {"task": "qc_review"}, "tier": "large", "optimize_for": "speed"}]},
+    )
+    assert bad.status_code == 422
+    assert client.get("/v1/rules").json()["rules"] == body

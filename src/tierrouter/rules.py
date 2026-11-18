@@ -1,12 +1,18 @@
-"""Rule overrides: when these attributes match, use this tier. Most specific rule wins, then
-highest `priority` breaks a tie between equally specific rules.
+"""Rule overrides: when these attributes match, use this tier (and optionally force a
+selection mode). Most specific rule wins, then highest `priority` breaks a tie between equally
+specific rules.
 
-Trimmed port of the earlier R&D/llmrouter project's rules.py (ADR-0013 there): same matching and
-precedence, no RuleStore/history (that was for a live-editable service, which does not exist in
-this phase), and validation is against tier names from tiers.yaml rather than a model registry.
+Trimmed port of the earlier R&D/llmrouter project's rules.py (ADR-0013 there): same matching
+and precedence, no RuleStore/history (that was for a live-editable service, which does not
+exist in this phase), and validation is against tier names from tiers.yaml rather than a model
+registry.
 
-A field's value may be a single string or a list of strings (OR match) — e.g. a rule that fires
-for `task in {qc_review, audit}` without needing two separate rules.
+A field's value may be a single string or a list of strings (OR match) — e.g. a rule that
+fires for `task in {qc_review, audit}` without needing two separate rules.
+
+Each rule may optionally pin an `optimize_for` mode ("cost"/"accuracy"/"balanced"). When set,
+it overrides the per-request default — so an operator can mark "qc_review on video" as
+always-accuracy without changing every caller (P2 — PLAN-v2.md §5).
 """
 
 from __future__ import annotations
@@ -14,8 +20,12 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Literal
 
 import yaml
+
+OptimizeFor = Literal["cost", "accuracy", "balanced"]
+VALID_OPTIMIZE_FOR: tuple[OptimizeFor, ...] = ("cost", "accuracy", "balanced")
 
 
 class RuleError(ValueError):
@@ -49,6 +59,11 @@ class Rule:
     when: Mapping[str, tuple[str, ...]]
     tier: str
     priority: int = 0
+    optimize_for: OptimizeFor | None = None
+    """Optional per-rule selection mode. `None` (the default) means "use whatever the caller
+    asked for, or the system default"; a value pins the mode regardless of what the caller
+    passed in — handy for rules that encode a quality-sensitive task (e.g. qc_review on
+    video)."""
 
     def matches(self, attributes: Mapping[str, str]) -> bool:
         return all(canonical_value(attributes.get(k, "")) in v for k, v in self.when.items())
@@ -57,8 +72,18 @@ class Rule:
         return " and ".join(f"{k}={'|'.join(v)}" for k, v in self.when.items())
 
     @classmethod
-    def create(cls, when: Mapping[str, object], tier: str, priority: int = 0) -> Rule:
-        return cls(_normalise(when), tier.strip(), priority)
+    def create(
+        cls,
+        when: Mapping[str, object],
+        tier: str,
+        priority: int = 0,
+        optimize_for: OptimizeFor | None = None,
+    ) -> Rule:
+        if optimize_for is not None and optimize_for not in VALID_OPTIMIZE_FOR:
+            raise RuleError(
+                f"optimize_for must be one of {VALID_OPTIMIZE_FOR!r} or None; got '{optimize_for}'"
+            )
+        return cls(_normalise(when), tier.strip(), priority, optimize_for)
 
 
 @dataclass(frozen=True)
@@ -83,11 +108,14 @@ class RuleSet:
                 known = ", ".join(sorted(known_tiers))
                 raise RuleError(f"rule {rule.describe()} names unknown tier '{rule.tier}'. Known: {known}")
 
-    def resolve(self, attributes: Mapping[str, str]) -> tuple[str, str] | None:
-        """(tier, reason) from the matching rule with the highest (priority, specificity), or
-        None when none matches. Specificity (how many conditions) breaks a tie in priority;
-        priority is the explicit override when an operator wants a less-specific rule to still
-        win (for example, a blanket safety rule over a narrower content-type rule).
+    def match(self, attributes: Mapping[str, str]) -> Rule | None:
+        """The matching rule with the highest (priority, specificity), or None when none
+        matches. Specificity (how many conditions) breaks a tie in priority; priority is the
+        explicit override when an operator wants a less-specific rule to still win (for
+        example, a blanket safety rule over a narrower content-type rule).
+
+        Prefer this over `.resolve()` when the caller needs the rule's `optimize_for` or any
+        other rule attribute beyond tier+reason.
         """
         best: Rule | None = None
         for rule in self.rules:
@@ -95,7 +123,14 @@ class RuleSet:
                 continue
             if best is None or (rule.priority, len(rule.when)) > (best.priority, len(best.when)):
                 best = rule
-        return (best.tier, f"rule {best.describe()}") if best else None
+        return best
+
+    def resolve(self, attributes: Mapping[str, str]) -> tuple[str, str] | None:
+        """(tier, reason) from the matching rule, or None. Back-compat wrapper over `match()`;
+        callers that need `optimize_for` should use `match()` directly.
+        """
+        rule = self.match(attributes)
+        return (rule.tier, f"rule {rule.describe()}") if rule else None
 
     def coverage(self, attributes: Sequence[Mapping[str, str]]) -> int:
         """How many of these attribute-sets this ruleset would match — used by the UI to preview
@@ -129,5 +164,18 @@ def rules_from_file(path: str | Path) -> RuleSet:
             priority = int(entry.get("priority", 0))
         except (TypeError, ValueError) as exc:
             raise RuleError(f"{path}: rules[{index}] has a non-integer 'priority'") from exc
-        rules.append(Rule(when, str(entry["tier"]).strip(), priority))
+        optimize_raw = entry.get("optimize_for")
+        if optimize_raw is None:
+            optimize_for: OptimizeFor | None = None
+        else:
+            text = str(optimize_raw).strip().lower()
+            if text not in VALID_OPTIMIZE_FOR:
+                raise RuleError(
+                    f"{path}: rules[{index}] has 'optimize_for'='{optimize_raw}'; "
+                    f"must be one of {VALID_OPTIMIZE_FOR!r}"
+                )
+            # Membership check above is enough for mypy to narrow `text` to OptimizeFor
+            # (VALID_OPTIMIZE_FOR is a tuple of the Literal values).
+            optimize_for = text
+        rules.append(Rule(when, str(entry["tier"]).strip(), priority, optimize_for))
     return RuleSet(rules=tuple(rules))
