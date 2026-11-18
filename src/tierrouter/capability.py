@@ -44,6 +44,9 @@ class ModelCapability:
     cost_per_1k_completion: float | None
     supports_video: bool = False
     supports_audio: bool = False
+    name: str = ""
+    """OpenRouter's human-readable display name when present; empty otherwise. Used by
+    sync_catalog.py as the catalog `label` for newly imported rows (P1)."""
 
 
 def fetch_openrouter_capabilities(timeout: float = 10.0) -> list[ModelCapability]:
@@ -74,6 +77,8 @@ def _parse_entry(entry: dict[str, object]) -> ModelCapability:
     }
     pricing = entry.get("pricing")
     pricing = pricing if isinstance(pricing, dict) else {}
+    raw_name = entry.get("name")
+    name = str(raw_name).strip() if isinstance(raw_name, str) else ""
     return ModelCapability(
         id=model_id,
         provider=provider,
@@ -83,6 +88,7 @@ def _parse_entry(entry: dict[str, object]) -> ModelCapability:
         cost_per_1k_completion=_as_cost(pricing.get("completion")),
         supports_video="video" in modalities,
         supports_audio="audio" in modalities,
+        name=name,
     )
 
 

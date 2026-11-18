@@ -311,3 +311,63 @@ def test_pick_filters_out_entries_without_audio_when_needs_audio() -> None:
     )
     entry, _ = catalog.pick("small", RANK, needs_audio=True)
     assert entry.id == "hears"
+
+
+# -----------------------------------------------------------------------------------------
+# P1 — UNREVIEWED sentinel always excluded (PLAN-v2.md §7.5 / G5).
+# -----------------------------------------------------------------------------------------
+
+
+def test_pick_excludes_unreviewed_in_cost_mode() -> None:
+    from tierrouter.tiers import UNREVIEWED_TIER
+
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("pending", "gemini", "UNREVIEWED", cost=1),
+            CatalogEntry("ready", "gemini", "small", cost=5),
+        )
+    )
+    entry, _ = catalog.pick("small", RANK, optimize_for="cost")
+    assert entry.id == "ready"
+    assert entry.tier != UNREVIEWED_TIER
+
+
+def test_pick_excludes_unreviewed_in_accuracy_mode() -> None:
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("pending", "gemini", "UNREVIEWED", cost=1),
+            CatalogEntry("ready", "gemini", "small", cost=5),
+        )
+    )
+    quality = {("pending", "qc"): 5.0, ("ready", "qc"): 2.0}
+    entry, _ = catalog.pick(
+        "small", RANK, quality=quality, quality_value="qc", optimize_for="accuracy"
+    )
+    assert entry.id == "ready"  # pending is UNREVIEWED even with a better rating
+
+
+def test_pick_excludes_unreviewed_in_balanced_mode() -> None:
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("pending", "gemini", "UNREVIEWED", cost=1),
+            CatalogEntry("ready", "gemini", "small", cost=5),
+        )
+    )
+    quality = {("pending", "qc"): 5.0, ("ready", "qc"): 2.0}
+    entry, _ = catalog.pick(
+        "small", RANK, quality=quality, quality_value="qc", optimize_for="balanced"
+    )
+    assert entry.id == "ready"
+
+
+def test_pick_excludes_unreviewed_even_if_in_selected_models() -> None:
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("pending", "gemini", "UNREVIEWED", cost=1),
+            CatalogEntry("ready", "gemini", "small", cost=5),
+        )
+    )
+    # Even when the caller explicitly selects only the pending model, pick must refuse
+    # rather than route to an unreviewed entry.
+    with pytest.raises(RuleError, match="no catalog model"):
+        catalog.pick("small", RANK, selected={"pending"})

@@ -345,7 +345,13 @@ function AuthenticatedShell() {
             {active === 'overview' && <Overview tiers={tiers} onlineStatus={online} onNavigate={setActive} />}
             {active === 'rules' && <Rules tierNames={tiers?.tiers.map((t) => t.name) ?? []} />}
             {active === 'tiers' && <Tiers tiers={tiers} />}
-            {active === 'catalog' && <Catalog selected={selectedModels} onChange={setSelectedModels} />}
+            {active === 'catalog' && (
+              <Catalog
+                selected={selectedModels}
+                onChange={setSelectedModels}
+                tierNames={tiers?.tiers.map((t) => t.name) ?? []}
+              />
+            )}
             {active === 'examples' && <Examples />}
             {active === 'judging' && <HumanJudging tierNames={tiers?.tiers.map((t) => t.name) ?? []} />}
             {active === 'train' && <Train onTrained={(r) => void onTrained(r)} result={lastTrainResult} />}

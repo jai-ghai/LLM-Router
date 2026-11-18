@@ -96,6 +96,12 @@ export const api = {
   train: () => request<TrainResult>('/v1/train', { method: 'POST' }),
   status: (signal?: AbortSignal) => request<Status>('/v1/status', { signal }),
   catalog: (signal?: AbortSignal) => request<{ catalog: CatalogEntry[] }>('/v1/catalog', { signal }),
+  // P1 — admin-only tier assignment / demotion. Returns the full catalog after update.
+  updateCatalogTier: (modelId: string, tier: string) =>
+    request<{ catalog: CatalogEntry[] }>(`/v1/catalog/${encodeURIComponent(modelId)}`, {
+      method: 'PUT',
+      ...json({ tier }),
+    }),
   history: (limit = 50, signal?: AbortSignal) =>
     request<{ history: HistoryEntry[] }>(`/v1/history?limit=${limit}`, { signal }),
   quality: (signal?: AbortSignal) => request<QualityResponse>('/v1/quality', { signal }),

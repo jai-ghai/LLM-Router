@@ -41,7 +41,7 @@ from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.requests import Request as StarletteRequest
 
-from tierrouter.catalog import VALID_OPTIMIZE_FOR, ModelCatalog, OptimizeFor
+from tierrouter.catalog import VALID_OPTIMIZE_FOR, ModelCatalog, OptimizeFor, replace_entry
 from tierrouter.classifier import ClassifierError, EvalReport, TierClassifier, evaluate_classifier
 from tierrouter.features import Dinov2Embedder, HashingEmbedder, MetadataEncoder
 from tierrouter.labels import LabelError, labels_from_rules, merge_labels, uncovered_examples
@@ -59,7 +59,7 @@ from tierrouter.service.auth import (
 )
 from tierrouter.service.store import Store, guess_image_ext
 from tierrouter.service.users_store import User, UserError, UsersStore
-from tierrouter.tiers import TierTable
+from tierrouter.tiers import UNREVIEWED_TIER, TierTable
 
 
 class RuleIn(BaseModel):
@@ -107,6 +107,11 @@ class UserCreateIn(BaseModel):
 
 class UserUpdateIn(BaseModel):
     disabled: bool
+
+
+class CatalogTierIn(BaseModel):
+    tier: str
+    """A declared tier name from tiers.yaml, or the UNREVIEWED sentinel (demotion)."""
 
 
 class TrainResult(BaseModel):
@@ -346,8 +351,7 @@ def create_app(
 
     # ---- catalog -----------------------------------------------------------------------
 
-    @app.get("/v1/catalog")
-    def get_catalog(_: User | None = Depends(_require_read)) -> dict[str, Any]:
+    def _catalog_payload() -> dict[str, Any]:
         if state.catalog is None:
             return {"catalog": []}
         return {
@@ -362,10 +366,45 @@ def create_app(
                     "supports_video": e.supports_video,
                     "supports_audio": e.supports_audio,
                     "label": e.label,
+                    # P1 — who last assigned the tier (empty until an admin reviews).
+                    "assigned_by": e.assigned_by,
                 }
                 for e in state.catalog.entries
             ]
         }
+
+    @app.get("/v1/catalog")
+    def get_catalog(_: User | None = Depends(_require_read)) -> dict[str, Any]:
+        return _catalog_payload()
+
+    @app.put("/v1/catalog/{model_id}")
+    def put_catalog_tier(
+        model_id: str, payload: CatalogTierIn, user: User = Depends(require_admin)
+    ) -> dict[str, Any]:
+        """Admin-only: assign (or demote) a catalog entry's tier. Persists to catalog.yaml
+        and updates the in-memory catalog so the next resolve() sees it without a restart.
+        `tier` must be a declared tier or UNREVIEWED (Q6.5.b demotion)."""
+        if state.catalog is None:
+            raise HTTPException(
+                status_code=422,
+                detail="no catalog is configured for this deployment (TIERROUTER_CATALOG unset)",
+            )
+        tier = payload.tier.strip()
+        allowed = set(tiers.names) | {UNREVIEWED_TIER}
+        if tier not in allowed:
+            raise HTTPException(
+                status_code=422,
+                detail=f"tier must be one of {sorted(allowed)}; got '{tier}'",
+            )
+        try:
+            updated = store.update_catalog_tier(model_id, tier, assigned_by=user.username)
+        except RuleError as exc:
+            msg = str(exc)
+            if "no catalog entry with id" in msg:
+                raise HTTPException(status_code=404, detail=msg) from exc
+            raise HTTPException(status_code=422, detail=msg) from exc
+        state.catalog = replace_entry(state.catalog, updated)
+        return _catalog_payload()
 
     # ---- quality ratings ---------------------------------------------------------------
 
