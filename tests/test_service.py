@@ -1,5 +1,5 @@
 # [Fact-Forcing preamble]
-# Behaviour and module under test: FastAPI app from `src/tierrouter/service/app.py`
+# Behaviour and module under test: FastAPI app from `src/gradist/service/app.py`
 # (routes /v1/rules, /v1/examples, /v1/judgments, /v1/train, /v1/resolve, /v1/catalog,
 # /v1/quality, /v1/history, plus new /v1/auth/* + /v1/users* in P0).
 # Existing test files for it: this file. No other test file targets `app.py`.
@@ -15,12 +15,12 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from tierrouter.catalog import CatalogEntry, ModelCatalog
-from tierrouter.service.app import create_app
-from tierrouter.service.auth import SessionConfig, hash_password
-from tierrouter.service.store import Store, guess_image_ext
-from tierrouter.service.users_store import UsersStore
-from tierrouter.tiers import TierSpec, TierTable
+from gradist.catalog import CatalogEntry, ModelCatalog
+from gradist.service.app import create_app
+from gradist.service.auth import SessionConfig, hash_password
+from gradist.service.store import Store, guess_image_ext
+from gradist.service.users_store import UsersStore
+from gradist.tiers import TierSpec, TierTable
 
 TIERS = TierTable(
     tiers=(
@@ -68,7 +68,7 @@ def _authed_client(
 def _write_catalog_yaml(path: Path, catalog: ModelCatalog) -> None:
     import yaml
 
-    from tierrouter.catalog import entry_to_yaml_dict
+    from gradist.catalog import entry_to_yaml_dict
 
     path.write_text(
         yaml.safe_dump({"catalog": [entry_to_yaml_dict(e) for e in catalog.entries]}, sort_keys=False),
@@ -231,7 +231,13 @@ def test_train_and_resolve_end_to_end_without_images(client: TestClient) -> None
     assert result["report"]["accuracy"] == 1.0
 
     status = client.get("/v1/status").json()
-    assert status == {"trained": True, "n_labels_last_trained_on": 2, "uses_images": False}
+    assert status["trained"] is True
+    assert status["n_labels_last_trained_on"] == 2
+    assert status["uses_images"] is False
+    assert status["catalog_configured"] is False  # default fixture has no catalog
+    assert status["unreviewed_count"] == 0
+    assert status["quality_field"] is None
+    assert status["allow_read_without_auth"] is False
 
     rule_hit = client.post(
         "/v1/resolve", data={"metadata": json.dumps({"task": "qc_review"}), "text": "x"}
@@ -357,7 +363,7 @@ def test_resolve_min_quality_has_no_effect_without_quality_field(catalog_client:
         "/v1/resolve",
         data={"metadata": json.dumps({"task": "news"}), "text": "", "min_quality": "3.0"},
     ).json()
-    assert decision["model_name"] == "cheap-small"  # no TIERROUTER_QUALITY_FIELD configured -> ignored
+    assert decision["model_name"] == "cheap-small"  # no GRADIST_QUALITY_FIELD configured -> ignored
 
 
 # -----------------------------------------------------------------------------------------
@@ -410,6 +416,46 @@ def test_resolve_endpoint_accepts_optimize_for_cost_accuracy_balanced(
     )
     assert balanced.status_code == 200
     assert balanced.json()["optimize_for"] == "balanced"
+
+
+def test_task_pools_roundtrip_and_resolve_uses_pool(catalog_client: TestClient) -> None:
+    put = catalog_client.put(
+        "/v1/task-pools/Video_Processing",
+        json={"models": ["pricey-small"]},
+    )
+    assert put.status_code == 200
+    assert put.json()["pools"]["video_processing"] == ["pricey-small"]
+    listed = catalog_client.get("/v1/task-pools")
+    assert listed.status_code == 200
+    assert listed.json()["pools"]["video_processing"] == ["pricey-small"]
+    # Module under test: service /v1/resolve hybrid catalog+ladder (user: all providers + content).
+    catalog_client.put(
+        "/v1/rules",
+        json={"rules": [{"when": {"task": "video_processing"}, "tier": "small"}]},
+    )
+    decision = catalog_client.post(
+        "/v1/resolve",
+        data={"metadata": "{}", "text": "clip", "task": "VIDEO_PROCESSING", "optimize_for": "cost"},
+    )
+    assert decision.status_code == 200
+    body = decision.json()
+    assert body["model_name"] == "pricey-small"
+    assert "task='video_processing'" in body["reason"]
+    assert body["rule_outcome"] == "rule task=video_processing"
+
+
+def test_resolve_rejects_empty_selected_models(catalog_client: TestClient) -> None:
+    response = catalog_client.post(
+        "/v1/resolve",
+        data={"metadata": "{}", "text": "", "selected_models": "[]", "optimize_for": "cost"},
+    )
+    assert response.status_code == 422
+    assert "empty" in str(response.json()["detail"]).lower()
+
+
+def test_task_pool_rejects_empty_models(catalog_client: TestClient) -> None:
+    response = catalog_client.put("/v1/task-pools/empty_job", json={"models": []})
+    assert response.status_code == 422
 
 
 def test_resolve_endpoint_rejects_invalid_optimize_for_with_422(client: TestClient) -> None:
@@ -493,7 +539,7 @@ def _seed_catalog_yaml(path: Path) -> ModelCatalog:
         "    supports_image: true\n    label: Pending\n",
         encoding="utf-8",
     )
-    from tierrouter.catalog import load_catalog
+    from gradist.catalog import load_catalog
 
     return load_catalog(path)
 
@@ -509,7 +555,7 @@ def test_put_catalog_tier_as_admin_updates_and_persists(tmp_path: Path) -> None:
     assert pending["tier"] == "medium"
     assert pending["assigned_by"] == "tester"
     # Persisted to disk.
-    from tierrouter.catalog import load_catalog
+    from gradist.catalog import load_catalog
 
     reloaded = load_catalog(catalog_path)
     assert next(e for e in reloaded.entries if e.id == "pending-model").tier == "medium"

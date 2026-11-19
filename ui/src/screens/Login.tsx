@@ -85,10 +85,10 @@ export function Login() {
             }}
             aria-hidden
           >
-            tr
+            gd
           </Box>
           <Typography sx={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.015em', color: PALETTE.text }}>
-            Sign in to tierrouter
+            Sign in to Gradist
           </Typography>
         </Stack>
         <Typography sx={{ fontSize: 13, color: PALETTE.textMuted, mb: 3 }}>
@@ -132,8 +132,7 @@ export function Login() {
           </Button>
         </Stack>
         <Typography sx={{ fontSize: 11.5, color: PALETTE.textFaint, mt: 3, textAlign: 'center' }}>
-          Don’t have an account? Ask an admin to create one — or if this is a fresh install,
-          run <Box component="code" sx={{ fontFamily: 'monospace' }}>python -m tierrouter.service.bootstrap --username &lt;name&gt;</Box>.
+          Don’t have an account? Ask an admin to create one for you.
         </Typography>
       </Box>
     </Box>

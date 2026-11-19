@@ -45,13 +45,13 @@ from typing import Any
 
 import yaml
 
-from tierrouter.capability import (
+from gradist.capability import (
     CapabilityError,
     ModelCapability,
     fetch_openrouter_capabilities,
     match_by_suffix,
 )
-from tierrouter.tiers import UNREVIEWED_TIER
+from gradist.tiers import UNREVIEWED_TIER
 
 COMMON_PROVIDERS = (
     "openai",

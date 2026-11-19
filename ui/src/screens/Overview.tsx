@@ -1,5 +1,5 @@
 import { Play } from '@phosphor-icons/react'
-import { Box, Button, MenuItem, Skeleton, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material'
+import { Box, Button, Skeleton, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material'
 import { BarChart } from '@mui/x-charts/BarChart'
 import { useEffect, useState } from 'react'
 import { api, describeError } from '../api'
@@ -25,7 +25,6 @@ export function Overview({
 }) {
   const [history, setHistory] = useState<HistoryEntry[] | null>(null)
   const [error, setError] = useState('')
-  const [range, setRange] = useState('24h')
 
   useEffect(() => {
     void (async () => {
@@ -112,28 +111,13 @@ export function Overview({
         title="Routing overview"
         lede="The right model for every request. Visibility into every decision."
         actions={
-          <>
-            <TextField
-              select
-              size="small"
-              value={range}
-              onChange={(e) => setRange(e.target.value)}
-              sx={{ minWidth: 150 }}
-              slotProps={{ input: { sx: { fontSize: 13 } } }}
-            >
-              <MenuItem value="24h">Last 24 hours</MenuItem>
-              <MenuItem value="7d">Last 7 days</MenuItem>
-              <MenuItem value="30d">Last 30 days</MenuItem>
-              <MenuItem value="all">All time</MenuItem>
-            </TextField>
-            <Button
-              variant="contained"
-              startIcon={<Play size={14} weight="fill" />}
-              onClick={() => onNavigate('resolve')}
-            >
-              Open playground
-            </Button>
-          </>
+          <Button
+            variant="contained"
+            startIcon={<Play size={14} weight="fill" />}
+            onClick={() => onNavigate('resolve')}
+          >
+            Open playground
+          </Button>
         }
       />
 

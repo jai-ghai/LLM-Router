@@ -124,6 +124,13 @@ export interface Status {
   trained: boolean
   n_labels_last_trained_on: number | null
   uses_images: boolean
+  /** Present on Gradist ≥0.5 — Settings / Bell use these. Older servers omit them. */
+  quality_field?: string | null
+  catalog_configured?: boolean
+  allow_read_without_auth?: boolean
+  unreviewed_count?: number
+  quality_head?: boolean
+  qc_risk?: boolean
 }
 
 export interface Decision {

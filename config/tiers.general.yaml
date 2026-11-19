@@ -1,0 +1,40 @@
+# Reader: gradist.tiers.load_tiers (GRADIST_TIERS). Catalog pick uses tier ranks;
+# model ids here are no-catalog fallbacks and must exist in OpenRouter-synced catalog when possible.
+# No secrets. User: all providers / generalized router.
+tiers:
+  - name: small
+    description: Cheap / high-volume helpers across providers.
+    models:
+      openai: gpt-5-nano
+      google: gemini-2.5-flash-lite
+      gemini: gemini-2.5-flash-lite
+      anthropic: claude-haiku-5.5
+      mistralai: mistral-nemo
+      deepseek: deepseek-v4.1-flash-1017
+      qwen: qwen3.7-flash
+      meta-llama: llama-3.2-1b-instruct
+  - name: medium
+    description: Balanced mid-tier for sports / mid complexity.
+    models:
+      openai: gpt-4.1-mini
+      google: gemini-2.5-flash
+      gemini: gemini-2.5-flash
+      anthropic: claude-haiku-4.5
+      mistralai: mistral-small-3.1-24b-instruct
+      deepseek: deepseek-v3.2-exp
+      qwen: qwen3.5-27b
+      meta-llama: llama-3.3-70b-instruct
+  - name: large
+    description: Strong models for news analysis / hard content.
+    models:
+      openai: gpt-5.2
+      google: gemini-3.1-pro-preview
+      gemini: gemini-3.1-pro-preview
+      anthropic: claude-sonnet-5.5
+      mistralai: mistral-large
+      deepseek: deepseek-v3.2-exp
+      qwen: qwen3.8-max-0902
+      meta-llama: llama-4-maverick
+
+default_provider: openai
+low_confidence_fallback: medium

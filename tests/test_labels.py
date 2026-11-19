@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from tierrouter.labels import (
+from gradist.labels import (
     LabelError,
     RawExample,
     export_for_human_judging,
@@ -15,7 +15,7 @@ from tierrouter.labels import (
     stratified_sample,
     uncovered_examples,
 )
-from tierrouter.rules import Rule, RuleSet
+from gradist.rules import Rule, RuleSet
 
 EXAMPLES = [
     RawExample("e1", {"channel_type": "news"}, "parliament passed the budget"),

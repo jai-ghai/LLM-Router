@@ -15,11 +15,11 @@ from pathlib import Path
 
 def _load_sync_catalog():
     path = Path(__file__).with_name("sync_catalog.py")
-    spec = importlib.util.spec_from_file_location("tierrouter_sync_catalog", path)
+    spec = importlib.util.spec_from_file_location("gradist_sync_catalog", path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"cannot load {path}")
     module = importlib.util.module_from_spec(spec)
-    # Ensure src/ is on path so sync_catalog can import tierrouter.*
+    # Ensure src/ is on path so sync_catalog can import gradist.*
     root = Path(__file__).resolve().parents[1]
     src = str(root / "src")
     if src not in sys.path:

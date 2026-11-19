@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import pytest
 
-from tierrouter.catalog import CatalogEntry, ModelCatalog
-from tierrouter.classifier import TierClassifier
-from tierrouter.features import HashingEmbedder, MetadataEncoder
-from tierrouter.labels import TierLabel
-from tierrouter.resolve import resolve, validate_setup
-from tierrouter.rules import Rule, RuleError, RuleSet
-from tierrouter.tiers import TierSpec, TierTable
+from gradist.catalog import CatalogEntry, ModelCatalog
+from gradist.classifier import TierClassifier
+from gradist.features import HashingEmbedder, MetadataEncoder
+from gradist.labels import TierLabel
+from gradist.resolve import resolve, validate_setup
+from gradist.rules import Rule, RuleError, RuleSet
+from gradist.tiers import TierSpec, TierTable
 
 NEWS = ["parliament passed the budget bill", "the minister announced an election"]
 SPORTS = ["goal scored in the final match", "the striker won the tournament"]
@@ -115,10 +115,14 @@ CATALOG = ModelCatalog(
 )
 
 
-def test_resolve_with_a_catalog_picks_the_cheapest_matching_model() -> None:
-    rules = RuleSet(rules=(Rule.create({"channel_type": "sports"}, "small"),))
+# Behaviour under test: resolve() hybrid — catalog + ladder (user: all providers + read content).
+def test_resolve_with_a_catalog_uses_ladder_tier_then_picks() -> None:
+    # Rule decides large → catalog picks cheapest *large* (not cheapest overall).
+    rules = RuleSet(rules=(Rule.create({"channel_type": "sports"}, "large"),))
     decision = resolve({"channel_type": "sports"}, "x", rules, TIERS, catalog=CATALOG)
-    assert decision.model_name == "cheap-small"
+    assert decision.model_name == "cheap-large"
+    assert decision.rule_outcome == "rule channel_type=sports"
+    assert "catalog tier='large'" in decision.reason
 
 
 def test_resolve_with_a_catalog_honours_the_caller_s_selection() -> None:
@@ -127,6 +131,14 @@ def test_resolve_with_a_catalog_honours_the_caller_s_selection() -> None:
         {"channel_type": "sports"}, "x", rules, TIERS, catalog=CATALOG, selected_models={"pricey-small"}
     )
     assert decision.model_name == "pricey-small"
+
+
+def test_empty_request_uses_fallback_not_confident_classifier() -> None:
+    decision = resolve({}, "", RuleSet(), TIERS, classifier=_trained_classifier())
+    assert decision.tier == "medium"
+    assert decision.confidence == 0.0
+    assert "empty request" in decision.reason
+    assert decision.fallback_outcome == "used 'medium'"
 
 
 # -----------------------------------------------------------------------------------------
@@ -175,27 +187,22 @@ def test_resolve_threads_optimize_for_through_to_catalog() -> None:
     assert accuracy_decision.optimize_for == "accuracy"
 
 
-def test_rule_optimize_for_overrides_request_optimize_for() -> None:
-    # Operator pinned this rule to "accuracy" (e.g. qc_review on video). The caller asks for
-    # "cost" anyway — the rule's pin wins. Decision.optimize_for reflects what actually ran,
-    # so a UI can show "rule overrode your request" without parsing the reason string.
+def test_rule_optimize_for_overrides_request_optimize_for_without_catalog() -> None:
+    # Without a catalog, the tier ladder still runs and a rule's optimize_for pin wins.
     rule = Rule.create(
         {"channel_type": "sports"}, "small", optimize_for="accuracy"
     )
     rules = RuleSet(rules=(rule,))
-    quality = {("cheap-small", "sports"): 2.0, ("good-small", "sports"): 4.5}
     decision = resolve(
         {"channel_type": "sports"},
         "x",
         rules,
         TIERS,
-        catalog=_P2_CATALOG,
-        quality=quality,
-        quality_field="channel_type",
-        optimize_for="cost",  # ignored because the rule pins "accuracy"
+        optimize_for="cost",
     )
-    assert decision.model_name == "good-small"
+    assert decision.tier == "small"
     assert decision.optimize_for == "accuracy"
+    assert decision.model_name == "g-small"
 
 
 # -----------------------------------------------------------------------------------------
@@ -240,14 +247,25 @@ def test_metadata_modality_audio_sets_needs_audio_on_pick() -> None:
     assert decision.model_name == "audio-small"
 
 
-def test_resolve_reports_when_every_candidate_is_unreviewed() -> None:
-    # P1 / G5: if the only catalog entries at (or above) the decided tier are UNREVIEWED,
-    # resolve must raise — never silently pick an unreviewed model.
-    from tierrouter.tiers import UNREVIEWED_TIER
+def test_resolve_catalog_never_routes_unreviewed_even_if_selected() -> None:
+    # Hybrid: UNREVIEWED stays out of pick(); ready at the decided tier wins.
+    from gradist.tiers import UNREVIEWED_TIER
 
     catalog = ModelCatalog(
-        entries=(CatalogEntry("pending", "gemini", UNREVIEWED_TIER, cost=1),)
+        entries=(
+            CatalogEntry("pending", "gemini", UNREVIEWED_TIER, cost=1),
+            CatalogEntry("ready", "gemini", "small", cost=9),
+        )
     )
-    rules = RuleSet(rules=(Rule.create({"channel_type": "sports"}, "small"),))
-    with pytest.raises(RuleError, match="no catalog model"):
-        resolve({"channel_type": "sports"}, "x", rules, TIERS, catalog=catalog)
+    rules = RuleSet(rules=(Rule.create({"task": "video_processing"}, "small"),))
+    decision = resolve(
+        {"task": "video_processing"},
+        "x",
+        rules,
+        TIERS,
+        catalog=catalog,
+        selected_models={"pending", "ready"},
+    )
+    assert decision.model_name == "ready"
+    assert decision.tier == "small"
+    assert "task='video_processing'" in decision.reason

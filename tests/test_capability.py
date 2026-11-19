@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from tierrouter.capability import (
+from gradist.capability import (
     CapabilityError,
     ModelCapability,
     fetch_openrouter_capabilities,
@@ -50,7 +50,7 @@ class _FakeResponse:
 
 
 def test_fetch_parses_pricing_context_and_modality() -> None:
-    with patch("tierrouter.capability.urllib.request.urlopen", return_value=_FakeResponse(SAMPLE_RESPONSE)):
+    with patch("gradist.capability.urllib.request.urlopen", return_value=_FakeResponse(SAMPLE_RESPONSE)):
         capabilities = fetch_openrouter_capabilities()
     assert len(capabilities) == 2  # the id-less entry is skipped
     flash = next(c for c in capabilities if c.id == "google/gemini-3.5-flash")
@@ -64,7 +64,7 @@ def test_fetch_parses_pricing_context_and_modality() -> None:
 
 def test_fetch_raises_a_capability_error_on_network_failure() -> None:
     with patch(
-        "tierrouter.capability.urllib.request.urlopen",
+        "gradist.capability.urllib.request.urlopen",
         side_effect=urllib.error.URLError("no network"),
     ), pytest.raises(CapabilityError, match="could not reach"):
         fetch_openrouter_capabilities()
@@ -72,7 +72,7 @@ def test_fetch_raises_a_capability_error_on_network_failure() -> None:
 
 def test_fetch_raises_on_the_wrong_shape() -> None:
     with (
-        patch("tierrouter.capability.urllib.request.urlopen", return_value=_FakeResponse({"oops": []})),
+        patch("gradist.capability.urllib.request.urlopen", return_value=_FakeResponse({"oops": []})),
         pytest.raises(CapabilityError, match="expected a mapping"),
     ):
         fetch_openrouter_capabilities()
@@ -111,7 +111,7 @@ def test_parses_video_and_audio_from_input_modalities() -> None:
             },
         ]
     }
-    with patch("tierrouter.capability.urllib.request.urlopen", return_value=_FakeResponse(payload)):
+    with patch("gradist.capability.urllib.request.urlopen", return_value=_FakeResponse(payload)):
         caps = fetch_openrouter_capabilities()
     video = next(c for c in caps if c.id == "google/gemini-video")
     assert video.supports_image is True
@@ -141,7 +141,7 @@ def test_absent_modalities_default_to_false() -> None:
             },
         ]
     }
-    with patch("tierrouter.capability.urllib.request.urlopen", return_value=_FakeResponse(payload)):
+    with patch("gradist.capability.urllib.request.urlopen", return_value=_FakeResponse(payload)):
         caps = fetch_openrouter_capabilities()
     assert len(caps) == 3
     for cap in caps:

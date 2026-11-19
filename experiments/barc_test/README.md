@@ -1,8 +1,8 @@
 # barc_test: one worked test, not part of the general library
 
-This folder is DATA for one test run against `src/tierrouter`, built from reading Minfy's BARC
+This folder is DATA for one test run against `src/gradist`, built from reading Minfy's BARC
 production code (`BARC Workspace/tabson-python-inferencing`, read-only, on 2026-11-16). Nothing
-in `src/tierrouter/*.py` knows this folder exists or contains anything BARC-specific — see
+in `src/gradist/*.py` knows this folder exists or contains anything BARC-specific — see
 ARCHITECTURE.md §6 and README.md's "Using this from another project" section. A different
 consumer supplies its own `tiers.yaml`, `rules.yaml` and examples; this is what BARC's would
 plausibly look like, for testing only.

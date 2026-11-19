@@ -1,22 +1,26 @@
 import { Plus, Trash } from '@phosphor-icons/react'
 import { Button, IconButton, Stack, TextField } from '@mui/material'
-import { useId, useState } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 
 /**
- * key=value metadata field editor. Reused wherever a caller needs to describe one request's
- * metadata by hand: the "Add example" form (Data > Examples) and the "Try it" form
- * (Try it > Resolve) both use this exact component, so the two screens stay consistent.
+ * key=value metadata editor. Callers: Resolve (Playground), Examples.
+ * `trailing` sits on the same row as Field / Value / Add (e.g. thumbnail upload).
  */
 export function MetadataFieldsEditor({
   value,
   onChange,
+  size = 'medium',
+  trailing,
 }: {
   value: Record<string, string>
   onChange: (next: Record<string, string>) => void
+  size?: 'small' | 'medium'
+  trailing?: ReactNode
 }) {
   const keyId = useId()
   const [key, setKey] = useState('')
   const [val, setVal] = useState('')
+  const controlH = size === 'small' ? 40 : 56
 
   function add() {
     const trimmedKey = key.trim()
@@ -33,28 +37,42 @@ export function MetadataFieldsEditor({
   }
 
   return (
-    <Stack spacing={1}>
+    <Stack spacing={1.25} sx={{ width: '100%' }}>
       {Object.entries(value).map(([k, v]) => (
-        <Stack key={k} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-          <TextField value={k} disabled fullWidth label="Field" />
-          <TextField value={v} disabled fullWidth label="Value" />
-          <IconButton aria-label={`Remove field ${k}`} onClick={() => remove(k)}>
+        <Stack key={k} direction="row" spacing={1} sx={{ alignItems: 'center', width: '100%' }}>
+          <TextField size={size} value={k} disabled fullWidth label="Field" />
+          <TextField size={size} value={v} disabled fullWidth label="Value" />
+          <IconButton size={size} aria-label={`Remove field ${k}`} onClick={() => remove(k)} sx={{ height: controlH, width: controlH, flexShrink: 0 }}>
             <Trash size={16} />
           </IconButton>
         </Stack>
       ))}
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', width: '100%', flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
         <TextField
           id={keyId}
-          label="Field (e.g. task)"
+          size={size}
+          label="Field (e.g. channel)"
           value={key}
           onChange={(e) => setKey(e.target.value)}
-          fullWidth
+          sx={{ flex: 1, minWidth: 120 }}
         />
-        <TextField label="Value" value={val} onChange={(e) => setVal(e.target.value)} fullWidth />
-        <Button startIcon={<Plus size={16} />} onClick={add} variant="outlined">
+        <TextField
+          size={size}
+          label="Value"
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          sx={{ flex: 1, minWidth: 120 }}
+        />
+        <Button
+          size={size}
+          startIcon={<Plus size={16} />}
+          onClick={add}
+          variant="outlined"
+          sx={{ flexShrink: 0, height: controlH, px: 1.5, textTransform: 'none' }}
+        >
           Add
         </Button>
+        {trailing}
       </Stack>
     </Stack>
   )

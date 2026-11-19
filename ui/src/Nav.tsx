@@ -1,35 +1,48 @@
 import {
+  BookOpen,
   Brain,
-  CaretDown,
   ChartBar,
   CheckSquare,
   ClipboardText,
   Database,
   Flask,
   FlowArrow,
+  GearSix,
   SquaresFour,
-  Stack as StackIcon,
-  Storefront,
   UsersThree,
 } from '@phosphor-icons/react'
-import { Badge, Box, List, ListItemButton, ListItemIcon, ListItemText, Typography } from '@mui/material'
+import { Badge, List, ListItemButton, ListItemIcon, ListItemText, Typography } from '@mui/material'
 import type { ReactNode } from 'react'
 import { PALETTE } from './theme'
 import type { UserRole } from './types'
 
-export type PageKey = 'overview' | 'rules' | 'tiers' | 'catalog' | 'examples' | 'judging' | 'train' | 'evaluate' | 'history' | 'resolve' | 'users'
+export type PageKey =
+  | 'overview'
+  | 'rules'
+  | 'examples'
+  | 'judging'
+  | 'train'
+  | 'evaluate'
+  | 'history'
+  | 'resolve'
+  | 'users'
+  | 'settings'
+  | 'docs'
 
 interface Item {
   key: PageKey
   label: string
   icon: ReactNode
   adminOnly?: boolean
+  /** Hide when a model catalog is configured (tier-ladder / classifier unused on resolve). */
+  hideWhenCatalog?: boolean
 }
 
 interface Group {
   label: string
   items: Item[]
   adminOnly?: boolean
+  hideWhenCatalog?: boolean
 }
 
 const ICON_SIZE = 18
@@ -40,162 +53,100 @@ const GROUPS: Group[] = [
     label: 'Platform',
     items: [
       { key: 'overview', label: 'Overview', icon: <SquaresFour {...ICON_PROPS} /> },
-      { key: 'rules', label: 'Routing rules', icon: <FlowArrow {...ICON_PROPS} /> },
-      { key: 'tiers', label: 'Model tiers', icon: <StackIcon {...ICON_PROPS} /> },
-      { key: 'catalog', label: 'Model catalog', icon: <Storefront {...ICON_PROPS} /> },
+      { key: 'rules', label: 'Routing rules', icon: <FlowArrow {...ICON_PROPS} />, hideWhenCatalog: true },
       { key: 'history', label: 'Request logs', icon: <ClipboardText {...ICON_PROPS} /> },
       { key: 'resolve', label: 'Playground', icon: <Flask {...ICON_PROPS} /> },
     ],
   },
   {
     label: 'Training',
+    hideWhenCatalog: true,
     items: [
-      { key: 'examples', label: 'Examples', icon: <Database {...ICON_PROPS} /> },
-      { key: 'judging', label: 'Human judging', icon: <CheckSquare {...ICON_PROPS} /> },
-      { key: 'train', label: 'Train', icon: <Brain {...ICON_PROPS} /> },
-      { key: 'evaluate', label: 'Evaluate', icon: <ChartBar {...ICON_PROPS} /> },
+      { key: 'examples', label: 'Examples', icon: <Database {...ICON_PROPS} />, hideWhenCatalog: true },
+      { key: 'judging', label: 'Human judging', icon: <CheckSquare {...ICON_PROPS} />, hideWhenCatalog: true },
+      { key: 'train', label: 'Train', icon: <Brain {...ICON_PROPS} />, hideWhenCatalog: true },
+      { key: 'evaluate', label: 'Evaluate', icon: <ChartBar {...ICON_PROPS} />, hideWhenCatalog: true },
     ],
   },
   {
-    label: 'Settings',
+    label: 'Admin',
     adminOnly: true,
     items: [
       { key: 'users', label: 'Operators', icon: <UsersThree {...ICON_PROPS} />, adminOnly: true },
     ],
   },
+  {
+    label: 'Help',
+    items: [
+      { key: 'docs', label: 'Documentation', icon: <BookOpen {...ICON_PROPS} /> },
+      { key: 'settings', label: 'Settings', icon: <GearSix {...ICON_PROPS} /> },
+    ],
+  },
 ]
 
 /**
- * A flat, grouped destination list — one full page per item (see App.tsx). The `Platform`
- * group mirrors the Figma reference exactly (six items: overview → playground). The
- * `Training` group is this project's addition for the human-judged-labels workflow that
- * the reference deck doesn't depict but the service actually ships (examples + judging +
- * train + evaluate, all wired through `/v1/*` already).
+ * Grouped destination list — one full page per item (see App.tsx). No workspace /
+ * environment chrome here: those were Figma placeholders with no backend model.
  */
 export function Nav({
   active,
   onNavigate,
   historyCount,
-  workspaceName,
-  workspaceTag,
-  onWorkspaceClick,
   role,
+  /** null = status not loaded yet — omit ladder items so they don't flash then vanish. */
+  catalogConfigured = null,
 }: {
   active: PageKey
   onNavigate: (key: PageKey) => void
   historyCount: number
-  workspaceName: string
-  workspaceTag?: string
-  onWorkspaceClick?: () => void
   role: UserRole | null
+  catalogConfigured?: boolean | null
 }) {
-  // Filter groups/items by role — admin-only entries disappear entirely for members, rather
-  // than showing a disabled state (less tempting to click, nothing to explain).
+  // Hybrid resolve (content→tier→catalog): always show Training / Rules / Tiers.
+  // App.tsx renders <Nav />. User: generalized app — don't hide ladder when catalog on.
+  void catalogConfigured
+  const hideLadder = false
   const visibleGroups = GROUPS.map((g) => ({
     ...g,
-    items: g.items.filter((item) => !item.adminOnly || role === 'admin'),
-  })).filter((g) => (!g.adminOnly || role === 'admin') && g.items.length > 0)
+    items: g.items.filter(
+      (item) => (!item.adminOnly || role === 'admin') && !(hideLadder && item.hideWhenCatalog),
+    ),
+  })).filter(
+    (g) => (!g.adminOnly || role === 'admin') && !(hideLadder && g.hideWhenCatalog) && g.items.length > 0,
+  )
   return (
-    <>
-      <Box sx={{ px: 2, pt: 1.5, pb: 1 }}>
-        <Typography
-          sx={{
-            fontSize: 10.5,
-            fontWeight: 700,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: PALETTE.textFaint,
-            mb: 0.75,
-          }}
-        >
-          Workspace
-        </Typography>
-        <Box
-          role="button"
-          onClick={onWorkspaceClick}
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-            px: 1,
-            py: 0.85,
-            borderRadius: '8px',
-            border: `1px solid ${PALETTE.hairline}`,
-            bgcolor: PALETTE.surface,
-            cursor: onWorkspaceClick ? 'pointer' : 'default',
-            transition: 'background-color 120ms ease, border-color 120ms ease',
-            '&:hover': onWorkspaceClick ? { bgcolor: PALETTE.subtle, borderColor: PALETTE.hairlineStrong } : undefined,
-          }}
-        >
-          <Box
+    <List component="nav" aria-label="Sections" dense sx={{ py: 1 }}>
+      {visibleGroups.map((group) => (
+        <List key={group.label} component="div" dense disablePadding sx={{ mb: 0.5 }}>
+          <Typography
             sx={{
-              flex: '0 0 auto',
-              width: 22,
-              height: 22,
-              borderRadius: '6px',
-              bgcolor: PALETTE.brandSoft,
-              color: PALETTE.brand,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 11,
+              fontSize: 10.5,
               fontWeight: 700,
-              letterSpacing: '0.02em',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: PALETTE.textFaint,
+              px: 2,
+              pt: 1,
+              pb: 0.5,
             }}
-            aria-hidden
           >
-            {workspaceName.slice(0, 1).toUpperCase()}
-          </Box>
-          <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Typography
-              noWrap
-              sx={{ fontSize: 13, fontWeight: 600, color: PALETTE.text, lineHeight: 1.2 }}
-            >
-              {workspaceName}
-            </Typography>
-            {workspaceTag && (
-              <Typography sx={{ fontSize: 10.5, color: PALETTE.textFaint, lineHeight: 1.2 }}>
-                {workspaceTag}
-              </Typography>
-            )}
-          </Box>
-          <CaretDown size={12} color={PALETTE.textFaint} />
-        </Box>
-      </Box>
-
-      <List component="nav" aria-label="Sections" dense sx={{ py: 1 }}>
-        {visibleGroups.map((group) => (
-          <List key={group.label} component="div" dense disablePadding sx={{ mb: 0.5 }}>
-            <Typography
-              sx={{
-                fontSize: 10.5,
-                fontWeight: 700,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: PALETTE.textFaint,
-                px: 2,
-                pt: 1,
-                pb: 0.5,
-              }}
-            >
-              {group.label}
-            </Typography>
-            {group.items.map((item) => (
-              <ListItemButton key={item.key} selected={active === item.key} onClick={() => onNavigate(item.key)}>
-                <ListItemIcon>{item.icon}</ListItemIcon>
-                <ListItemText primary={item.label} slotProps={{ primary: { sx: { fontSize: 13.5, fontWeight: active === item.key ? 650 : 500 } } }} />
-                {item.key === 'history' && historyCount > 0 && (
-                  <Badge
-                    badgeContent={historyCount}
-                    max={999}
-                    sx={{ '& .MuiBadge-badge': { position: 'static', transform: 'none', bgcolor: PALETTE.raised, color: PALETTE.textMuted, fontWeight: 600, borderRadius: '6px' } }}
-                  />
-                )}
-              </ListItemButton>
-            ))}
-          </List>
-        ))}
-      </List>
-    </>
+            {group.label}
+          </Typography>
+          {group.items.map((item) => (
+            <ListItemButton key={item.key} selected={active === item.key} onClick={() => onNavigate(item.key)}>
+              <ListItemIcon>{item.icon}</ListItemIcon>
+              <ListItemText primary={item.label} slotProps={{ primary: { sx: { fontSize: 13.5, fontWeight: active === item.key ? 650 : 500 } } }} />
+              {item.key === 'history' && historyCount > 0 && (
+                <Badge
+                  badgeContent={historyCount}
+                  max={999}
+                  sx={{ '& .MuiBadge-badge': { position: 'static', transform: 'none', bgcolor: PALETTE.raised, color: PALETTE.textMuted, fontWeight: 600, borderRadius: '6px' } }}
+                />
+              )}
+            </ListItemButton>
+          ))}
+        </List>
+      ))}
+    </List>
   )
 }

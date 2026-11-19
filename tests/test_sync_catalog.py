@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from tierrouter.capability import ModelCapability
-from tierrouter.tiers import UNREVIEWED_TIER
+from gradist.capability import ModelCapability
+from gradist.tiers import UNREVIEWED_TIER
 
 _SYNC_PATH = Path(__file__).resolve().parents[1] / "experiments" / "sync_catalog.py"
 
@@ -22,7 +22,7 @@ def _load_sync():
     src = str(Path(__file__).resolve().parents[1] / "src")
     if src not in sys.path:
         sys.path.insert(0, src)
-    spec = importlib.util.spec_from_file_location("tierrouter_sync_catalog_test", _SYNC_PATH)
+    spec = importlib.util.spec_from_file_location("gradist_sync_catalog_test", _SYNC_PATH)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
