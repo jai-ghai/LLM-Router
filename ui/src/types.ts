@@ -167,6 +167,7 @@ export interface Decision {
     metadata_used?: string[]
     metadata_ignored?: string[]
     classifier_inputs?: ClassifierInputs
+    screen_text?: { engine: string | null; lines: { text: string; confidence: number }[]; error?: string }
   }
 }
 
@@ -179,7 +180,9 @@ export interface ClassifierInputs {
   image_embedder: string | null
   image_dims: number
   image_used: boolean
+  screen_text_used: boolean
   without_image: Record<string, number>
   without_text: Record<string, number>
+  without_screen_text: Record<string, number>
   without_metadata: Record<string, number>
 }

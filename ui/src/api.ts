@@ -113,6 +113,7 @@ export const api = {
   // Called by Catalog.tsx + Resolve.tsx for task→model pools (user: map selective models to a task).
   taskPools: (signal?: AbortSignal) =>
     request<{ pools: Record<string, string[]> }>('/v1/task-pools', { signal }),
+  channels: () => request<{ channels: Record<string, Record<string, string>> }>('/v1/channels'),
   saveTaskPool: (task: string, models: string[]) =>
     request<{ pools: Record<string, string[]> }>(`/v1/task-pools/${encodeURIComponent(task)}`, {
       ...json({ models }),

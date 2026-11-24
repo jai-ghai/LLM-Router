@@ -28,6 +28,7 @@ from fastapi.testclient import TestClient
 from gradist.classifier import TierClassifier
 from gradist.features import HashingEmbedder, MetadataEncoder
 from gradist.labels import TierLabel
+from gradist.ocr import ScreenLine
 from gradist.resolve import resolve
 from gradist.rules import Rule, RuleSet
 from gradist.service.app import AppState, create_app
@@ -460,6 +461,52 @@ def test_service_thumbnail_accepted_when_classifier_trained_with_images(
     )
     assert no_thumb.status_code == 200
     assert no_thumb.json()["rule_outcome"] == "no matching rule"
+
+
+class FakeScreenReader:
+    engine = "fake-ocr"
+
+    def read(self, image_bytes: bytes) -> list[ScreenLine]:
+        return [ScreenLine("BREAKING NEWS", 0.9)] if image_bytes == RED_THUMB else [ScreenLine("SCORE 2-1", 0.8)]
+
+    def save_cache(self) -> None:
+        pass
+
+
+def test_service_reads_screen_text_when_ocr_is_on(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _ladder_client(tmp_path, monkeypatch)
+    reader = FakeScreenReader()
+    monkeypatch.setattr(AppState, "screen_reader", lambda self: reader)
+    for tier, thumb, meta in (
+        ("large", RED_THUMB, {"channel_type": "news", "channel_code": "101", "channel_name": "Alpha"}),
+        ("small", BLUE_THUMB, {"channel_type": "sports", "channel_code": "202", "channel_name": "Beta"}),
+    ):
+        for i in range(2):
+            added = client.post(
+                "/v1/examples",
+                data={"metadata": json.dumps(meta), "text": f"clip {i}"},
+                files={"image": ("f.png", io.BytesIO(thumb), "image/png")},
+            ).json()
+            client.post("/v1/judgments", json={"example_id": added["example_id"], "tier": tier, "notes": ""})
+    assert client.post("/v1/train").status_code == 200
+    meta = json.loads((tmp_path / "data" / "classifier.meta.json").read_text(encoding="utf-8"))
+    assert meta["reads_screen_text"] is True
+
+    body = client.post(
+        "/v1/resolve",
+        data={"metadata": json.dumps({"channel_type": "news"}), "text": "check this clip"},
+        files={"image": ("q.png", io.BytesIO(RED_THUMB), "image/png")},
+    ).json()
+    assert body["signals"]["screen_text"] == {
+        "engine": "fake-ocr",
+        "lines": [{"text": "BREAKING NEWS", "confidence": 0.9}],
+    }
+    inputs = body["signals"]["classifier_inputs"]
+    assert inputs["screen_text_used"] is True
+    assert set(inputs["without_screen_text"]) == {"small", "large"}
+
+    channels = client.get("/v1/channels").json()["channels"]
+    assert channels["101"] == {"channel_name": "Alpha", "channel_type": "news"}
 
 
 def test_service_fallback_with_unused_thumbnail_before_train(

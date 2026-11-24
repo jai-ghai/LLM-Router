@@ -53,6 +53,9 @@ export function Resolve({
   const [media, setMedia] = useState<MediaInfo | null>(null)
   const mediaKind = media?.kind ?? null
   const [selectedProviders, setSelectedProviders] = useState<string[]>([])
+  const [channels, setChannels] = useState<Record<string, Record<string, string>>>({})
+  const [fromFilename, setFromFilename] = useState<(RecordingName & { fields: Record<string, string> }) | null>(null)
+  const [autoFilled, setAutoFilled] = useState<string[]>([])
   const [sent, setSent] = useState<SentRequest | null>(null)
   const [minConfidence, setMinConfidence] = useState(0)
   const [minQuality, setMinQuality] = useState(0)
@@ -136,6 +139,7 @@ export function Resolve({
         const counts: Record<string, number> = {}
         for (const e of catalog.catalog) counts[e.provider] = (counts[e.provider] ?? 0) + 1
         setProviderCounts(counts)
+        setChannels((await api.channels()).channels)
       } catch {
         // Optional surfaces — leave disabled if the calls fail.
       }
@@ -147,6 +151,8 @@ export function Resolve({
     setText('')
     setImage(null)
     setMedia(null)
+    setFromFilename(null)
+    setAutoFilled([])
     setSelectedProviders([])
     setSent(null)
     setMinConfidence(0)
@@ -163,18 +169,31 @@ export function Resolve({
     setImage(file)
     if (!file || !meta) {
       setMedia(null)
+      setFromFilename(null)
       setMetadata((prev) => {
         const next = { ...prev }
         delete next.modality
+        for (const k of autoFilled) delete next[k]
         return next
       })
+      setAutoFilled([])
       return
     }
     setMedia(meta)
-    setMetadata((prev) => ({
-      ...prev,
-      modality: meta.kind === 'video' ? 'video' : 'image',
-    }))
+    const parsed = parseRecordingName(meta.sourceName)
+    const added: Record<string, string> = {}
+    if (parsed) {
+      added.channel_code = parsed.channelCode
+      Object.assign(added, channels[parsed.channelCode] ?? {})
+    }
+    setFromFilename(parsed ? { ...parsed, fields: added } : null)
+    const next = { ...metadata }
+    for (const k of autoFilled) delete next[k]
+    const filled = Object.keys(added).filter((k) => !(k in next))
+    for (const k of filled) next[k] = added[k]
+    next.modality = meta.kind === 'video' ? 'video' : 'image'
+    setAutoFilled(filled)
+    setMetadata(next)
   }
 
   function openCreateTask() {
@@ -447,6 +466,16 @@ export function Resolve({
                 sourceKind={mediaKind}
                 sourceName={media?.sourceName ?? null}
               />
+              {fromFilename && (
+                <Typography sx={{ fontSize: 12, color: PALETTE.textMuted, mt: 0.75 }}>
+                  From the file name: channel <Mono size={12}>{fromFilename.channelCode}</Mono>
+                  {fromFilename.fields.channel_name ? ` (${fromFilename.fields.channel_name})` : ' (not in the training data)'}
+                  {' · recorded '}
+                  {fromFilename.start}
+                  {fromFilename.end ? ` → ${fromFilename.end.slice(11)}` : ''}
+                  {autoFilled.length ? ` — added ${autoFilled.join(', ')} to the metadata` : ''}
+                </Typography>
+              )}
             </Box>
 
             <Stack
@@ -633,6 +662,21 @@ export function Resolve({
   )
 }
 
+interface RecordingName {
+  channelCode: string
+  start: string
+  end: string | null
+}
+
+/** Recorder file names: <7-digit channel code>_<YYYY.MM.DD_HH.MM.SS>[-<YYYY.MM.DD_HH.MM.SS>]. */
+function parseRecordingName(name: string): RecordingName | null {
+  const stamp = String.raw`(\d{4})\.(\d{2})\.(\d{2})_(\d{2})\.(\d{2})\.(\d{2})`
+  const m = new RegExp(String.raw`^(\d{7})_${stamp}(?:-${stamp})?`).exec(name)
+  if (!m) return null
+  const fmt = (g: string[]) => `${g[0]}-${g[1]}-${g[2]} ${g[3]}:${g[4]}`
+  return { channelCode: m[1], start: fmt(m.slice(2, 8)), end: m[8] ? fmt(m.slice(8, 14)) : null }
+}
+
 interface SentRequest {
   metadata: Record<string, string>
   text: string
@@ -808,6 +852,31 @@ function RequestSent({ sent, decision }: { sent: SentRequest; decision: Decision
       rows.push(['Image', `${m.width}×${m.height}`])
     }
     rows.push(['Sent to the router', `${m.sentName} · ${m.sentType} · ${formatBytes(m.sentBytes)} — the video itself is never uploaded`])
+    const screen = s.screen_text
+    rows.push([
+      'Text read from the frame',
+      !screen?.engine ? (
+        'OCR is off (set GRADIST_OCR=1 on the API to read on-screen text)'
+      ) : screen.error ? (
+        `OCR failed: ${screen.error}`
+      ) : screen.lines.length === 0 ? (
+        `${screen.engine}: no readable text`
+      ) : (
+        <Stack spacing={0.25}>
+          {screen.lines.map((line, i) => (
+            <Box key={i} sx={{ display: 'flex', gap: 1, alignItems: 'baseline' }}>
+              <Mono size={11} muted>
+                {Math.round(line.confidence * 100)}%
+              </Mono>
+              <span>{line.text}</span>
+            </Box>
+          ))}
+          <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted }}>
+            {screen.engine} · lines under 30% confidence are dropped
+          </Typography>
+        </Stack>
+      ),
+    ])
     rows.push([
       'Effect on the pick',
       m.kind === 'video'
@@ -899,11 +968,20 @@ function ClassifierReading({ inputs, decision, hasMedia }: { inputs: ClassifierI
       ? `${words} words → ${inputs.text_embedder} sentence embedding (${inputs.text_dims} numbers): the meaning of the wording, not keyword matching`
       : 'empty — the text part carried no signal',
   ])
+  const screenLines = decision.signals?.screen_text?.lines ?? []
+  if (screenLines.length) {
+    read.push([
+      'Screen text',
+      inputs.screen_text_used
+        ? `${screenLines.length} line(s) of OCR text, added to the text before embedding`
+        : 'read, but not used — this classifier was trained without screen text (retrain with OCR on)',
+    ])
+  }
   if (inputs.image_embedder) {
     read.push([
       'Image',
       inputs.image_used
-        ? `${inputs.image_embedder} visual embedding (${inputs.image_dims} numbers) of the frame: its overall look — layout, colours, people, on-screen graphics. It does not read the text in the frame (no OCR) and does not name objects.`
+        ? `${inputs.image_embedder} visual embedding (${inputs.image_dims} numbers) of the frame: its overall look — layout, colours, people, on-screen graphics. It does not name objects; on-screen words come only from the OCR row above.`
         : 'none sent — the model saw an explicit “no image” flag',
     ])
   }
@@ -911,6 +989,9 @@ function ClassifierReading({ inputs, decision, hasMedia }: { inputs: ClassifierI
   const variants: { label: string; atLeast: Record<string, number> }[] = [{ label: 'Everything (actual)', atLeast: all }]
   if (inputs.image_used) variants.push({ label: 'Without the image', atLeast: atLeastByTier(inputs.without_image) })
   if (words) variants.push({ label: 'Without the text', atLeast: atLeastByTier(inputs.without_text) })
+  if (inputs.screen_text_used) {
+    variants.push({ label: 'Without the screen text', atLeast: atLeastByTier(inputs.without_screen_text) })
+  }
   if (buckets.length) variants.push({ label: 'Without the metadata', atLeast: atLeastByTier(inputs.without_metadata) })
 
   const focus = decision.tier

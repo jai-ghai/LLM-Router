@@ -31,8 +31,11 @@ taken from the session user — client-supplied values are ignored, not trusted.
 
 from __future__ import annotations
 
+import dataclasses
 import json
+import os
 import threading
+from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any
@@ -52,7 +55,13 @@ from gradist.catalog import (
     label_catalog_tiers,
     replace_entry,
 )
-from gradist.classifier import ClassifierError, EvalReport, TierClassifier, evaluate_classifier
+from gradist.classifier import (
+    ClassifierError,
+    EvalReport,
+    TierClassifier,
+    evaluate_classifier,
+    with_screen_text,
+)
 
 # create_app / train endpoint — SentenceTransformer for content-aware fit when installed.
 from gradist.features import (
@@ -61,8 +70,16 @@ from gradist.features import (
     HashingEmbedder,
     MetadataEncoder,
     SentenceTransformerEmbedder,
+    load_image_bytes,
 )
-from gradist.labels import LabelError, labels_from_rules, merge_labels, uncovered_examples
+from gradist.labels import (
+    LabelError,
+    TierLabel,
+    labels_from_rules,
+    merge_labels,
+    uncovered_examples,
+)
+from gradist.ocr import ScreenReader, join_lines
 from gradist.qc_risk import QcRiskHead
 from gradist.quality import QualityError, quality_lookup
 from gradist.quality_head import TierQualityHead
@@ -165,6 +182,33 @@ class Status(BaseModel):
 
 
 
+CHANNEL_FIELDS = ("channel_name", "network", "channel_type", "genre")
+
+
+def _channel_directory(examples: list[Any]) -> dict[str, dict[str, str]]:
+    """channel_code → the most common channel_name / network / type / genre seen with it."""
+    seen: dict[str, dict[str, Counter[str]]] = {}
+    for example in examples:
+        code = example.metadata.get("channel_code")
+        if not code:
+            continue
+        per_field = seen.setdefault(code, {f: Counter() for f in CHANNEL_FIELDS})
+        for f in CHANNEL_FIELDS:
+            if example.metadata.get(f):
+                per_field[f][example.metadata[f]] += 1
+    return {
+        code: {f: counts.most_common(1)[0][0] for f, counts in fields.items() if counts}
+        for code, fields in sorted(seen.items())
+    }
+
+
+def _with_ocr(label: TierLabel, reader: ScreenReader) -> TierLabel:
+    if not label.image_path:
+        return label
+    lines = reader.read(load_image_bytes(label.image_path))
+    return dataclasses.replace(label, text=with_screen_text(label.text, join_lines(lines)))
+
+
 def _infer_fields(examples: list[Any]) -> dict[str, list[str]]:
     fields: dict[str, set[str]] = {}
     for example in examples:
@@ -201,6 +245,8 @@ class AppState:
         self.last_report: EvalReport | None = None
         self._image_embedder: Dinov2Embedder | None = None
         self._image_lock = threading.Lock()
+        self.ocr_enabled = os.environ.get("GRADIST_OCR") == "1"
+        self._screen_reader: ScreenReader | None = None
 
     def image_embedder(self) -> Dinov2Embedder:
         """Loaded once, on first use, so server startup does not pay for it when no example has
@@ -210,6 +256,18 @@ class AppState:
             if self._image_embedder is None:
                 self._image_embedder = Dinov2Embedder()
             return self._image_embedder
+
+    def screen_reader(self) -> ScreenReader | None:
+        """OCR for frames, when GRADIST_OCR=1. Built on first use (the models take ~30 s to load)."""
+        if not self.ocr_enabled:
+            return None
+        with self._image_lock:
+            if self._screen_reader is None:
+                langs = tuple(
+                    s.strip() for s in os.environ.get("GRADIST_OCR_LANGS", "hi,en").split(",") if s.strip()
+                )
+                self._screen_reader = ScreenReader(langs, cache_path=self.store.root / "ocr_cache.json")
+            return self._screen_reader
 
 
 MINILM = "sentence-transformers/all-MiniLM-L6-v2"
@@ -250,6 +308,7 @@ def _load_saved_models(state: AppState, store: Store) -> None:
         MetadataEncoder(meta["fields"]),
         text_embedder,
         state.image_embedder() if meta["uses_images"] else None,
+        reads_screen_text=bool(meta.get("reads_screen_text", False)),
     )
     state.classifier_uses_images = bool(meta["uses_images"])
     state.loaded_n_labels = meta.get("n_labels")
@@ -523,6 +582,10 @@ def create_app(
 
     # ---- task → model pools ------------------------------------------------------------
 
+    @app.get("/v1/channels")
+    def get_channels(_: User | None = Depends(_require_read)) -> dict[str, Any]:
+        return {"channels": _channel_directory(store.list_examples())}
+
     @app.get("/v1/task-pools")
     def get_task_pools(_: User | None = Depends(_require_read)) -> dict[str, Any]:
         try:
@@ -700,7 +763,11 @@ def create_app(
         except ImportError:
             text_embedder = HashingEmbedder()
             text_kind = "hashing"
-        classifier = TierClassifier(encoder, text_embedder, image_embedder)
+        reader = state.screen_reader() if uses_images else None
+        if reader is not None:
+            labels = [_with_ocr(label, reader) for label in labels]
+            reader.save_cache()
+        classifier = TierClassifier(encoder, text_embedder, image_embedder, reads_screen_text=reader is not None)
         try:
             classifier.fit(labels)
         except ClassifierError as exc:
@@ -708,7 +775,13 @@ def create_app(
         classifier.save(store.classifier_path)
         _classifier_meta_path(store).write_text(
             json.dumps(
-                {"text_embedder": text_kind, "uses_images": uses_images, "fields": encoder_fields, "n_labels": len(labels)}
+                {
+                    "text_embedder": text_kind,
+                    "uses_images": uses_images,
+                    "reads_screen_text": reader is not None,
+                    "fields": encoder_fields,
+                    "n_labels": len(labels),
+                }
             ),
             encoding="utf-8",
         )
@@ -825,6 +898,17 @@ def create_app(
             )
         rules = store.load_rules()
         image_bytes = image.file.read() if image is not None else None
+        screen: dict[str, Any] = {"engine": None, "lines": []}
+        reader = state.screen_reader() if image_bytes else None
+        if reader is not None and image_bytes:
+            try:
+                screen = {
+                    "engine": reader.engine,
+                    "lines": [{"text": ln.text, "confidence": ln.confidence} for ln in reader.read(image_bytes)],
+                }
+            except Exception as exc:  # noqa: BLE001 — OCR is advisory; a bad frame must not fail the resolve
+                screen = {"engine": reader.engine, "lines": [], "error": str(exc)}
+        screen_text = " | ".join(line["text"] for line in screen["lines"])
         classifier = state.classifier
         # Catalog-first resolve never runs the classifier; only gate images on the ladder path.
         if (
@@ -860,9 +944,12 @@ def create_app(
                 optimize_for=optimize_for_literal,
                 quality_head=state.quality_head,
                 qc_risk=state.qc_risk,
+                screen_text=screen_text,
             )
         except (RuleError, ClassifierError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+        if image_bytes:
+            decision.signals["screen_text"] = screen
         store.append_history(
             {
                 "timestamp": datetime.now(UTC).isoformat(),

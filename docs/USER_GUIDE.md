@@ -42,8 +42,16 @@ decision returns `tier_scores` (the evidence for the tier), `candidates` (the to
 bytes, modality, providers). When the classifier decides, `signals.classifier_inputs` lists what it
 read (each metadata value and whether it was seen in training, the text and image embedders and
 their sizes) and the tier odds with the image, text or metadata removed — so you can see which
-input the decision rests on. The image part is a DINOv2 visual embedding of the frame; it does not
-read on-screen text. A video is never uploaded: the browser sends one still frame plus
+input the decision rests on. The image part is a DINOv2 visual embedding of the frame.
+
+**On-screen text (OCR).** With `GRADIST_OCR=1` (and `pip install .[ocr]`) the API reads the frame
+with EasyOCR (Hindi + English; `GRADIST_OCR_LANGS` for other scripts) and returns the lines in
+`signals.screen_text`. Training with OCR on appends each frame's text to its example text, so the
+classifier learns from it (`reads_screen_text` in `classifier.meta.json`); OCR results are cached
+in `data/ocr_cache.json`. `python experiments/eval_ocr.py` compares held-out accuracy with and
+without OCR. **Recorder file names** (`1010013_2026.07.28_07.40.00-….mp4`) fill `channel_code`
+and the channel's name, network, type and genre (from `GET /v1/channels`) automatically in the
+Playground. A video is never uploaded: the browser sends one still frame plus
 `modality=video`, which limits the pick to models that accept video.
 
 ## Run locally

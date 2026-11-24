@@ -35,6 +35,12 @@ def _embedder_name(embedder: object) -> str:
     return str(getattr(embedder, "model_name", None) or type(embedder).__name__)
 
 
+def with_screen_text(text: str, screen_text: str) -> str:
+    """The text a screen-reading classifier embeds: request text, then the frame's OCR text.
+    Training and prediction must build it the same way."""
+    return f"{text}\n[on screen] {screen_text}" if screen_text else text
+
+
 class TierClassifier:
     """fit(labels) once, then predict(metadata, text) -> (tier, confidence) many times.
 
@@ -54,10 +60,12 @@ class TierClassifier:
         metadata_encoder: MetadataEncoder,
         text_embedder: Embedder,
         image_embedder: ImageEmbedder | None = None,
+        reads_screen_text: bool = False,
     ) -> None:
         self._metadata_encoder = metadata_encoder
         self._text_embedder = text_embedder
         self._image_embedder = image_embedder
+        self.reads_screen_text = reads_screen_text
         self._clf: Any = None
         self._constant: str | None = None
 
@@ -118,15 +126,24 @@ class TierClassifier:
         proba = self._clf.predict_proba(x.reshape(1, -1))[0]
         return {str(tier): float(p) for tier, p in zip(self._clf.classes_, proba, strict=True)}
 
-    def explain(self, metadata: dict[str, str], text: str, image_bytes: bytes | None = None) -> dict[str, Any]:
+    def explain(
+        self,
+        metadata: dict[str, str],
+        text: str,
+        image_bytes: bytes | None = None,
+        screen_text: str = "",
+    ) -> dict[str, Any]:
         """What the classifier actually read from this request, and how much each input moved it.
 
-        `proba` is the same distribution `predict_proba` returns. `without_image`,
-        `without_text` and `without_metadata` re-score the request with that one part blanked
-        (no image flag, empty text, every field unknown), so a caller can show which input the
-        decision rests on. Blanked parts reuse the already-computed embeddings — the image is
-        embedded once.
+        `proba` is the same distribution `predict_proba` returns for the combined text.
+        `without_image`, `without_text`, `without_screen_text` and `without_metadata` re-score
+        the request with that one part blanked (no image flag, empty text, no OCR text, every
+        field unknown), so a caller can show which input the decision rests on. The image is
+        embedded once. `screen_text` is ignored unless this classifier was trained with it.
         """
+        screen_text = screen_text if self.reads_screen_text else ""
+        request_text = text
+        text = with_screen_text(request_text, screen_text)
         known = self._metadata_encoder.known_only(metadata)
         image_embedder = self._image_embedder
         report: dict[str, Any] = {
@@ -136,13 +153,20 @@ class TierClassifier:
             "image_embedder": _embedder_name(image_embedder) if image_embedder is not None else None,
             "image_dims": image_embedder.width if image_embedder is not None else 0,
             "image_used": image_embedder is not None and image_bytes is not None,
+            "screen_text_used": bool(screen_text),
         }
         meta_vec = self._metadata_encoder.encode(known)
         text_vec = self._text_embedder.embed([text])[0]
         report["text_dims"] = int(text_vec.shape[0])
         if self._constant is not None:
             constant = {self._constant: 1.0}
-            report.update(proba=constant, without_image=constant, without_text=constant, without_metadata=constant)
+            report.update(
+                proba=constant,
+                without_image=constant,
+                without_text=constant,
+                without_screen_text=constant,
+                without_metadata=constant,
+            )
             return report
         if self._clf is None:
             raise ClassifierError("classifier is not fitted; call fit() first")
@@ -161,7 +185,14 @@ class TierClassifier:
 
         report["proba"] = score(meta_vec, text_vec, image_part)
         report["without_image"] = score(meta_vec, text_vec, blank_image)
-        report["without_text"] = score(meta_vec, self._text_embedder.embed([""])[0], image_part)
+        report["without_text"] = score(
+            meta_vec, self._text_embedder.embed([with_screen_text("", screen_text)])[0], image_part
+        )
+        report["without_screen_text"] = (
+            score(meta_vec, self._text_embedder.embed([request_text])[0], image_part)
+            if screen_text
+            else report["proba"]
+        )
         report["without_metadata"] = score(self._metadata_encoder.encode({}), text_vec, image_part)
         return report
 
@@ -190,6 +221,7 @@ class TierClassifier:
         metadata_encoder: MetadataEncoder,
         text_embedder: Embedder,
         image_embedder: ImageEmbedder | None = None,
+        reads_screen_text: bool = False,
     ) -> TierClassifier:
         """Load a saved classifier. `joblib` uses `pickle`, which can execute arbitrary code for
 
@@ -198,7 +230,7 @@ class TierClassifier:
         will silently use a different-width feature vector than the one it was trained on.
         """
         state = joblib.load(path)
-        instance = cls(metadata_encoder, text_embedder, image_embedder)
+        instance = cls(metadata_encoder, text_embedder, image_embedder, reads_screen_text)
         instance._clf = state["clf"]
         instance._constant = state["constant"]
         return instance

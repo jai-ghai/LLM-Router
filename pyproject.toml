@@ -32,6 +32,8 @@ embeddings = ["sentence-transformers>=3.0"]
 # model card carries no license tag at all — the same ambiguous-license exclusion this project
 # already applied to Arch-Router (ADR-0006 in the earlier R&D project).
 images = ["transformers>=4.40", "torch>=2.2", "pillow>=10"]
+# EasyOCR (Apache 2.0): reads on-screen text (Devanagari + Latin by default) from frames.
+ocr = ["easyocr>=1.7"]
 service = [
   "fastapi>=0.111",
   "uvicorn>=0.30",
@@ -70,6 +72,6 @@ files = ["src"]
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["sklearn.*", "sentence_transformers.*", "joblib.*", "transformers.*", "torch.*", "PIL.*"]
+module = ["sklearn.*", "sentence_transformers.*", "joblib.*", "transformers.*", "torch.*", "PIL.*", "easyocr.*"]
 ignore_missing_imports = true
 follow_imports = "skip"

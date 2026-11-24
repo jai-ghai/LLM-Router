@@ -128,8 +128,12 @@ def resolve(
     optimize_for: OptimizeFor = "cost",
     quality_head: TierQualityHead | None = None,
     qc_risk: QcRiskHead | None = None,
+    screen_text: str = "",
 ) -> Decision:
     """Precedence: a matching rule wins outright, then the classifier, then the fallback tier.
+
+    `screen_text` is OCR text read from the image; the classifier reads it only if it was
+    trained with screen text.
 
     The classifier step has two models: requests with an image or domain metadata use the domain
     `classifier`; plain-text requests use `quality_head` when one is loaded (it predicts each
@@ -217,7 +221,7 @@ def resolve(
             classifier_outcome = reason
             fallback_outcome = "not needed"
         elif classifier is not None:
-            evidence = classifier.explain(metadata, text, image_bytes)
+            evidence = classifier.explain(metadata, text, image_bytes, screen_text)
             proba = evidence.pop("proba")
             signals["classifier_inputs"] = evidence
             predicted_tier = max(proba, key=lambda t: proba[t])
