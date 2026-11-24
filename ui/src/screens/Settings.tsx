@@ -46,7 +46,7 @@ export function Settings() {
     <Box>
       <PageHead
         title="Settings"
-        lede="What this Gradist deployment is running with. Secrets and file paths are set via environment variables, not here."
+        lede="What this mRouter deployment is running with. Secrets and file paths are set via environment variables, not here."
       />
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>

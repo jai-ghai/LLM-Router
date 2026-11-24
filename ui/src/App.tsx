@@ -57,10 +57,13 @@ const PAGE_TITLES: Record<PageKey, string> = {
 }
 
 const LADDER_PAGES = new Set<PageKey>(['rules', 'examples', 'judging', 'train', 'evaluate'])
+const TRAINING_PAGES = new Set<PageKey>(['examples', 'judging', 'train', 'evaluate'])
 
 const SEARCHABLE: { key: PageKey; label: string; adminOnly?: boolean; hideWhenCatalog?: boolean }[] = (
   Object.entries(PAGE_TITLES) as [PageKey, string][]
-).map(([key, label]) => ({
+)
+  .filter(([key]) => !TRAINING_PAGES.has(key))
+  .map(([key, label]) => ({
   key,
   label,
   adminOnly: key === 'users',
@@ -192,10 +195,10 @@ function AuthenticatedShell() {
             }}
             aria-hidden
           >
-            gd
+            mR
           </Box>
           <Typography sx={{ fontWeight: 700, fontSize: 16, letterSpacing: '-0.015em', color: PALETTE.text }}>
-            Gradist
+            mRouter
           </Typography>
         </Box>
         <Divider />
@@ -443,7 +446,7 @@ function AuthenticatedShell() {
         <Box sx={{ p: 3, maxWidth: 1360, mx: 'auto' }}>
           {online === 'offline' && (
             <Alert severity="error" sx={{ mb: 2 }}>
-              Cannot reach the Gradist service{import.meta.env.VITE_API_BASE ? ` at ${import.meta.env.VITE_API_BASE}` : ''}.
+              Cannot reach the mRouter service{import.meta.env.VITE_API_BASE ? ` at ${import.meta.env.VITE_API_BASE}` : ''}.
               {error ? ` ${error}` : ''} Check that the API is running, then refresh.
             </Alert>
           )}

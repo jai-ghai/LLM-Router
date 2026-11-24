@@ -1,16 +1,4 @@
-import {
-  BookOpen,
-  Brain,
-  ChartBar,
-  CheckSquare,
-  ClipboardText,
-  Database,
-  Flask,
-  FlowArrow,
-  GearSix,
-  SquaresFour,
-  UsersThree,
-} from '@phosphor-icons/react'
+import { ClipboardText, Flask, FlowArrow, SquaresFour } from '@phosphor-icons/react'
 import { Badge, List, ListItemButton, ListItemIcon, ListItemText, Typography } from '@mui/material'
 import type { ReactNode } from 'react'
 import { PALETTE } from './theme'
@@ -58,30 +46,32 @@ const GROUPS: Group[] = [
       { key: 'resolve', label: 'Playground', icon: <Flask {...ICON_PROPS} /> },
     ],
   },
-  {
-    label: 'Training',
-    hideWhenCatalog: true,
-    items: [
-      { key: 'examples', label: 'Examples', icon: <Database {...ICON_PROPS} />, hideWhenCatalog: true },
-      { key: 'judging', label: 'Human judging', icon: <CheckSquare {...ICON_PROPS} />, hideWhenCatalog: true },
-      { key: 'train', label: 'Train', icon: <Brain {...ICON_PROPS} />, hideWhenCatalog: true },
-      { key: 'evaluate', label: 'Evaluate', icon: <ChartBar {...ICON_PROPS} />, hideWhenCatalog: true },
-    ],
-  },
-  {
-    label: 'Admin',
-    adminOnly: true,
-    items: [
-      { key: 'users', label: 'Operators', icon: <UsersThree {...ICON_PROPS} />, adminOnly: true },
-    ],
-  },
-  {
-    label: 'Help',
-    items: [
-      { key: 'docs', label: 'Documentation', icon: <BookOpen {...ICON_PROPS} /> },
-      { key: 'settings', label: 'Settings', icon: <GearSix {...ICON_PROPS} /> },
-    ],
-  },
+  // Training is an operator workflow, not something end users need; the pages still exist.
+  // {
+  //   label: 'Training',
+  //   hideWhenCatalog: true,
+  //   items: [
+  //     { key: 'examples', label: 'Examples', icon: <Database {...ICON_PROPS} />, hideWhenCatalog: true },
+  //     { key: 'judging', label: 'Human judging', icon: <CheckSquare {...ICON_PROPS} />, hideWhenCatalog: true },
+  //     { key: 'train', label: 'Train', icon: <Brain {...ICON_PROPS} />, hideWhenCatalog: true },
+  //     { key: 'evaluate', label: 'Evaluate', icon: <ChartBar {...ICON_PROPS} />, hideWhenCatalog: true },
+  //   ],
+  // },
+  // Admin (Operators) and Help (Documentation, Settings) live in the user menu.
+  // {
+  //   label: 'Admin',
+  //   adminOnly: true,
+  //   items: [
+  //     { key: 'users', label: 'Operators', icon: <UsersThree {...ICON_PROPS} />, adminOnly: true },
+  //   ],
+  // },
+  // {
+  //   label: 'Help',
+  //   items: [
+  //     { key: 'docs', label: 'Documentation', icon: <BookOpen {...ICON_PROPS} /> },
+  //     { key: 'settings', label: 'Settings', icon: <GearSix {...ICON_PROPS} /> },
+  //   ],
+  // },
 ]
 
 /**

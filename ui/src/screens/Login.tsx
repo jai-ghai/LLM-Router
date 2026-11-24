@@ -85,10 +85,10 @@ export function Login() {
             }}
             aria-hidden
           >
-            gd
+            mR
           </Box>
           <Typography sx={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.015em', color: PALETTE.text }}>
-            Sign in to Gradist
+            Sign in to mRouter
           </Typography>
         </Stack>
         <Typography sx={{ fontSize: 13, color: PALETTE.textMuted, mb: 3 }}>

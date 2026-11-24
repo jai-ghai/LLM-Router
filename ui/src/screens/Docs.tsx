@@ -77,24 +77,24 @@ export function Docs() {
     <Box>
       <PageHead
         title="Documentation"
-        lede="How Gradist picks a model tier, how to run it, and how to call it from another app."
+        lede="How mRouter picks a model tier, how to run it, and how to call it from another app."
       />
 
-      <Panel title="What Gradist is">
+      <Panel title="What mRouter is">
         <P>
-          Gradist chooses which <em>tier</em> and which <em>model</em> should handle a request from
+          mRouter chooses which <em>tier</em> and which <em>model</em> should handle a request from
           its metadata (and optional text or image). It does <strong>not</strong> run the model.
-          Your own application calls the provider after Gradist returns a decision.
+          Your own application calls the provider after mRouter returns a decision.
         </P>
         <P>
-          Routing rules, quality ratings, and cost vs accuracy preferences stay in Gradist. Provider
+          Routing rules, quality ratings, and cost vs accuracy preferences stay in mRouter. Provider
           credentials and inference stay in your application.
         </P>
         <Shot src="/docs/images/overview.png" caption="Overview — request volume and how decisions were made (rules → classifier → fallback)." />
       </Panel>
 
       <Panel title="Where it is useful">
-        <P>Use Gradist when you run more than one model tier and need a consistent, auditable pick:</P>
+        <P>Use mRouter when you run more than one model tier and need a consistent, auditable pick:</P>
         <Stack component="ul" sx={{ pl: 2.5, m: 0, mb: 1, '& li': { fontSize: 13.5, color: PALETTE.textMuted, mb: 0.5 } }}>
           <li>Workloads that already carry structured metadata (task, channel, content type, …)</li>
           <li>Defaulting to lower-cost models and raising the bar only when quality ratings support it</li>
@@ -103,7 +103,7 @@ export function Docs() {
         </Stack>
         <P>
           If you only ever use a single model, or you need a full request proxy with streaming and
-          provider failover, Gradist alone is not that layer — pair it with whatever you already use
+          provider failover, mRouter alone is not that layer — pair it with whatever you already use
           to call models.
         </P>
       </Panel>
@@ -173,7 +173,7 @@ curl -b cookies.txt -X POST http://localhost:8000/v1/resolve \\
 #   "fallback_outcome": null,
 #   "optimize_for": "cost"
 # }`}</Code>
-        <P>Then call your model provider with <code>model_name</code>. Gradist does not store provider API keys.</P>
+        <P>Then call your model provider with <code>model_name</code>. mRouter does not store provider API keys.</P>
         <H>Python sketch</H>
         <Code>{`import httpx
 
