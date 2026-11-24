@@ -33,11 +33,11 @@ this phase — no implementation files yet.
 
 ### Task 1: Project skeleton
 - **ACTION**: `pyproject.toml` (deps: `pydantic`, `pyyaml`, `numpy`, `scikit-learn`, `joblib`;
-  optional extra for `sentence-transformers`). `src/tierrouter/__init__.py`. `config/tiers.example.yaml`
+  optional extra for `sentence-transformers`). `src/gradist/__init__.py`. `config/tiers.example.yaml`
   with the tier → model-per-provider shape from ARCHITECTURE.md §5, every value a `REPLACE_ME`.
 - **VALIDATE**: package installs editable; example config parses as YAML.
 
-### Task 2: Feature builder (`src/tierrouter/features.py`)
+### Task 2: Feature builder (`src/gradist/features.py`)
 - **ACTION**: `MetadataEncoder`: built from a caller-supplied `{field_name: [known_values]}`,
   one-hot per field plus one "unknown" column per field for any value not in the list, including
   a missing field. `TextEmbedder`: same interface shape as the earlier project's
@@ -49,18 +49,18 @@ this phase — no implementation files yet.
 - **VALIDATE**: unseen value → unknown bucket, not an error; a request missing a field still
   produces a correctly-shaped vector.
 
-### Task 3: Rules (`src/tierrouter/rules.py`)
+### Task 3: Rules (`src/gradist/rules.py`)
 - **ACTION**: Port the earlier project's `Rule`/`RuleSet` (attribute matching, most-specific-wins,
   YAML load/save) trimmed to only what this phase needs: no `RuleStore` history/versioning yet
   (that was for a live-editable service, which does not exist here), keep `validate()` against
   the tier names (not a model registry, since there is no registry here — only `tiers.yaml`).
 - **VALIDATE**: same behavior as the earlier project's `test_rules.py` cases, adapted.
 
-### Task 4: Labeled training data loader (`src/tierrouter/labels.py`) — BLOCKED
+### Task 4: Labeled training data loader (`src/gradist/labels.py`) — BLOCKED
 - **ACTION**: Depends entirely on which labeling strategy is chosen (see below). Do not start
   until that choice is made; the record schema differs by strategy.
 
-### Task 5: Tier classifier (`src/tierrouter/classifier.py`)
+### Task 5: Tier classifier (`src/gradist/classifier.py`)
 - **ACTION**: 3-class classifier over the Task 2 feature vector (start with multinomial logistic
   regression — same reasoning as the earlier project: MMR-Bench found simple routers matched
   complex ones). `fit`, `predict` (tier + confidence), `save`/`load` via `joblib`, same "only load
@@ -70,7 +70,7 @@ this phase — no implementation files yet.
 - **VALIDATE**: beats "always medium" on a held-out split; reports per-metadata-field accuracy,
   including the "unknown" bucket specifically.
 
-### Task 6: Resolver (`src/tierrouter/resolve.py`)
+### Task 6: Resolver (`src/gradist/resolve.py`)
 - **ACTION**: `resolve(request, rules, classifier, tier_map) -> Decision(tier, model_name,
   confidence, reason)`. Rule match wins outright (reason: "rule <description>"); otherwise the
   classifier decides (reason: "classifier, confidence X.XX"); low confidence falls back to the
@@ -78,7 +78,7 @@ this phase — no implementation files yet.
 - **VALIDATE**: a rule always overrides the classifier; a low-confidence classification is visibly
   marked, not silently accepted.
 
-### Task 7: LangChain stub (`src/tierrouter/llm_stub.py`)
+### Task 7: LangChain stub (`src/gradist/llm_stub.py`)
 - **ACTION**: One factory function, `get_client(model_name: str) -> None`, docstring only: "Not
   implemented. When the team is ready to call models, this returns a LangChain chat model for
   `model_name`." No LangChain import, no dependency added.

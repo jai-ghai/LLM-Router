@@ -2,8 +2,8 @@
 #
 # Behaviour and module under test: `UsersStore` methods (`add`, `set_disabled`,
 # `set_password_hash`, `find_by_username`, `find_by_id`, `is_empty`) in
-# `src/tierrouter/service/users_store.py`, and the three `/v1/users*` admin routes in
-# `src/tierrouter/service/app.py`.
+# `src/gradist/service/users_store.py`, and the three `/v1/users*` admin routes in
+# `src/gradist/service/app.py`.
 #
 # Existing test files for it: none — this file is new in P0.
 #
@@ -17,11 +17,11 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from tierrouter.service.app import create_app
-from tierrouter.service.auth import SessionConfig, hash_password
-from tierrouter.service.store import Store
-from tierrouter.service.users_store import UserError, UsersStore
-from tierrouter.tiers import TierSpec, TierTable
+from gradist.service.app import create_app
+from gradist.service.auth import SessionConfig, hash_password
+from gradist.service.store import Store
+from gradist.service.users_store import UserError, UsersStore
+from gradist.tiers import TierSpec, TierTable
 
 TIERS = TierTable(
     tiers=(

@@ -1,5 +1,5 @@
 # Optional: a selectable catalog of candidate models, instead of tiers.yaml's single model per
-# tier. If TIERROUTER_CATALOG is unset, resolve() uses tiers.yaml as before — this file is
+# tier. If GRADIST_CATALOG is unset, resolve() uses tiers.yaml as before — this file is
 # additive, not a replacement. Copy to catalog.yaml and fill in real ids and costs.
 #
 # `tier` must be one of the tier names declared in tiers.yaml. `cost` is a RELATIVE number (not

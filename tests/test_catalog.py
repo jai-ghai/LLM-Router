@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from tierrouter.catalog import CatalogEntry, ModelCatalog, load_catalog
-from tierrouter.rules import RuleError
+from gradist.catalog import CatalogEntry, ModelCatalog, load_catalog
+from gradist.rules import RuleError
 
 RANK = {"small": 0, "medium": 1, "large": 2}
 
@@ -319,7 +319,7 @@ def test_pick_filters_out_entries_without_audio_when_needs_audio() -> None:
 
 
 def test_pick_excludes_unreviewed_in_cost_mode() -> None:
-    from tierrouter.tiers import UNREVIEWED_TIER
+    from gradist.tiers import UNREVIEWED_TIER
 
     catalog = ModelCatalog(
         entries=(
@@ -367,7 +367,97 @@ def test_pick_excludes_unreviewed_even_if_in_selected_models() -> None:
             CatalogEntry("ready", "gemini", "small", cost=5),
         )
     )
-    # Even when the caller explicitly selects only the pending model, pick must refuse
-    # rather than route to an unreviewed entry.
+    # Legacy pick() still refuses UNREVIEWED (tier-ladder path). pick_from_pool allows them.
     with pytest.raises(RuleError, match="no catalog model"):
         catalog.pick("small", RANK, selected={"pending"})
+
+
+def test_pick_from_pool_ignores_tier_and_allows_explicit_unreviewed() -> None:
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("pending", "gemini", "UNREVIEWED", cost=1),
+            CatalogEntry("ready", "gemini", "large", cost=5),
+        )
+    )
+    entry, note = catalog.pick_from_pool(selected={"pending", "ready"}, optimize_for="cost")
+    assert entry.id == "pending"
+    assert note is not None and "selection pool" in note
+
+
+def test_pick_from_pool_all_means_entire_catalog() -> None:
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("pending", "gemini", "UNREVIEWED", cost=1),
+            CatalogEntry("ready", "gemini", "small", cost=5),
+        )
+    )
+    entry, _ = catalog.pick_from_pool(optimize_for="cost")
+    assert entry.id == "pending"
+
+
+def test_label_catalog_tiers_buckets_by_cost() -> None:
+    from gradist.catalog import label_catalog_tiers
+
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("a", "g", "UNREVIEWED", cost=1),
+            CatalogEntry("b", "g", "UNREVIEWED", cost=5),
+            CatalogEntry("c", "g", "UNREVIEWED", cost=10),
+        )
+    )
+    labeled = label_catalog_tiers(catalog, ["small", "medium", "large"])
+    by_id = {e.id: e for e in labeled.entries}
+    assert by_id["a"].tier == "small"
+    assert by_id["c"].tier == "large"
+    assert by_id["a"].assigned_by == "heuristic"
+
+
+def test_label_catalog_tiers_preserves_manual_assignments() -> None:
+    from gradist.catalog import label_catalog_tiers
+
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("a", "g", "UNREVIEWED", cost=1),
+            CatalogEntry("manual", "g", "medium", cost=99, assigned_by="admin"),
+        )
+    )
+    labeled = label_catalog_tiers(catalog, ["small", "medium", "large"])
+    by_id = {e.id: e for e in labeled.entries}
+    assert by_id["a"].tier == "small"
+    assert by_id["manual"].tier == "medium"
+    assert by_id["manual"].assigned_by == "admin"
+
+
+def test_label_equal_costs_share_same_bucket() -> None:
+    from gradist.catalog import label_catalog_tiers
+
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("a", "g", "UNREVIEWED", cost=1),
+            CatalogEntry("b", "g", "UNREVIEWED", cost=1),
+            CatalogEntry("c", "g", "UNREVIEWED", cost=1),
+        )
+    )
+    labeled = label_catalog_tiers(catalog, ["small", "medium", "large"])
+    # All same cost → same browse label (cheapest bucket).
+    assert {e.tier for e in labeled.entries} == {"small"}
+
+
+def test_label_catalog_tiers_splits_by_model_count_thirds() -> None:
+    from gradist.catalog import label_catalog_tiers
+
+    catalog = ModelCatalog(
+        entries=tuple(
+            CatalogEntry(f"m{i}", "g", "UNREVIEWED", cost=float(i)) for i in range(9)
+        )
+    )
+    labeled = label_catalog_tiers(catalog, ["small", "medium", "large"])
+    by_id = {e.id: e.tier for e in labeled.entries}
+    assert by_id["m0"] == "small"
+    assert by_id["m4"] == "medium"
+    assert by_id["m8"] == "large"
+
+
+def test_pick_from_pool_empty_selection_raises_not_all() -> None:
+    with pytest.raises(RuleError, match=r"selected=\[\]"):
+        CATALOG.pick_from_pool(selected=set(), optimize_for="cost")

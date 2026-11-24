@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from tierrouter.features import HashingEmbedder, MetadataEncoder, build_feature_vector
+from gradist.features import HashingEmbedder, MetadataEncoder, build_feature_vector
 
 
 class FakeImageEmbedder:

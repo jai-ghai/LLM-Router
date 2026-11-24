@@ -1,14 +1,14 @@
 # [Fact-Forcing preamble]
-# Callers: `src/tierrouter/service/auth.py` (functions `login_user`, `require_user`),
-#          `src/tierrouter/service/app.py` (routes `/v1/auth/*`, `/v1/users*`),
-#          `src/tierrouter/service/bootstrap.py` (CLI `main` function).
+# Callers: `src/gradist/service/auth.py` (functions `login_user`, `require_user`),
+#          `src/gradist/service/app.py` (routes `/v1/auth/*`, `/v1/users*`),
+#          `src/gradist/service/bootstrap.py` (CLI `main` function).
 # Duplicates: no existing file manages users. `service/store.py` manages examples/judgments/
 # rules/history/quality but not users — confirmed by reading service/store.py end-to-end.
 # Schema written: JSONL, one record per line: {id, username, password_hash, role,
 # created_at, disabled, notes}. Fully rewritten on each mutation (users are tiny; rewrite is
 # O(users), not O(requests)). Schema read: same JSONL on service start / each login lookup.
 # No secrets stored in plaintext: password_hash is the bcrypt output from passlib (see
-# auth.py). TIERROUTER_SESSION_SECRET is never persisted in this file.
+# auth.py). GRADIST_SESSION_SECRET is never persisted in this file.
 # Driven by PLAN-v2.md §4 (P0 — Auth, Level B). Operator's verbatim ask: "create auth or
 # required things because maybe user have different workflow and they can create difference
 # judgments".

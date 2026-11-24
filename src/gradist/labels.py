@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from tierrouter.rules import RuleSet
+from gradist.rules import RuleSet
 
 LabelSource = Literal["rule", "human"]
 

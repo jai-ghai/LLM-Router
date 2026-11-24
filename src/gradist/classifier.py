@@ -17,14 +17,14 @@ import joblib
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 
-from tierrouter.features import (
+from gradist.features import (
     Embedder,
     ImageEmbedder,
     MetadataEncoder,
     build_feature_vector,
     load_image_bytes,
 )
-from tierrouter.labels import TierLabel
+from gradist.labels import TierLabel
 
 
 class ClassifierError(ValueError):

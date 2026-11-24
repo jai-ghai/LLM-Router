@@ -1,11 +1,11 @@
-"""llm-tier-router: metadata + text + image -> tier -> model name. Does not call any model.
+"""Gradist: metadata + text + image -> tier -> model name. Does not call any model.
 
 See ../../ARCHITECTURE.md for the design and ../../PLAN.md for what is and is not built yet.
 Tasks 1-8 are implemented, including real image features (Dinov2Embedder, Apache 2.0, see
-features.py) and a FastAPI service (tierrouter.service) for the UI.
+features.py) and a FastAPI service (gradist.service) for the UI.
 
 Typical use:
-    from tierrouter import load_tiers, RuleSet, resolve, validate_setup
+    from gradist import load_tiers, RuleSet, resolve, validate_setup
 
     tiers = load_tiers("tiers.yaml")
     rules = RuleSet()  # or rules_from_file("rules.yaml")
@@ -14,9 +14,9 @@ Typical use:
     # decision.model_name is what to call; this package never calls it.
 """
 
-from tierrouter.catalog import CatalogEntry, ModelCatalog, load_catalog
-from tierrouter.classifier import ClassifierError, EvalReport, TierClassifier, evaluate_classifier
-from tierrouter.features import (
+from gradist.catalog import CatalogEntry, ModelCatalog, load_catalog
+from gradist.classifier import ClassifierError, EvalReport, TierClassifier, evaluate_classifier
+from gradist.features import (
     Dinov2Embedder,
     Embedder,
     HashingEmbedder,
@@ -26,7 +26,7 @@ from tierrouter.features import (
     build_feature_vector,
     load_image_bytes,
 )
-from tierrouter.labels import (
+from gradist.labels import (
     LabelError,
     RawExample,
     TierLabel,
@@ -38,9 +38,9 @@ from tierrouter.labels import (
     stratified_sample,
     uncovered_examples,
 )
-from tierrouter.resolve import Decision, resolve, validate_setup
-from tierrouter.rules import Rule, RuleError, RuleSet, rules_from_file
-from tierrouter.tiers import TierSpec, TierTable, load_tiers
+from gradist.resolve import Decision, resolve, validate_setup
+from gradist.rules import Rule, RuleError, RuleSet, rules_from_file
+from gradist.tiers import TierSpec, TierTable, load_tiers
 
 __version__ = "0.2.0"
 

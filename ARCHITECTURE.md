@@ -23,7 +23,7 @@ which tier of model it needs, before any model is called.
 **Explicitly out of scope for this phase** (the team's 2026-11-16 decision):
 - **Calling any model.** `resolve()` returns a model name and stops. The caller calls it however
   it already does.
-- **LangChain integration.** Stubbed as an empty factory interface only (`tierrouter.llm_stub`),
+- **LangChain integration.** Stubbed as an empty factory interface only (`gradist.llm_stub`),
   so a later phase has a place to put it without changing the classifier's contract. Not wired
   to anything, not tested against a real provider, no dependency added yet.
 - **Output verification, escalation, cost tracking, tracing.** All of that lived in the earlier
@@ -33,7 +33,7 @@ which tier of model it needs, before any model is called.
 A FastAPI service and a Material UI console *were* built (see README.md) so one operator can
 manage rules/examples/training without touching YAML or code directly — this was added once the
 classifier and feature pipeline were proven, not part of the original "resolve-only" scope above,
-which still holds for the library itself (`src/tierrouter/`).
+which still holds for the library itself (`src/gradist/`).
 
 ## 2. Why not LiteLLM alone, why not LangChain yet
 

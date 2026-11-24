@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from tierrouter.rules import RuleError
-from tierrouter.tiers import load_tiers
+from gradist.rules import RuleError
+from gradist.tiers import load_tiers
 
 
 def _write(path: Path, text: str) -> Path:

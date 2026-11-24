@@ -34,8 +34,8 @@ from typing import Literal
 
 import yaml
 
-from tierrouter.rules import RuleError
-from tierrouter.tiers import UNREVIEWED_TIER
+from gradist.rules import RuleError
+from gradist.tiers import UNREVIEWED_TIER
 
 OptimizeFor = Literal["cost", "accuracy", "balanced"]
 VALID_OPTIMIZE_FOR: tuple[OptimizeFor, ...] = ("cost", "accuracy", "balanced")
@@ -254,6 +254,71 @@ class ModelCatalog:
             "selection/provider/modality filters"
         )
 
+    def pick_from_pool(
+        self,
+        *,
+        selected: set[str] | None = None,
+        provider: str | None = None,
+        needs_image: bool = False,
+        needs_video: bool = False,
+        needs_audio: bool = False,
+        quality: Mapping[tuple[str, str], float] | None = None,
+        quality_value: str | None = None,
+        min_quality: float | None = None,
+        optimize_for: OptimizeFor = "cost",
+    ) -> tuple[CatalogEntry, str | None]:
+        """Pick the best model from an explicit selection pool — no tier ladder.
+
+        Callers: resolve() when a catalog is configured. Operator flow: select models
+        (optionally per task), then cost/accuracy/balanced among that pool only.
+        """
+        if optimize_for not in VALID_OPTIMIZE_FOR:
+            raise RuleError(
+                f"optimize_for must be one of {VALID_OPTIMIZE_FOR!r}; got '{optimize_for}'"
+            )
+        if selected is None:
+            candidates = list(self.entries)
+        else:
+            wanted = {s.lower() for s in selected}
+            candidates = [e for e in self.entries if e.id.lower() in wanted]
+        candidates = [
+            e
+            for e in candidates
+            if (provider is None or e.provider == provider)
+            and (not needs_image or e.supports_image)
+            and (not needs_video or e.supports_video)
+            and (not needs_audio or e.supports_audio)
+        ]
+        if not candidates:
+            selected_desc = "all" if selected is None else sorted(selected)
+            raise RuleError(
+                "no catalog model matches the current selection/provider/modality filters "
+                f"(selected={selected_desc}, "
+                f"provider={provider or 'any'}, needs_image={needs_image}, "
+                f"needs_video={needs_video}, needs_audio={needs_audio})"
+            )
+
+        quality_note: str | None = None
+        if quality and min_quality is not None and quality_value is not None:
+            passing = [e for e in candidates if _passes_quality(e, quality, quality_value, min_quality)]
+            if passing:
+                excluded = len(candidates) - len(passing)
+                if excluded:
+                    quality_note = (
+                        f"excluded {excluded} reviewed model(s) below the {min_quality:.1f} "
+                        f"quality bar for '{quality_value}'"
+                    )
+                candidates = passing
+            else:
+                quality_note = (
+                    f"no model meets the {min_quality:.1f} quality bar for '{quality_value}' "
+                    "in the selection — ignored the bar rather than failing the request"
+                )
+
+        chosen, mode_note = _choose_by_mode(candidates, optimize_for, quality, quality_value)
+        pool_note = f"picked from {len(candidates)} model(s) in the selection pool"
+        return chosen, _compose_note(pool_note, quality_note, mode_note)
+
 
 def load_catalog(path: str | Path) -> ModelCatalog:
     try:
@@ -328,4 +393,80 @@ def replace_entry(catalog: ModelCatalog, updated: CatalogEntry) -> ModelCatalog:
             entries.append(entry)
     if not found:
         raise RuleError(f"no catalog entry with id '{updated.id}'")
+    return ModelCatalog(entries=tuple(entries))
+
+
+def suggest_tier_by_cost(cost: float, sorted_costs: list[float], tier_names: list[str]) -> str:
+    """Browse-only: map cost → tier using equal-count ranks over `sorted_costs` (one per model).
+
+    Cheapest third of models → first name (usually "small"), most expensive third → last
+    ("large"). Same cost → same tier (uses the first index of that cost). Does not change
+    routing — pick_from_pool ignores tier.
+    """
+    if not tier_names:
+        raise RuleError("suggest_tier_by_cost needs at least one tier name")
+    if not sorted_costs:
+        return tier_names[0]
+    n = len(sorted_costs)
+    # First index with this cost (ties share the cheaper bucket).
+    index = 0
+    for i, value in enumerate(sorted_costs):
+        if value >= cost:
+            index = i
+            break
+        index = i
+    bucket = int(index * len(tier_names) / n)
+    return tier_names[min(bucket, len(tier_names) - 1)]
+
+
+def label_catalog_tiers(
+    catalog: ModelCatalog,
+    tier_names: list[str],
+    *,
+    only_unreviewed_or_heuristic: bool = True,
+) -> ModelCatalog:
+    """Assign browse-only tier labels from cost thirds (`assigned_by='heuristic'`).
+
+    `tier_names` must be cheapest→expensive declaration order (e.g. small, medium, large).
+    Models are sorted by cost; the cheapest third get `tier_names[0]`, the expensive third
+    get `tier_names[-1]`. By default only UNREVIEWED / previous heuristic rows are rewritten.
+    """
+    if not tier_names:
+        raise RuleError("label_catalog_tiers needs at least one tier name")
+    # Sort models by cost so buckets are equal-count by row. Same cost → same tier
+    # (bucket from the first index of that cost group).
+    ranked = sorted(catalog.entries, key=lambda e: (e.cost, e.id))
+    n = len(ranked)
+    id_to_tier: dict[str, str] = {}
+    cost_first_index: dict[float, int] = {}
+    for i, e in enumerate(ranked):
+        cost_first_index.setdefault(e.cost, i)
+    for e in ranked:
+        index = cost_first_index[e.cost]
+        bucket = min(len(tier_names) - 1, int(index * len(tier_names) / n)) if n else 0
+        id_to_tier[e.id] = tier_names[bucket]
+
+    entries: list[CatalogEntry] = []
+    for e in catalog.entries:
+        keep = only_unreviewed_or_heuristic and e.tier != UNREVIEWED_TIER and e.assigned_by not in (
+            "",
+            "heuristic",
+        )
+        if keep:
+            entries.append(e)
+            continue
+        entries.append(
+            CatalogEntry(
+                id=e.id,
+                provider=e.provider,
+                tier=id_to_tier[e.id],
+                cost=e.cost,
+                supports_image=e.supports_image,
+                supports_video=e.supports_video,
+                supports_audio=e.supports_audio,
+                label=e.label,
+                context_length=e.context_length,
+                assigned_by="heuristic",
+            )
+        )
     return ModelCatalog(entries=tuple(entries))

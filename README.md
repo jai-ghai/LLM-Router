@@ -1,8 +1,11 @@
-# llm-tier-router
+# Gradist
 
 A small, general-purpose library: given a request's metadata and text (and later, a thumbnail),
 predict which **tier** of model should handle it — small, medium, or large. The resolver then
 turns that tier into a concrete model name from a config file. It does not call the model itself.
+
+Operator guide (run, integrate, screenshots): [docs/USER_GUIDE.md](docs/USER_GUIDE.md) — also in the
+console under **Documentation**.
 
 This replaces the earlier, larger `R&D/llmrouter` project's scope (which also called models,
 verified output, escalated, and ran a full service and UI). That project is left as-is and
@@ -33,18 +36,18 @@ llm-tier-router/
 ├── PLAN.md                the task-by-task build plan, including the labeling decision
 ├── config/
 │   └── tiers.example.yaml tier -> model name per provider, company-agnostic (copy to tiers.yaml)
-├── src/tierrouter/        the library (skeleton; see PLAN.md Task 1 onward)
+├── src/gradist/        the library (skeleton; see PLAN.md Task 1 onward)
 ├── experiments/           training and evaluation scripts (not yet written)
 └── tests/                 (not yet written)
 ```
 
 ## Using this from another project (including BARC)
 
-Nothing in `src/tierrouter/` may import or assume anything about a specific consumer (no BARC
+Nothing in `src/gradist/` may import or assume anything about a specific consumer (no BARC
 channel codes, no video-specific types in the core package). A consumer like a BARC service:
 
 1. Installs this as a local/editable package (`pip install -e path/to/llm-tier-router`) once it
-   has code, or vendors just `src/tierrouter/` — both work, it has no service dependencies.
+   has code, or vendors just `src/gradist/` — both work, it has no service dependencies.
 2. Supplies its own `tiers.yaml` (its model names) and, if it wants metadata features, its own
    list of known metadata values (e.g. its anchor names, its channel codes) — the library never
    hardcodes anyone's values; unknown values fall into a shared "unknown" bucket (see

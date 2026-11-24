@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from tierrouter.classifier import ClassifierError, TierClassifier, evaluate_classifier
-from tierrouter.features import HashingEmbedder, MetadataEncoder
-from tierrouter.labels import TierLabel
+from gradist.classifier import ClassifierError, TierClassifier, evaluate_classifier
+from gradist.features import HashingEmbedder, MetadataEncoder
+from gradist.labels import TierLabel
 
 NEWS = ["parliament passed the budget bill", "the minister announced an election", "court verdict"]
 SPORTS = ["goal scored in the final match", "the striker won the tournament", "wicket and a century"]

@@ -15,7 +15,7 @@ from pathlib import Path
 
 import yaml
 
-from tierrouter.rules import RuleError
+from gradist.rules import RuleError
 
 # Catalog-only sentinel (P1). Not part of TierTable.names; never routable.
 UNREVIEWED_TIER = "UNREVIEWED"

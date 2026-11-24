@@ -1,6 +1,6 @@
 # [Fact-Forcing preamble]
 #
-# The file(s) and line(s) that will call it: `src/tierrouter/service/main.py` line 49
+# The file(s) and line(s) that will call it: `src/gradist/service/main.py` line 49
 # (`return create_app(...)`); `tests/test_service.py` fixtures `client`, `catalog_client`,
 # `quality_client`; new `tests/test_auth.py` and `tests/test_users.py` also import
 # `create_app`.
@@ -12,7 +12,7 @@
 # set/read via `SessionMiddleware`.
 #
 # No secrets stored in plaintext: session signing secret comes from `SessionConfig.secret`
-# (populated from TIERROUTER_SESSION_SECRET in `main.py`, never persisted here); user
+# (populated from GRADIST_SESSION_SECRET in `main.py`, never persisted here); user
 # passwords only land as bcrypt hashes via `auth.hash_password`.
 #
 # The user's verbatim instruction driving this file: "create auth or required things because
@@ -25,7 +25,7 @@ session-based auth with admin/member roles (PLAN-v2.md §4).
 Every mutating endpoint requires an authenticated session via `Depends(require_user)`;
 `/v1/users*` additionally requires the admin role. Read endpoints require auth by default;
 set `allow_read_without_auth=True` at construction to relax them (driven by
-`TIERROUTER_ALLOW_READ_WITHOUT_AUTH` in `main.py`). `judged_by` on ratings/judgments is
+`GRADIST_ALLOW_READ_WITHOUT_AUTH` in `main.py`). `judged_by` on ratings/judgments is
 taken from the session user — client-supplied values are ignored, not trusted.
 """
 
@@ -35,20 +35,38 @@ import threading
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
+import yaml
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.requests import Request as StarletteRequest
 
-from tierrouter.catalog import VALID_OPTIMIZE_FOR, ModelCatalog, OptimizeFor, replace_entry
-from tierrouter.classifier import ClassifierError, EvalReport, TierClassifier, evaluate_classifier
-from tierrouter.features import Dinov2Embedder, HashingEmbedder, MetadataEncoder
-from tierrouter.labels import LabelError, labels_from_rules, merge_labels, uncovered_examples
-from tierrouter.quality import QualityError, quality_lookup
-from tierrouter.resolve import Decision, resolve, validate_setup
-from tierrouter.rules import Rule, RuleError, RuleSet
-from tierrouter.service.auth import (
+from gradist.catalog import (
+    VALID_OPTIMIZE_FOR,
+    ModelCatalog,
+    OptimizeFor,
+    entry_to_yaml_dict,
+    label_catalog_tiers,
+    replace_entry,
+)
+from gradist.classifier import ClassifierError, EvalReport, TierClassifier, evaluate_classifier
+
+# create_app / train endpoint — SentenceTransformer for content-aware fit when installed.
+from gradist.features import (
+    Dinov2Embedder,
+    Embedder,
+    HashingEmbedder,
+    MetadataEncoder,
+    SentenceTransformerEmbedder,
+)
+from gradist.labels import LabelError, labels_from_rules, merge_labels, uncovered_examples
+from gradist.qc_risk import QcRiskHead
+from gradist.quality import QualityError, quality_lookup
+from gradist.quality_head import TierQualityHead
+from gradist.resolve import Decision, resolve, validate_setup
+from gradist.rules import Rule, RuleError, RuleSet, canonical_value
+from gradist.service.auth import (
     AuthError,
     SessionConfig,
     hash_password,
@@ -57,9 +75,9 @@ from tierrouter.service.auth import (
     require_admin,
     require_user,
 )
-from tierrouter.service.store import Store, guess_image_ext
-from tierrouter.service.users_store import User, UserError, UsersStore
-from tierrouter.tiers import UNREVIEWED_TIER, TierTable
+from gradist.service.store import Store, guess_image_ext
+from gradist.service.users_store import User, UserError, UsersStore
+from gradist.tiers import UNREVIEWED_TIER, TierTable
 
 
 class RuleIn(BaseModel):
@@ -114,6 +132,14 @@ class CatalogTierIn(BaseModel):
     """A declared tier name from tiers.yaml, or the UNREVIEWED sentinel (demotion)."""
 
 
+class TaskPoolIn(BaseModel):
+    models: list[str]
+
+
+class TaskPoolsIn(BaseModel):
+    pools: dict[str, list[str]]
+
+
 class TrainResult(BaseModel):
     n_labels: int
     n_rule_labels: int
@@ -127,6 +153,14 @@ class Status(BaseModel):
     trained: bool
     n_labels_last_trained_on: int | None
     uses_images: bool
+    # Deployment facts the Settings screen shows (no secrets). Additive; older UIs ignore.
+    quality_field: str | None = None
+    catalog_configured: bool = False
+    allow_read_without_auth: bool = False
+    unreviewed_count: int = 0
+    quality_head: bool = False
+    qc_risk: bool = False
+
 
 
 def _infer_fields(examples: list[Any]) -> dict[str, list[str]]:
@@ -159,6 +193,8 @@ class AppState:
         self.quality_field = quality_field
         self.classifier: TierClassifier | None = None
         self.classifier_uses_images: bool = False
+        self.quality_head: TierQualityHead | None = None
+        self.qc_risk: QcRiskHead | None = None
         self.last_report: EvalReport | None = None
         self._image_embedder: Dinov2Embedder | None = None
         self._image_lock = threading.Lock()
@@ -183,7 +219,7 @@ def create_app(
     quality_field: str | None = None,
     allow_read_without_auth: bool = False,
 ) -> FastAPI:
-    app = FastAPI(title="llm-tier-router", version="0.5.0")
+    app = FastAPI(title="Gradist", version="0.5.0")
 
     # CORS first so preflights never reach route handlers; then SessionMiddleware so routes
     # can read `request.session`. `https_only` is off because the service is intended to run
@@ -194,7 +230,7 @@ def create_app(
             CORSMiddleware,
             allow_origins=cors_origins,
             allow_credentials=True,  # so the signed session cookie flows cross-origin
-            allow_methods=["GET", "POST", "PUT"],
+            allow_methods=["GET", "POST", "PUT", "DELETE"],
             allow_headers=["Content-Type"],
         )
     app.add_middleware(
@@ -207,6 +243,17 @@ def create_app(
     )
 
     state = AppState(tiers, store, users, allow_read_without_auth, catalog, quality_field)
+    head_path = store.root / "quality_head.joblib"
+    risk_path = store.root / "qc_risk.joblib"
+    if head_path.exists() or risk_path.exists():
+        try:
+            minilm = SentenceTransformerEmbedder("sentence-transformers/all-MiniLM-L6-v2")
+        except ImportError:
+            minilm = None
+        if minilm is not None and head_path.exists():
+            state.quality_head = TierQualityHead.load(head_path, minilm)
+        if minilm is not None and risk_path.exists():
+            state.qc_risk = QcRiskHead.load(risk_path, minilm)
     # The auth dependency reads `request.app.state.users` to look up sessions.
     app.state.users = users
 
@@ -231,7 +278,7 @@ def create_app(
         if users.is_empty():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="no users exist yet; run `python -m tierrouter.service.bootstrap "
+                detail="no users exist yet; run `python -m gradist.service.bootstrap "
                 "--username <name>` before anyone can log in",
             )
         try:
@@ -377,6 +424,36 @@ def create_app(
     def get_catalog(_: User | None = Depends(_require_read)) -> dict[str, Any]:
         return _catalog_payload()
 
+    # Static path BEFORE /v1/catalog/{model_id} so "label-tiers" is never treated as an id.
+    @app.post("/v1/catalog/label-tiers")
+    def label_catalog_by_cost(
+        force: bool = False,
+        user: User = Depends(require_admin),
+    ) -> dict[str, Any]:
+        """Admin-only: assign browse-only tier labels from cost thirds (assigned_by=heuristic).
+
+        Cheapest ~⅓ of models → first tier name, middle → second, expensive → last.
+        Does not change resolve() — pick_from_pool ignores tier. By default preserves rows
+        an admin manually labeled; pass `?force=true` to rewrite every row.
+        """
+        if state.catalog is None:
+            raise HTTPException(
+                status_code=422,
+                detail="no catalog is configured for this deployment (GRADIST_CATALOG unset)",
+            )
+        # Cheapest→expensive by declared rank (0=small). Never list(tiers.names) — it's a set.
+        ordered_tiers = [name for name, _rank in sorted(tiers.rank().items(), key=lambda kv: kv[1])]
+        labeled = label_catalog_tiers(
+            state.catalog,
+            ordered_tiers,
+            only_unreviewed_or_heuristic=not force,
+        )
+        if store.catalog_path is not None:
+            document = {"catalog": [entry_to_yaml_dict(e) for e in labeled.entries]}
+            store.catalog_path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
+        state.catalog = labeled
+        return _catalog_payload()
+
     @app.put("/v1/catalog/{model_id}")
     def put_catalog_tier(
         model_id: str, payload: CatalogTierIn, user: User = Depends(require_admin)
@@ -387,7 +464,7 @@ def create_app(
         if state.catalog is None:
             raise HTTPException(
                 status_code=422,
-                detail="no catalog is configured for this deployment (TIERROUTER_CATALOG unset)",
+                detail="no catalog is configured for this deployment (GRADIST_CATALOG unset)",
             )
         tier = payload.tier.strip()
         allowed = set(tiers.names) | {UNREVIEWED_TIER}
@@ -405,6 +482,38 @@ def create_app(
             raise HTTPException(status_code=422, detail=msg) from exc
         state.catalog = replace_entry(state.catalog, updated)
         return _catalog_payload()
+
+    # ---- task → model pools ------------------------------------------------------------
+
+    @app.get("/v1/task-pools")
+    def get_task_pools(_: User | None = Depends(_require_read)) -> dict[str, Any]:
+        try:
+            return {"pools": store.load_task_pools()}
+        except RuleError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.put("/v1/task-pools")
+    def put_task_pools(payload: TaskPoolsIn, _: User = Depends(require_user)) -> dict[str, Any]:
+        try:
+            return {"pools": store.save_task_pools(payload.pools)}
+        except RuleError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.put("/v1/task-pools/{task}")
+    def put_one_task_pool(
+        task: str, payload: TaskPoolIn, _: User = Depends(require_user)
+    ) -> dict[str, Any]:
+        try:
+            return {"pools": store.upsert_task_pool(task, payload.models)}
+        except RuleError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.delete("/v1/task-pools/{task}")
+    def delete_one_task_pool(task: str, _: User = Depends(require_user)) -> dict[str, Any]:
+        try:
+            return {"pools": store.delete_task_pool(task)}
+        except RuleError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     # ---- quality ratings ---------------------------------------------------------------
 
@@ -544,7 +653,13 @@ def create_app(
         fields = _infer_fields(examples)
         encoder = MetadataEncoder(fields) if fields else MetadataEncoder({"_unused": []})
         image_embedder = state.image_embedder() if uses_images else None
-        classifier = TierClassifier(encoder, HashingEmbedder(), image_embedder)
+        # Prefer a small sentence embedder when installed — content dynamics for HF/text labels.
+        text_embedder: Embedder
+        try:
+            text_embedder = SentenceTransformerEmbedder("sentence-transformers/all-MiniLM-L6-v2")
+        except ImportError:
+            text_embedder = HashingEmbedder()
+        classifier = TierClassifier(encoder, text_embedder, image_embedder)
         try:
             classifier.fit(labels)
         except ClassifierError as exc:
@@ -582,10 +697,19 @@ def create_app(
     @app.get("/v1/status")
     def status_endpoint(_: User | None = Depends(_require_read)) -> Status:
         report = state.last_report
+        unreviewed = 0
+        if state.catalog is not None:
+            unreviewed = sum(1 for e in state.catalog.entries if e.tier == UNREVIEWED_TIER)
         return Status(
             trained=state.classifier is not None,
             n_labels_last_trained_on=report.n if report else None,
             uses_images=state.classifier_uses_images,
+            quality_field=state.quality_field,
+            catalog_configured=state.catalog is not None,
+            allow_read_without_auth=state.allow_read_without_auth,
+            unreviewed_count=unreviewed,
+            quality_head=state.quality_head is not None,
+            qc_risk=state.qc_risk is not None,
         )
 
     # ---- resolve + history -------------------------------------------------------------
@@ -597,6 +721,7 @@ def create_app(
         provider: Annotated[str | None, Form()] = None,
         min_confidence: Annotated[float, Form()] = 0.0,
         selected_models: Annotated[str | None, Form()] = None,
+        task: Annotated[str | None, Form()] = None,
         min_quality: Annotated[float | None, Form()] = None,
         optimize_for: Annotated[str, Form()] = "cost",
         image: Annotated[UploadFile | None, File()] = None,
@@ -618,24 +743,57 @@ def create_app(
             )
         # Membership check above is enough for mypy to narrow the form field to OptimizeFor.
         optimize_for_literal: OptimizeFor = optimize_for
+        # None = "no filter / all models". A parsed empty list must stay empty (not collapse
+        # to None), or an empty task pool would silently compete over the full catalog.
         selected: list[str] | None = None
-        if selected_models:
+        selected_explicit = False
+        if selected_models is not None and selected_models != "":
             try:
-                selected = _json.loads(selected_models)
+                parsed_selected = _json.loads(selected_models)
             except _json.JSONDecodeError as exc:
                 raise HTTPException(status_code=422, detail=f"'selected_models' is not valid JSON: {exc}") from exc
-            if not isinstance(selected, list):
+            if not isinstance(parsed_selected, list):
                 raise HTTPException(status_code=422, detail="'selected_models' must be a JSON array of ids")
+            selected = [str(m) for m in parsed_selected]
+            selected_explicit = True
+        task_name = canonical_value((task or "").strip()) or None
+        # Catalog-first: a named task pool supplies the competition set when the caller did
+        # not pass selected_models explicitly.
+        if not selected_explicit and task_name and state.catalog is not None:
+            try:
+                pools = store.load_task_pools()
+            except RuleError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+            if task_name not in pools:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"unknown task pool '{task_name}'; save models for it on Catalog first",
+                )
+            selected = list(pools[task_name])
+            selected_explicit = True
+        if selected_explicit and selected is not None and len(selected) == 0:
+            raise HTTPException(
+                status_code=422,
+                detail="selection pool is empty — add models on Catalog or pick a non-empty task pool",
+            )
         rules = store.load_rules()
         image_bytes = image.file.read() if image is not None else None
         classifier = state.classifier
-        if image_bytes is not None and classifier is not None and not classifier.uses_images:
+        # Catalog-first resolve never runs the classifier; only gate images on the ladder path.
+        if (
+            state.catalog is None
+            and image_bytes is not None
+            and classifier is not None
+            and not classifier.uses_images
+        ):
             raise HTTPException(
                 status_code=422,
                 detail="The trained classifier was not trained with any image examples, so it "
                 "cannot use this image. Add an image example and retrain first.",
             )
         clean_metadata = {str(k): str(v) for k, v in parsed.items()}
+        if task_name:
+            clean_metadata.setdefault("task", task_name)
         quality_scores = quality_lookup(store.list_quality_ratings(), state.quality_field) if state.quality_field else None
         try:
             decision = resolve(
@@ -648,11 +806,13 @@ def create_app(
                 min_confidence=min_confidence,
                 image_bytes=image_bytes,
                 catalog=state.catalog,
-                selected_models=set(selected) if selected else None,
+                selected_models=set(selected) if selected_explicit and selected is not None else None,
                 quality=quality_scores,
                 quality_field=state.quality_field,
                 min_quality=min_quality,
                 optimize_for=optimize_for_literal,
+                quality_head=state.quality_head,
+                qc_risk=state.qc_risk,
             )
         except (RuleError, ClassifierError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -664,10 +824,9 @@ def create_app(
                 "text": text,
                 "has_image": image_bytes is not None,
                 "provider": provider,
+                "task": task_name,
                 "selected_models": selected,
                 "min_quality": min_quality,
-                # Record what the caller asked for AND what actually drove the pick (a rule's
-                # own optimize_for can override the request's — see decision.optimize_for).
                 "optimize_for_requested": optimize_for_literal,
                 "optimize_for": decision.optimize_for,
                 "tier": decision.tier,

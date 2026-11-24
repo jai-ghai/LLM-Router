@@ -1,15 +1,15 @@
 # [Fact-Forcing preamble]
 #
 # The file(s) and line(s) that will call it:
-#   - `src/tierrouter/service/app.py` — `SessionConfig` is used by create_app's
+#   - `src/gradist/service/app.py` — `SessionConfig` is used by create_app's
 #     SessionMiddleware wire-up; `hash_password` + `verify_password` by the `/v1/auth/login`
 #     route; `require_user` + `require_admin` as `Depends(...)` on every mutating route;
 #     `AuthError` is caught by `/v1/auth/login` and translated to HTTP 401.
-#   - `src/tierrouter/service/bootstrap.py` — `hash_password` is called to write the first
+#   - `src/gradist/service/bootstrap.py` — `hash_password` is called to write the first
 #     admin's password hash into users.jsonl.
 #
 # No existing file serves the same purpose: confirmed by reading every .py under
-# `src/tierrouter/` end-to-end. `service/store.py` manages examples/judgments/rules/history/
+# `src/gradist/` end-to-end. `service/store.py` manages examples/judgments/rules/history/
 # quality but has no notion of users or passwords.
 #
 # The data schemas it reads or writes:
@@ -21,7 +21,7 @@
 #
 # No secrets stored in plaintext: bcrypt hashes only (`passlib.context.CryptContext` with
 # `schemes=["bcrypt"]`). The session signing secret comes from the
-# TIERROUTER_SESSION_SECRET env var and is never persisted by this module.
+# GRADIST_SESSION_SECRET env var and is never persisted by this module.
 #
 # The user's verbatim instruction driving this file: "create auth or required things because
 # maybe user have different workflow and they can create difference judgments" — see
@@ -48,7 +48,7 @@ from dataclasses import dataclass
 import bcrypt
 from fastapi import Depends, HTTPException, Request, status
 
-from tierrouter.service.users_store import User, UsersStore
+from gradist.service.users_store import User, UsersStore
 
 _MAX_PASSWORD_BYTES = 72
 
@@ -88,7 +88,7 @@ class SessionConfig:
     and tests can inject a known secret."""
 
     secret: str
-    cookie_name: str = "tierrouter_session"
+    cookie_name: str = "gradist_session"
     max_age_seconds: int = 60 * 60 * 24 * 7  # one week; shorter would be more paranoid
 
 
@@ -139,7 +139,7 @@ def require_admin(user: User = Depends(require_user)) -> User:
 
 
 def optional_user(request: Request) -> User | None:
-    """For read endpoints that may be relaxed via `TIERROUTER_ALLOW_READ_WITHOUT_AUTH=1`:
+    """For read endpoints that may be relaxed via `GRADIST_ALLOW_READ_WITHOUT_AUTH=1`:
     returns the current user if there is one, else None, never raises. The route decides
     what to do with None."""
     return _current_user(request)

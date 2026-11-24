@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from tierrouter.quality import QualityError, QualityRating, quality_lookup
+from gradist.quality import QualityError, QualityRating, quality_lookup
 
 
 def test_rating_must_be_1_to_5() -> None:

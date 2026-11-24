@@ -12,16 +12,16 @@ from pathlib import Path
 
 import yaml
 
-from tierrouter.catalog import CatalogEntry, entry_to_yaml_dict, load_catalog, replace_entry
-from tierrouter.labels import (
+from gradist.catalog import CatalogEntry, entry_to_yaml_dict, load_catalog, replace_entry
+from gradist.labels import (
     LabelError,
     RawExample,
     TierLabel,
     load_examples,
     load_human_judgments,
 )
-from tierrouter.quality import QualityError, QualityRating
-from tierrouter.rules import RuleError, RuleSet, rules_from_file
+from gradist.quality import QualityError, QualityRating
+from gradist.rules import RuleError, RuleSet, canonical_value, rules_from_file
 
 
 class Store:
@@ -36,7 +36,9 @@ class Store:
         self.classifier_path = self.root / "classifier.joblib"
         self.history_path = self.root / "history.jsonl"
         self.quality_path = self.root / "quality.jsonl"
-        # Optional path to the live catalog.yaml (TIERROUTER_CATALOG). Needed so
+        # Task → model id lists for the catalog-first Playground flow (resolve + /v1/task-pools).
+        self.task_pools_path = self.root / "task_pools.yaml"
+        # Optional path to the live catalog.yaml (GRADIST_CATALOG). Needed so
         # PUT /v1/catalog/{id} can persist tier assignments (P1).
         self.catalog_path = Path(catalog_path) if catalog_path else None
         if not self.examples_path.exists():
@@ -49,6 +51,8 @@ class Store:
             self.history_path.write_text("", encoding="utf-8")
         if not self.quality_path.exists():
             self.quality_path.write_text("", encoding="utf-8")
+        if not self.task_pools_path.exists():
+            self.task_pools_path.write_text("pools: {}\n", encoding="utf-8")
 
     # ---- examples -----------------------------------------------------------------------
 
@@ -115,7 +119,7 @@ class Store:
         service layer does that (and also allows UNREVIEWED for demotion).
         """
         if self.catalog_path is None:
-            raise RuleError("no catalog is configured for this deployment (TIERROUTER_CATALOG unset)")
+            raise RuleError("no catalog is configured for this deployment (GRADIST_CATALOG unset)")
         if not self.catalog_path.exists():
             raise RuleError(f"catalog file {self.catalog_path} does not exist")
         catalog = load_catalog(self.catalog_path)
@@ -139,6 +143,64 @@ class Store:
         document = {"catalog": [entry_to_yaml_dict(e) for e in new_catalog.entries]}
         self.catalog_path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
         return updated
+
+    # ---- task → model pools ---------------------------------------------------------------
+
+    def load_task_pools(self) -> dict[str, list[str]]:
+        """Named competition pools: task key → list of catalog model ids.
+
+        Empty dict when unset. Used by Playground / resolve so one request maps to one task's
+        selected models (cost/accuracy/balanced among that pool only).
+        """
+        try:
+            data = yaml.safe_load(self.task_pools_path.read_text(encoding="utf-8")) or {}
+        except (OSError, yaml.YAMLError) as exc:
+            raise RuleError(f"cannot read task pools file {self.task_pools_path}: {exc}") from exc
+        pools = data.get("pools", {}) if isinstance(data, dict) else {}
+        if not isinstance(pools, dict):
+            raise RuleError(f"{self.task_pools_path}: 'pools' must be a mapping of task → model id list")
+        out: dict[str, list[str]] = {}
+        for task, models in pools.items():
+            if not isinstance(task, str) or not task.strip():
+                raise RuleError(f"{self.task_pools_path}: pool keys must be non-empty strings")
+            if not isinstance(models, list) or not all(isinstance(m, str) and m.strip() for m in models):
+                raise RuleError(f"{self.task_pools_path}: pools['{task}'] must be a list of model id strings")
+            out[canonical_value(task.strip())] = [m.strip() for m in models]
+        return out
+
+    def save_task_pools(self, pools: dict[str, list[str]]) -> dict[str, list[str]]:
+        cleaned: dict[str, list[str]] = {}
+        for task, models in pools.items():
+            key = canonical_value(str(task).strip())
+            if not key:
+                raise RuleError("task pool names must be non-empty")
+            if not isinstance(models, list) or not all(isinstance(m, str) and m.strip() for m in models):
+                raise RuleError(f"pools['{key}'] must be a list of model id strings")
+            ids = [m.strip() for m in models]
+            if not ids:
+                raise RuleError(f"pools['{key}'] must contain at least one model id")
+            cleaned[key] = ids
+        self.task_pools_path.write_text(
+            yaml.safe_dump({"pools": cleaned}, sort_keys=False),
+            encoding="utf-8",
+        )
+        return cleaned
+
+    def upsert_task_pool(self, task: str, models: list[str]) -> dict[str, list[str]]:
+        pools = self.load_task_pools()
+        key = canonical_value(task.strip())
+        if not key:
+            raise RuleError("task name must be non-empty")
+        ids = [m.strip() for m in models if isinstance(m, str) and m.strip()]
+        if not ids:
+            raise RuleError(f"pools['{key}'] must contain at least one model id")
+        pools[key] = ids
+        return self.save_task_pools(pools)
+
+    def delete_task_pool(self, task: str) -> dict[str, list[str]]:
+        pools = self.load_task_pools()
+        pools.pop(canonical_value(task.strip()), None)
+        return self.save_task_pools(pools)
 
     # ---- request history ------------------------------------------------------------------
 

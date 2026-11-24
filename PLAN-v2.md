@@ -35,7 +35,7 @@ Call-transcript context reconciled (2026-11-17, pasted by operator):
 - "Most content in the company is text-based; video is secondary" — modality-agnostic design
   stays; P3 is framed accordingly, not as a video-first piece.
 - "LangChain chosen as the abstraction layer ... Single API across all providers." The current
-  `src/tierrouter/llm_stub.py` is the planned seam. P2's output contract (`model_name` string)
+  `src/gradist/llm_stub.py` is the planned seam. P2's output contract (`model_name` string)
   stays compatible with a future factory layer; no scope creep into LangChain itself here.
 - "Factory pattern over integrations to be built later. Jai to start on the ML classifier part."
   So the classifier/routing side is Jai's workstream — this plan stays inside it.
@@ -73,9 +73,9 @@ Plus a fourth concern surfaced during Q5.5.a review:
 
 | Concern | Code that already exists | What it does NOT do |
 |---|---|---|
-| OSS + industry capability source | `src/tierrouter/capability.py` fetches OpenRouter `/api/v1/models`. OpenRouter covers both industry models (GPT-5, Claude, Gemini, Grok) and open-source (Llama, Qwen, DeepSeek, Mistral, Phi, Yi). Public endpoint, no key needed for the list. | Only used offline from `experiments/refresh_catalog.py`. `resolve()` never calls it — by design (ARCHITECTURE.md §1). |
+| OSS + industry capability source | `src/gradist/capability.py` fetches OpenRouter `/api/v1/models`. OpenRouter covers both industry models (GPT-5, Claude, Gemini, Grok) and open-source (Llama, Qwen, DeepSeek, Mistral, Phi, Yi). Public endpoint, no key needed for the list. | Only used offline from `experiments/refresh_catalog.py`. `resolve()` never calls it — by design (ARCHITECTURE.md §1). |
 | YAML as source of truth | `experiments/refresh_catalog.py` refreshes `cost`, `context_length`, `supports_image` for models already in `catalog.yaml`, matching by id suffix. | Does NOT add new models. Manual. No "discover" path. |
-| Cost + accuracy | `src/tierrouter/quality.py` models 1-5 human ratings keyed by `(model_id, metadata-field value)`. `catalog.pick()` takes `min_quality` as a floor. `resolve()` wires it through. `/v1/quality` POST+GET already exist in `service/app.py`. | No "pick the HIGHEST-quality model at the tier" (accuracy-first) mode — only "cheapest above the floor." |
+| Cost + accuracy | `src/gradist/quality.py` models 1-5 human ratings keyed by `(model_id, metadata-field value)`. `catalog.pick()` takes `min_quality` as a floor. `resolve()` wires it through. `/v1/quality` POST+GET already exist in `service/app.py`. | No "pick the HIGHEST-quality model at the tier" (accuracy-first) mode — only "cheapest above the floor." |
 | Modality coverage | `supports_image: bool` on every `CatalogEntry`. `capability.py` reads OpenRouter's `input_modalities` list but only extracts `"image"`. | No `supports_video`, no `supports_audio`. Nothing in the UI prompts a human to rate a real output. |
 | Identity and audit | None. `service/app.py` top comment: "built for one trusted local user ... no authentication anywhere." | No way to attribute a rating/rule/catalog edit to a specific user. No per-user judgment separation. |
 
@@ -115,9 +115,9 @@ rebuilding the modal later. P0 lands first so every subsequent piece can rely on
   created_at, disabled}` record.
 - **Password hashing:** `passlib[bcrypt]`. One new runtime dep, declared in `pyproject.toml`.
 - **Session:** `starlette.middleware.sessions.SessionMiddleware`. Cookie-based,
-  `httponly=True`, `samesite="lax"`. Secret from `TIERROUTER_SESSION_SECRET` env var; the
+  `httponly=True`, `samesite="lax"`. Secret from `GRADIST_SESSION_SECRET` env var; the
   service refuses to start if that env var is unset (no insecure fallback).
-- **Bootstrap:** `python -m tierrouter.service.bootstrap --username <name>` prompts for a
+- **Bootstrap:** `python -m gradist.service.bootstrap --username <name>` prompts for a
   password, writes the first user (role `admin`), and exits. The service refuses to accept
   logins until at least one user exists.
 - **Roles:** `admin` and `member`. `admin` can create/disable users, assign catalog tiers,
@@ -150,7 +150,7 @@ Every mutating endpoint gains a FastAPI `Depends(require_user)` dependency:
 
 Read endpoints (`GET /v1/catalog`, `/v1/tiers`, `/v1/history`, `/v1/examples`, `/v1/rules`,
 `/v1/status`, `/v1/quality`) also require auth by default, but a config toggle
-`TIERROUTER_ALLOW_READ_WITHOUT_AUTH=1` relaxes this for ops/monitoring use.
+`GRADIST_ALLOW_READ_WITHOUT_AUTH=1` relaxes this for ops/monitoring use.
 
 ### 4.3 UI surface
 
@@ -168,16 +168,16 @@ Read endpoints (`GET /v1/catalog`, `/v1/tiers`, `/v1/history`, `/v1/examples`, `
 
 ```
 pyproject.toml                        (+ passlib[bcrypt], + python-multipart already present)
-src/tierrouter/service/auth.py        (new: User model, hash_password, verify_password,
+src/gradist/service/auth.py        (new: User model, hash_password, verify_password,
                                        require_user dependency, require_admin dependency)
-src/tierrouter/service/users_store.py (new: append-only users.jsonl reader/writer)
-src/tierrouter/service/app.py         (SessionMiddleware wire-up, new /v1/auth/* and
+src/gradist/service/users_store.py (new: append-only users.jsonl reader/writer)
+src/gradist/service/app.py         (SessionMiddleware wire-up, new /v1/auth/* and
                                        /v1/users routes, Depends on every mutating route)
-src/tierrouter/service/store.py       (plumb session user id through write paths so each
+src/gradist/service/store.py       (plumb session user id through write paths so each
                                        rating/judgment record carries its author)
-src/tierrouter/service/bootstrap.py   (new: CLI to create the first admin user)
-src/tierrouter/service/__init__.py    (export bootstrap entry point)
-src/tierrouter/quality.py             (judged_by description updated: now a user id, not a
+src/gradist/service/bootstrap.py   (new: CLI to create the first admin user)
+src/gradist/service/__init__.py    (export bootstrap entry point)
+src/gradist/quality.py             (judged_by description updated: now a user id, not a
                                        free string; existing check "non-empty" still holds)
 ui/src/api.ts                         (login, logout, me helpers; response types)
 ui/src/auth.tsx                       (new: AuthProvider context, useUser hook)
@@ -215,7 +215,7 @@ tests/test_service.py                 (update: every mutating test logs in first
 ### 4.6 Non-goals for P0 (explicitly)
 
 - No OAuth, no SSO, no email verification, no password reset flow. Password reset is a CLI
-  reissue by an admin (`python -m tierrouter.service.bootstrap --reset <username>`).
+  reissue by an admin (`python -m gradist.service.bootstrap --reset <username>`).
 - No workspaces (that was Level C, deferred).
 - No per-permission ACLs beyond `admin`/`member`. Two roles is enough for this scope.
 - No audit log of logins. Add later if there is a concrete need.
@@ -254,11 +254,11 @@ Edge cases, each with a visible `note` in `Decision.reason`:
 
 ### 5.2 API surface
 
-- `src/tierrouter/catalog.py`: `pick(..., optimize_for)` — the only non-cost branches live here.
-- `src/tierrouter/resolve.py`: `resolve(..., optimize_for)` — thin passthrough.
-- `src/tierrouter/service/app.py`: `/v1/resolve` gains `optimize_for: str = "cost"` form field.
+- `src/gradist/catalog.py`: `pick(..., optimize_for)` — the only non-cost branches live here.
+- `src/gradist/resolve.py`: `resolve(..., optimize_for)` — thin passthrough.
+- `src/gradist/service/app.py`: `/v1/resolve` gains `optimize_for: str = "cost"` form field.
   Validated against the three allowed literals; 422 on anything else.
-- `src/tierrouter/rules.py`: `Rule` gains optional `optimize_for` field. When a rule matches,
+- `src/gradist/rules.py`: `Rule` gains optional `optimize_for` field. When a rule matches,
   its `optimize_for` wins over the request's — operators can pin accuracy mode for high-
   stakes tasks (e.g. QC on video frames, legal summarisation) at the rule layer, once.
 - `ui/src/types.ts`: `Decision` unchanged (reason already carries notes). `ResolveRequest`
@@ -269,10 +269,10 @@ Edge cases, each with a visible `note` in `Decision.reason`:
 ### 5.3 Files touched
 
 ```
-src/tierrouter/catalog.py        (pick + Decision reason threading)
-src/tierrouter/resolve.py        (new param, pass through, rule-override precedence)
-src/tierrouter/rules.py          (Rule.optimize_for + YAML load/save)
-src/tierrouter/service/app.py    (new form field on /v1/resolve)
+src/gradist/catalog.py        (pick + Decision reason threading)
+src/gradist/resolve.py        (new param, pass through, rule-override precedence)
+src/gradist/rules.py          (Rule.optimize_for + YAML load/save)
+src/gradist/service/app.py    (new form field on /v1/resolve)
 ui/src/types.ts                  (ResolveRequest, Rule types)
 ui/src/api.ts                    (resolve() signature)
 ui/src/screens/Resolve.tsx       (toggle)
@@ -332,7 +332,7 @@ use a different key pass it explicitly to `pick()` from their own glue code.
 
 - `ui/src/screens/History.tsx`: every history row gets a "Rate" action. Opens a modal with:
   1-5 stars, optional `notes`, and a dropdown for `task` (populated from
-  `TIERROUTER_QUALITY_FIELD` on the server via a new `/v1/quality/field` endpoint, or hidden
+  `GRADIST_QUALITY_FIELD` on the server via a new `/v1/quality/field` endpoint, or hidden
   if no field is configured). `judged_by` is NOT a form field — the server records
   `session.user.id` (P0).
 - On submit → `POST /v1/quality` with `model_id` = the row's `model_name`, `metadata` = the
@@ -344,10 +344,10 @@ use a different key pass it explicitly to `pick()` from their own glue code.
 ### 6.3 Files touched
 
 ```
-src/tierrouter/catalog.py            (CatalogEntry fields, pick filters)
-src/tierrouter/capability.py         (parse video + audio from input_modalities)
-src/tierrouter/resolve.py            (infer needs_video/audio from metadata)
-src/tierrouter/service/app.py        (expose supports_video/audio in /v1/catalog;
+src/gradist/catalog.py            (CatalogEntry fields, pick filters)
+src/gradist/capability.py         (parse video + audio from input_modalities)
+src/gradist/resolve.py            (infer needs_video/audio from metadata)
+src/gradist/service/app.py        (expose supports_video/audio in /v1/catalog;
                                       new /v1/quality/field endpoint)
 experiments/refresh_catalog.py       (sync the two new booleans like supports_image)
 config/catalog.example.yaml          (add supports_video/audio example rows)
@@ -438,12 +438,12 @@ python experiments/sync_catalog.py \
 ```
 experiments/sync_catalog.py          (new; merges refresh_catalog.py + import semantics)
 experiments/refresh_catalog.py       (shim, 3 lines, deprecates to sync_catalog.py)
-src/tierrouter/catalog.py            (UNREVIEWED filter in pick; CatalogEntry gains
+src/gradist/catalog.py            (UNREVIEWED filter in pick; CatalogEntry gains
                                       assigned_by: str = "")
-src/tierrouter/tiers.py              (UNREVIEWED_TIER constant; export)
-src/tierrouter/service/app.py        (PUT /v1/catalog/{id} admin-only;
+src/gradist/tiers.py              (UNREVIEWED_TIER constant; export)
+src/gradist/service/app.py        (PUT /v1/catalog/{id} admin-only;
                                       store.update_catalog_tier)
-src/tierrouter/service/store.py      (update_catalog_tier + file write)
+src/gradist/service/store.py      (update_catalog_tier + file write)
 ui/src/types.ts                      (tier type now includes "UNREVIEWED")
 ui/src/api.ts                        (updateCatalogTier helper)
 ui/src/screens/Catalog.tsx           (pending-review banner, tier assignment, demote)
@@ -510,7 +510,7 @@ pytest -q tests/test_sync_catalog.py           # P1 subset
 
 End-to-end smoke on each piece (manual, documented in the PR body, not a CI job):
 
-- **P0**: run `python -m tierrouter.service.bootstrap --username admin` → set a password →
+- **P0**: run `python -m gradist.service.bootstrap --username admin` → set a password →
   start service → UI redirects to `/login` → log in → sidebar shows "@admin, admin" → create
   a `member` user → log in as that member → verify Users screen is not visible from nav.
 - **P2**: logged in → `/v1/resolve` with `optimize_for=accuracy` → verify `Decision.reason`

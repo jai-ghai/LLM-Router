@@ -14,7 +14,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from tierrouter import (
+from gradist import (
     HashingEmbedder,
     MetadataEncoder,
     RuleSet,
@@ -28,7 +28,7 @@ from tierrouter import (
     rules_from_file,
     uncovered_examples,
 )
-from tierrouter.labels import RawExample
+from gradist.labels import RawExample
 
 
 def infer_fields(examples: list[RawExample]) -> dict[str, list[str]]:
@@ -72,7 +72,7 @@ def main() -> None:
     if not labels:
         sys.exit(
             "No labels at all: no rule matched anything, and no --human-judgments were given.\n"
-            "Export the uncovered examples for human judging first (tierrouter.export_for_human_judging)."
+            "Export the uncovered examples for human judging first (gradist.export_for_human_judging)."
         )
 
     fields = infer_fields(examples)

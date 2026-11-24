@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from tierrouter.rules import Rule, RuleError, RuleSet, canonical_value, rules_from_file
+from gradist.rules import Rule, RuleError, RuleSet, canonical_value, rules_from_file
 
 
 def test_values_compare_without_case_padding_or_zeros() -> None:

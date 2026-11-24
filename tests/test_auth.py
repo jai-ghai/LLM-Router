@@ -1,9 +1,9 @@
 # [Fact-Forcing preamble]
 #
-# Behaviour and module under test: `src/tierrouter/service/auth.py` (functions
+# Behaviour and module under test: `src/gradist/service/auth.py` (functions
 # `hash_password`, `verify_password`, `login_user`, `require_user`, `require_admin`,
 # `optional_user`) and the three `/v1/auth/*` routes plus session-enforcement on
-# `/v1/rules` and `/v1/quality` defined in `src/tierrouter/service/app.py`.
+# `/v1/rules` and `/v1/quality` defined in `src/gradist/service/app.py`.
 #
 # Existing test files for it: none — this file is new in P0.
 #
@@ -17,11 +17,11 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from tierrouter.service.app import create_app
-from tierrouter.service.auth import AuthError, SessionConfig, hash_password, verify_password
-from tierrouter.service.store import Store
-from tierrouter.service.users_store import UsersStore
-from tierrouter.tiers import TierSpec, TierTable
+from gradist.service.app import create_app
+from gradist.service.auth import AuthError, SessionConfig, hash_password, verify_password
+from gradist.service.store import Store
+from gradist.service.users_store import UsersStore
+from gradist.tiers import TierSpec, TierTable
 
 TIERS = TierTable(
     tiers=(

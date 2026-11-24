@@ -1,4 +1,4 @@
-# Design: llm-tier-router
+# Design: Gradist
 
 Status: reflects the code as it stands (library + FastAPI service + UI). Complements
 ARCHITECTURE.md (scope, decisions, rationale) and PLAN.md (task-by-task build plan) — this
@@ -11,7 +11,7 @@ a decision, those files are the source of truth for *why*; this file is the sour
 
 ```
                       ┌─────────────────────────────────────────────────────┐
-                      │                     tierrouter (library)              │
+                      │                     gradist (library)              │
                       │                                                       │
    metadata, text,    │   rules.py ──► RuleSet.resolve()  ──┐                 │
    optional image ───►│                                     ├─► resolve.py ──┼──► Decision
@@ -40,10 +40,10 @@ a decision, those files are the source of truth for *why*; this file is the sour
 
 Three layers, each independently optional, matching README/ARCHITECTURE.md:
 
-1. **Library** (`src/tierrouter/`) — the only part another project needs to import. No HTTP, no
+1. **Library** (`src/gradist/`) — the only part another project needs to import. No HTTP, no
    database, no model-calling. Pure functions/classes over in-memory data and two or three YAML
    config files.
-2. **Service** (`src/tierrouter/service/`) — a FastAPI app wrapping the library for one local,
+2. **Service** (`src/gradist/service/`) — a FastAPI app wrapping the library for one local,
    trusted operator to manage rules/examples/training without touching YAML or code. Adds a
    flat-file store; still never calls a model.
 3. **UI** (`ui/`) — a React/MUI console calling the service's HTTP API. Pure client; no business
@@ -179,19 +179,19 @@ catalog:
     label: <display name>
 ```
 
-### 4.4 Service storage layout (`TIERROUTER_DATA`, default `./data`) — flat files, no database
+### 4.4 Service storage layout (`GRADIST_DATA`, default `./data`) — flat files, no database
 ```
 data/
 ├── examples.jsonl     # RawExample rows: example_id, metadata, text, image_path
 ├── judgments.jsonl    # human TierLabel rows: example_id, tier, judged_by, notes
-├── rules.yaml         # the live, UI-editable RuleSet (seeded once from TIERROUTER_RULES_SEED
+├── rules.yaml         # the live, UI-editable RuleSet (seeded once from GRADIST_RULES_SEED
 │                      #   only if this file is still empty — never overwritten after that)
 ├── classifier.joblib  # last-trained TierClassifier (joblib/pickle — see §3's warning)
 ├── history.jsonl      # append-only log of every /v1/resolve call and its Decision
 └── images/            # uploaded example images, named ex-<id>.<ext>
 ```
 
-## 5. Service API (FastAPI, `src/tierrouter/service/app.py`)
+## 5. Service API (FastAPI, `src/gradist/service/app.py`)
 
 No auth. Built for one trusted local operator (README, docstring in `app.py`) — put it behind
 your own auth layer before exposing it to a network or other people.
@@ -222,7 +222,7 @@ Notable behavior baked into the routes, not left implicit:
 - `/v1/resolve` rejects an image upload with `422` if the currently-trained classifier was not
   trained with any image examples, rather than silently ignoring the image or crashing on a
   width mismatch.
-- `TIERROUTER_RULES_SEED` only seeds `rules.yaml` once, when the store's own file is still empty
+- `GRADIST_RULES_SEED` only seeds `rules.yaml` once, when the store's own file is still empty
   — it can never clobber rules an operator has already edited through the UI.
 
 ## 6. UI (`ui/`, React + MUI, talks only to the service's HTTP API)

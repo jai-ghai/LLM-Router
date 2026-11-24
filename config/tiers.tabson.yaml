@@ -1,0 +1,23 @@
+# Generated from tabsonsdb.gemini_model + tabson-python-inferencing defaults.
+# small  = flash-lite helpers (headline/hinglish/spell)
+# medium = 3.5-flash-lite (playout-class mid)
+# large  = flash-preview (STAGE1/STAGE2/MODEL_ID default)
+tiers:
+  - name: small
+    description: Lite Gemini — cheap / high-volume Tabson helper stages.
+    models:
+      google: gemini-3.1-flash-lite
+      gemini: gemini-3.1-flash-lite
+  - name: medium
+    description: Mid flash-lite — playout-style default class.
+    models:
+      google: gemini-3.5-flash-lite
+      gemini: gemini-3.5-flash-lite
+  - name: large
+    description: Flash preview — Tabson STAGE1/STAGE2/MODEL_ID default.
+    models:
+      google: gemini-3-flash-preview
+      gemini: gemini-3-flash-preview
+
+default_provider: google
+low_confidence_fallback: medium
