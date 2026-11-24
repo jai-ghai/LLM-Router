@@ -137,7 +137,7 @@ export const api = {
     ),
   resolve: (
     input: ExampleInput & {
-      provider?: string
+      providers?: string[]
       minConfidence?: number
       selectedModels?: string[] | null
       task?: string
@@ -146,7 +146,7 @@ export const api = {
     },
   ) => {
     const form = toFormData(input)
-    if (input.provider) form.set('provider', input.provider)
+    if (input.providers?.length) form.set('provider', input.providers.join(','))
     if (input.minConfidence !== undefined) form.set('min_confidence', String(input.minConfidence))
     if (input.selectedModels) form.set('selected_models', JSON.stringify(input.selectedModels))
     if (input.task) form.set('task', input.task)

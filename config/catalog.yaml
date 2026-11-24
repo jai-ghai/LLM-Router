@@ -9,6 +9,8 @@ catalog:
   label: 'OpenAI: GPT-6.2 Astra Pro'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 54.9
+  capability_source: estimated
 - id: gpt-6.2-astra-pro:batch
   provider: openai
   tier: large
@@ -19,6 +21,8 @@ catalog:
   label: 'OpenAI: GPT-6.2 Astra Pro (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 54.9
+  capability_source: estimated
 - id: gpt-6.2-astra
   provider: openai
   tier: large
@@ -29,6 +33,8 @@ catalog:
   label: 'OpenAI: GPT-6.2 Astra'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 62.1
+  capability_source: measured
 - id: gpt-6.2-astra:batch
   provider: openai
   tier: large
@@ -39,6 +45,8 @@ catalog:
   label: 'OpenAI: GPT-6.2 Astra (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 62.1
+  capability_source: measured
 - id: gpt-6.2-sol-pro
   provider: openai
   tier: large
@@ -49,6 +57,8 @@ catalog:
   label: 'OpenAI: GPT-6.2 Sol Pro'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 48.8
+  capability_source: estimated
 - id: gpt-6.2-sol-pro:batch
   provider: openai
   tier: medium
@@ -59,6 +69,8 @@ catalog:
   label: 'OpenAI: GPT-6.2 Sol Pro (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 48.8
+  capability_source: estimated
 - id: gpt-6.2-sol
   provider: openai
   tier: large
@@ -69,6 +81,8 @@ catalog:
   label: 'OpenAI: GPT-6.2 Sol'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 57.3
+  capability_source: measured
 - id: gpt-6.2-sol:batch
   provider: openai
   tier: medium
@@ -79,9 +93,11 @@ catalog:
   label: 'OpenAI: GPT-6.2 Sol (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 57.3
+  capability_source: measured
 - id: qwen4-max
   provider: qwen
-  tier: medium
+  tier: large
   cost: 0.001425
   supports_image: true
   supports_video: true
@@ -89,9 +105,11 @@ catalog:
   label: 'Qwen: Qwen4 Max'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 42.9
+  capability_source: measured
 - id: gemini-4-hydrogen
   provider: google
-  tier: medium
+  tier: large
   cost: 0.0015
   supports_image: true
   supports_video: true
@@ -99,6 +117,8 @@ catalog:
   label: 'Google: Gemini 4 Hydrogen'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 53.9
+  capability_source: measured
 - id: gemini-4-hydrogen:batch
   provider: google
   tier: medium
@@ -109,6 +129,8 @@ catalog:
   label: 'Google: Gemini 4 Hydrogen (batch)'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 53.9
+  capability_source: measured
 - id: gemini-4-carbon
   provider: google
   tier: large
@@ -119,6 +141,8 @@ catalog:
   label: 'Google: Gemini 4 Carbon'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 60.0
+  capability_source: measured
 - id: gemini-4-carbon:batch
   provider: google
   tier: medium
@@ -129,6 +153,8 @@ catalog:
   label: 'Google: Gemini 4 Carbon (batch)'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 60.0
+  capability_source: measured
 - id: claude-fable-5.2
   provider: anthropic
   tier: large
@@ -139,6 +165,8 @@ catalog:
   label: 'Anthropic: Claude Fable 5.2'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 64.6
+  capability_source: measured
 - id: claude-fable-5.2:batch
   provider: anthropic
   tier: large
@@ -149,9 +177,11 @@ catalog:
   label: 'Anthropic: Claude Fable 5.2 (batch)'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 64.6
+  capability_source: measured
 - id: gemini-omni-1.2-flash
   provider: google
-  tier: medium
+  tier: large
   cost: 0.0015
   supports_image: true
   supports_video: true
@@ -159,9 +189,11 @@ catalog:
   label: 'Google: Gemini Omni 1.2 Flash'
   context_length: 131072
   assigned_by: heuristic
+  capability: 46.2
+  capability_source: estimated
 - id: gemini-omni-1.1-flash
   provider: google
-  tier: medium
+  tier: large
   cost: 0.0015
   supports_image: true
   supports_video: true
@@ -169,6 +201,8 @@ catalog:
   label: 'Google: Gemini Omni 1.1 Flash'
   context_length: 131072
   assigned_by: heuristic
+  capability: 46.1
+  capability_source: estimated
 - id: gpt-6.1-terra-pro
   provider: openai
   tier: medium
@@ -179,6 +213,8 @@ catalog:
   label: 'OpenAI: GPT-6.1 Terra Pro'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 43.3
+  capability_source: estimated
 - id: gpt-6.1-terra-pro:batch
   provider: openai
   tier: medium
@@ -189,6 +225,8 @@ catalog:
   label: 'OpenAI: GPT-6.1 Terra Pro (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 43.3
+  capability_source: estimated
 - id: gpt-6.1-terra
   provider: openai
   tier: medium
@@ -199,6 +237,8 @@ catalog:
   label: 'OpenAI: GPT-6.1 Terra'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 51.3
+  capability_source: measured
 - id: gpt-6.1-terra:batch
   provider: openai
   tier: medium
@@ -209,26 +249,32 @@ catalog:
   label: 'OpenAI: GPT-6.1 Terra (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 51.3
+  capability_source: measured
 - id: deepseek-v4.1-flash-1017
   provider: deepseek
   tier: small
-  cost: 3.6e-05
+  cost: 3.0e-05
   supports_image: true
   supports_video: false
   supports_audio: false
   label: 'DeepSeek: DeepSeek V4.1 Flash 1017'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 32.6
+  capability_source: measured
 - id: deepseek-v4.1-flash-1017:batch
   provider: deepseek
   tier: small
-  cost: 3.6e-05
+  cost: 3.5e-05
   supports_image: true
   supports_video: false
   supports_audio: false
   label: 'DeepSeek: DeepSeek V4.1 Flash 1017 (batch)'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 32.6
+  capability_source: measured
 - id: gemini-4-argon
   provider: google
   tier: large
@@ -239,6 +285,8 @@ catalog:
   label: 'Google: Gemini 4 Argon'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 50.4
+  capability_source: measured
 - id: gemini-4-argon:batch
   provider: google
   tier: medium
@@ -249,6 +297,8 @@ catalog:
   label: 'Google: Gemini 4 Argon (batch)'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 50.4
+  capability_source: measured
 - id: claude-haiku-5.5
   provider: anthropic
   tier: small
@@ -259,6 +309,8 @@ catalog:
   label: 'Anthropic: Claude Haiku 5.5'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 36.5
+  capability_source: measured
 - id: claude-haiku-5.5:batch
   provider: anthropic
   tier: small
@@ -269,9 +321,11 @@ catalog:
   label: 'Anthropic: Claude Haiku 5.5 (batch)'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 36.5
+  capability_source: measured
 - id: gemini-nano-banana-2.1
   provider: google
-  tier: medium
+  tier: large
   cost: 0.0015
   supports_image: true
   supports_video: false
@@ -279,6 +333,8 @@ catalog:
   label: 'Google: Nano Banana 2.1'
   context_length: 65536
   assigned_by: heuristic
+  capability: 42.9
+  capability_source: estimated
 - id: mistral-large-4-0
   provider: mistralai
   tier: medium
@@ -289,6 +345,8 @@ catalog:
   label: 'Mistral: Mistral Large 4'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 26.1
+  capability_source: measured
 - id: gpt-6.1-sol-pro
   provider: openai
   tier: large
@@ -299,6 +357,8 @@ catalog:
   label: 'OpenAI: GPT-6.1 Sol Pro'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 43.4
+  capability_source: estimated
 - id: gpt-6.1-sol-pro:batch
   provider: openai
   tier: medium
@@ -309,6 +369,8 @@ catalog:
   label: 'OpenAI: GPT-6.1 Sol Pro (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 43.4
+  capability_source: estimated
 - id: gpt-6.1-sol
   provider: openai
   tier: large
@@ -319,6 +381,8 @@ catalog:
   label: 'OpenAI: GPT-6.1 Sol'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 54.6
+  capability_source: measured
 - id: gpt-6.1-sol:batch
   provider: openai
   tier: medium
@@ -329,6 +393,8 @@ catalog:
   label: 'OpenAI: GPT-6.1 Sol (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 54.6
+  capability_source: measured
 - id: claude-sonnet-5.5
   provider: anthropic
   tier: large
@@ -339,6 +405,8 @@ catalog:
   label: 'Anthropic: Claude Sonnet 5.5'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 54.5
+  capability_source: measured
 - id: claude-sonnet-5.5:batch
   provider: anthropic
   tier: medium
@@ -349,6 +417,8 @@ catalog:
   label: 'Anthropic: Claude Sonnet 5.5 (batch)'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 54.5
+  capability_source: measured
 - id: qwen3.8-max-prime
   provider: qwen
   tier: large
@@ -359,6 +429,8 @@ catalog:
   label: 'Qwen: Qwen3.8 Max Prime'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 45.8
+  capability_source: estimated
 - id: gpt-6-luna-pro
   provider: openai
   tier: small
@@ -369,6 +441,8 @@ catalog:
   label: 'OpenAI: GPT-6 Luna Pro'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 29.3
+  capability_source: estimated
 - id: gpt-6-luna-pro:batch
   provider: openai
   tier: small
@@ -379,6 +453,8 @@ catalog:
   label: 'OpenAI: GPT-6 Luna Pro (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 29.3
+  capability_source: estimated
 - id: gpt-6-luna
   provider: openai
   tier: small
@@ -389,6 +465,8 @@ catalog:
   label: 'OpenAI: GPT-6 Luna'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 27.9
+  capability_source: measured
 - id: gpt-6-luna:batch
   provider: openai
   tier: small
@@ -399,6 +477,8 @@ catalog:
   label: 'OpenAI: GPT-6 Luna (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 27.9
+  capability_source: measured
 - id: gpt-6-sol-pro
   provider: openai
   tier: large
@@ -409,6 +489,8 @@ catalog:
   label: 'OpenAI: GPT-6 Sol Pro'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 42.6
+  capability_source: estimated
 - id: gpt-6-sol-pro:batch
   provider: openai
   tier: medium
@@ -419,6 +501,8 @@ catalog:
   label: 'OpenAI: GPT-6 Sol Pro (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 42.6
+  capability_source: estimated
 - id: gpt-6-sol
   provider: openai
   tier: large
@@ -429,6 +513,8 @@ catalog:
   label: 'OpenAI: GPT-6 Sol'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 44.2
+  capability_source: measured
 - id: gpt-6-sol:batch
   provider: openai
   tier: medium
@@ -439,6 +525,8 @@ catalog:
   label: 'OpenAI: GPT-6 Sol (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 44.2
+  capability_source: measured
 - id: claude-opus-5.5
   provider: anthropic
   tier: large
@@ -449,6 +537,8 @@ catalog:
   label: 'Anthropic: Claude Opus 5.5'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 59.1
+  capability_source: measured
 - id: claude-opus-5.5:batch
   provider: anthropic
   tier: large
@@ -459,6 +549,8 @@ catalog:
   label: 'Anthropic: Claude Opus 5.5 (batch)'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 59.1
+  capability_source: measured
 - id: qwen3.8-omni-flash
   provider: qwen
   tier: small
@@ -469,26 +561,32 @@ catalog:
   label: 'Qwen: Qwen3.8 Omni Flash'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 30.9
+  capability_source: estimated
 - id: deepseek-v4.1-flash
   provider: deepseek
-  tier: medium
-  cost: 0.0003
+  tier: small
+  cost: 0.00014
   supports_image: true
   supports_video: false
   supports_audio: false
   label: 'DeepSeek: DeepSeek V4.1 Flash'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 29.4
+  capability_source: estimated
 - id: deepseek-v4.1-flash:batch
   provider: deepseek
   tier: small
-  cost: 0.000112
+  cost: 5.0e-05
   supports_image: true
   supports_video: false
   supports_audio: false
   label: 'DeepSeek: DeepSeek V4.1 Flash (batch)'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 27.9
+  capability_source: estimated
 - id: gpt-6-astra
   provider: openai
   tier: large
@@ -499,6 +597,8 @@ catalog:
   label: 'OpenAI: GPT-6 Astra'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 56.9
+  capability_source: measured
 - id: gpt-6-astra:batch
   provider: openai
   tier: large
@@ -509,6 +609,8 @@ catalog:
   label: 'OpenAI: GPT-6 Astra (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 56.9
+  capability_source: measured
 - id: gpt-6-astra-pro
   provider: openai
   tier: large
@@ -519,6 +621,8 @@ catalog:
   label: 'OpenAI: GPT-6 Astra Pro'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 47.8
+  capability_source: estimated
 - id: gpt-6-astra-pro:batch
   provider: openai
   tier: large
@@ -529,6 +633,8 @@ catalog:
   label: 'OpenAI: GPT-6 Astra Pro (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 47.8
+  capability_source: estimated
 - id: qwen3.8-max-0902
   provider: qwen
   tier: large
@@ -539,6 +645,8 @@ catalog:
   label: 'Qwen: Qwen3.8 Max (0902)'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 33.7
+  capability_source: measured
 - id: qwen3.8-max-0902:batch
   provider: qwen
   tier: medium
@@ -549,6 +657,8 @@ catalog:
   label: 'Qwen: Qwen3.8 Max (0902) (batch)'
   context_length: 262144
   assigned_by: heuristic
+  capability: 33.7
+  capability_source: measured
 - id: gemini-3.8-flash
   provider: google
   tier: medium
@@ -559,6 +669,8 @@ catalog:
   label: 'Google: Gemini 3.8 Flash'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 30.8
+  capability_source: measured
 - id: gemini-3.8-flash:batch
   provider: google
   tier: medium
@@ -569,6 +681,8 @@ catalog:
   label: 'Google: Gemini 3.8 Flash (batch)'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 30.8
+  capability_source: measured
 - id: claude-fable-5.1
   provider: anthropic
   tier: large
@@ -579,6 +693,8 @@ catalog:
   label: 'Anthropic: Claude Fable 5.1'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 50.0
+  capability_source: measured
 - id: claude-fable-5.1:batch
   provider: anthropic
   tier: large
@@ -589,6 +705,8 @@ catalog:
   label: 'Anthropic: Claude Fable 5.1 (batch)'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 50.0
+  capability_source: measured
 - id: qwen3.8-flash
   provider: qwen
   tier: small
@@ -599,26 +717,32 @@ catalog:
   label: 'Qwen: Qwen3.8 Flash'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 28.6
+  capability_source: measured
 - id: deepseek-v4-flash-vision-exp
   provider: deepseek
-  tier: medium
-  cost: 0.00044
+  tier: small
+  cost: 0.000216
   supports_image: true
   supports_video: false
   supports_audio: false
   label: 'DeepSeek: DeepSeek V4 Flash Vision Exp'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 29.2
+  capability_source: estimated
 - id: qwen3.8-27b
   provider: qwen
   tier: small
-  cost: 6.0e-05
+  cost: 3.5e-05
   supports_image: true
   supports_video: true
   supports_audio: false
   label: 'Qwen: Qwen3.8 27B'
   context_length: 1024000
   assigned_by: heuristic
+  capability: 20.1
+  capability_source: measured
 - id: qwen3.8-27b:batch
   provider: qwen
   tier: small
@@ -629,6 +753,8 @@ catalog:
   label: 'Qwen: Qwen3.8 27B (batch)'
   context_length: 262144
   assigned_by: heuristic
+  capability: 20.1
+  capability_source: measured
 - id: gemini-3.7-flash
   provider: google
   tier: medium
@@ -639,6 +765,8 @@ catalog:
   label: 'Google: Gemini 3.7 Flash'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 33.9
+  capability_source: estimated
 - id: gemini-3.7-flash:batch
   provider: google
   tier: medium
@@ -649,6 +777,8 @@ catalog:
   label: 'Google: Gemini 3.7 Flash (batch)'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 33.9
+  capability_source: estimated
 - id: qwen3.8-2.4t-a95b
   provider: qwen
   tier: large
@@ -659,6 +789,8 @@ catalog:
   label: 'Qwen: Qwen3.8 2.4T A95B'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 38.1
+  capability_source: estimated
 - id: deepseek-v4-pro-0813
   provider: deepseek
   tier: small
@@ -669,16 +801,20 @@ catalog:
   label: 'DeepSeek: DeepSeek V4 Pro 0813'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 23.1
+  capability_source: measured
 - id: deepseek-v4-flash-0731
   provider: deepseek
   tier: small
-  cost: 6.0e-05
+  cost: 4.5e-05
   supports_image: false
   supports_video: false
   supports_audio: false
   label: 'DeepSeek: DeepSeek V4 Flash 0731'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 19.9
+  capability_source: estimated
 - id: deepseek-v4-flash-0731:batch
   provider: deepseek
   tier: small
@@ -689,6 +825,8 @@ catalog:
   label: 'DeepSeek: DeepSeek V4 Flash 0731 (batch)'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 23.3
+  capability_source: estimated
 - id: qwen3.7-flash
   provider: qwen
   tier: small
@@ -699,6 +837,8 @@ catalog:
   label: 'Qwen: Qwen3.7 Flash'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 17.8
+  capability_source: estimated
 - id: claude-opus-5
   provider: anthropic
   tier: large
@@ -709,6 +849,8 @@ catalog:
   label: 'Anthropic: Claude Opus 5'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 44.2
+  capability_source: measured
 - id: claude-opus-5:batch
   provider: anthropic
   tier: large
@@ -719,6 +861,8 @@ catalog:
   label: 'Anthropic: Claude Opus 5 (batch)'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 44.2
+  capability_source: measured
 - id: gemini-3.6-flash
   provider: google
   tier: medium
@@ -729,6 +873,8 @@ catalog:
   label: 'Google: Gemini 3.6 Flash'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 31.3
+  capability_source: estimated
 - id: gemini-3.6-flash:batch
   provider: google
   tier: medium
@@ -739,6 +885,8 @@ catalog:
   label: 'Google: Gemini 3.6 Flash (batch)'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 31.3
+  capability_source: estimated
 - id: gemini-3.5-flash-lite
   provider: google
   tier: medium
@@ -749,6 +897,8 @@ catalog:
   label: 'Google: Gemini 3.5 Flash Lite'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 11.7
+  capability_source: measured
 - id: gemini-3.5-flash-lite:batch
   provider: google
   tier: small
@@ -759,6 +909,8 @@ catalog:
   label: 'Google: Gemini 3.5 Flash Lite (batch)'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 11.7
+  capability_source: measured
 - id: gpt-5.6-luna-pro
   provider: openai
   tier: small
@@ -769,6 +921,8 @@ catalog:
   label: 'OpenAI: GPT-5.6 Luna Pro'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 24.1
+  capability_source: estimated
 - id: gpt-5.6-luna-pro:batch
   provider: openai
   tier: small
@@ -779,6 +933,8 @@ catalog:
   label: 'OpenAI: GPT-5.6 Luna Pro (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 24.1
+  capability_source: estimated
 - id: gpt-5.6-luna
   provider: openai
   tier: small
@@ -789,6 +945,8 @@ catalog:
   label: 'OpenAI: GPT-5.6 Luna'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 23.8
+  capability_source: measured
 - id: gpt-5.6-luna:batch
   provider: openai
   tier: small
@@ -799,6 +957,8 @@ catalog:
   label: 'OpenAI: GPT-5.6 Luna (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 23.8
+  capability_source: measured
 - id: gpt-5.6-terra-pro
   provider: openai
   tier: large
@@ -809,6 +969,8 @@ catalog:
   label: 'OpenAI: GPT-5.6 Terra Pro'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 34.4
+  capability_source: estimated
 - id: gpt-5.6-terra-pro:batch
   provider: openai
   tier: medium
@@ -819,6 +981,8 @@ catalog:
   label: 'OpenAI: GPT-5.6 Terra Pro (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 34.4
+  capability_source: estimated
 - id: gpt-5.6-terra
   provider: openai
   tier: large
@@ -829,6 +993,8 @@ catalog:
   label: 'OpenAI: GPT-5.6 Terra'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 32.3
+  capability_source: measured
 - id: gpt-5.6-terra:batch
   provider: openai
   tier: medium
@@ -839,6 +1005,8 @@ catalog:
   label: 'OpenAI: GPT-5.6 Terra (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 32.3
+  capability_source: measured
 - id: gpt-5.6-sol-pro
   provider: openai
   tier: large
@@ -849,6 +1017,8 @@ catalog:
   label: 'OpenAI: GPT-5.6 Sol Pro'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 37.5
+  capability_source: estimated
 - id: gpt-5.6-sol-pro:batch
   provider: openai
   tier: large
@@ -859,6 +1029,8 @@ catalog:
   label: 'OpenAI: GPT-5.6 Sol Pro (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 37.5
+  capability_source: estimated
 - id: gpt-5.6-sol
   provider: openai
   tier: large
@@ -869,6 +1041,8 @@ catalog:
   label: 'OpenAI: GPT-5.6 Sol'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 37.5
+  capability_source: estimated
 - id: gpt-5.6-sol:batch
   provider: openai
   tier: large
@@ -879,6 +1053,8 @@ catalog:
   label: 'OpenAI: GPT-5.6 Sol (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 37.5
+  capability_source: estimated
 - id: claude-sonnet-5
   provider: anthropic
   tier: large
@@ -889,6 +1065,8 @@ catalog:
   label: 'Anthropic: Claude Sonnet 5'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 33.4
+  capability_source: estimated
 - id: claude-sonnet-5:batch
   provider: anthropic
   tier: medium
@@ -899,6 +1077,8 @@ catalog:
   label: 'Anthropic: Claude Sonnet 5 (batch)'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 33.4
+  capability_source: estimated
 - id: gemini-3.1-flash-lite-image
   provider: google
   tier: small
@@ -909,6 +1089,8 @@ catalog:
   label: 'Google: Nano Banana 2 Lite (Gemini 3.1 Flash Lite Image)'
   context_length: 65536
   assigned_by: heuristic
+  capability: 24.2
+  capability_source: estimated
 - id: gemini-3.1-flash-image
   provider: google
   tier: medium
@@ -919,6 +1101,8 @@ catalog:
   label: 'Google: Nano Banana 2 (Gemini 3.1 Flash Image)'
   context_length: 131072
   assigned_by: heuristic
+  capability: 25.9
+  capability_source: estimated
 - id: gemini-3-pro-image
   provider: google
   tier: large
@@ -929,6 +1113,8 @@ catalog:
   label: 'Google: Nano Banana Pro (Gemini 3 Pro Image)'
   context_length: 131072
   assigned_by: heuristic
+  capability: 32.1
+  capability_source: estimated
 - id: claude-fable-5
   provider: anthropic
   tier: large
@@ -939,6 +1125,8 @@ catalog:
   label: 'Anthropic: Claude Fable 5'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 38.3
+  capability_source: estimated
 - id: claude-fable-5:batch
   provider: anthropic
   tier: large
@@ -949,6 +1137,8 @@ catalog:
   label: 'Anthropic: Claude Fable 5 (batch)'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 38.3
+  capability_source: estimated
 - id: qwen3.7-plus
   provider: qwen
   tier: medium
@@ -959,6 +1149,8 @@ catalog:
   label: 'Qwen: Qwen3.7 Plus'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 22.3
+  capability_source: estimated
 - id: qwen3.7-plus:batch
   provider: qwen
   tier: small
@@ -969,6 +1161,8 @@ catalog:
   label: 'Qwen: Qwen3.7 Plus (batch)'
   context_length: 262144
   assigned_by: heuristic
+  capability: 23.9
+  capability_source: estimated
 - id: claude-opus-4.8
   provider: anthropic
   tier: large
@@ -979,6 +1173,8 @@ catalog:
   label: 'Anthropic: Claude Opus 4.8'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 33.8
+  capability_source: estimated
 - id: claude-opus-4.8:batch
   provider: anthropic
   tier: large
@@ -989,9 +1185,11 @@ catalog:
   label: 'Anthropic: Claude Opus 4.8 (batch)'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 33.8
+  capability_source: estimated
 - id: qwen3.7-max
   provider: qwen
-  tier: medium
+  tier: large
   cost: 0.001475
   supports_image: false
   supports_video: false
@@ -999,9 +1197,11 @@ catalog:
   label: 'Qwen: Qwen3.7 Max'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 27.7
+  capability_source: estimated
 - id: gemini-3.5-flash
   provider: google
-  tier: medium
+  tier: large
   cost: 0.0015
   supports_image: true
   supports_video: true
@@ -1009,6 +1209,8 @@ catalog:
   label: 'Google: Gemini 3.5 Flash'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 27.5
+  capability_source: estimated
 - id: gemini-3.5-flash:batch
   provider: google
   tier: medium
@@ -1019,6 +1221,8 @@ catalog:
   label: 'Google: Gemini 3.5 Flash (batch)'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 27.5
+  capability_source: estimated
 - id: gemini-3.1-flash-lite
   provider: google
   tier: small
@@ -1029,6 +1233,8 @@ catalog:
   label: 'Google: Gemini 3.1 Flash Lite'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 18.2
+  capability_source: estimated
 - id: gemini-3.1-flash-lite:batch
   provider: google
   tier: small
@@ -1039,6 +1245,8 @@ catalog:
   label: 'Google: Gemini 3.1 Flash Lite (batch)'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 18.2
+  capability_source: estimated
 - id: gpt-chat-latest
   provider: openai
   tier: large
@@ -1049,9 +1257,11 @@ catalog:
   label: 'OpenAI: GPT Chat Latest'
   context_length: 400000
   assigned_by: heuristic
+  capability: 31.4
+  capability_source: estimated
 - id: mistral-medium-3-5
   provider: mistralai
-  tier: medium
+  tier: large
   cost: 0.0015
   supports_image: true
   supports_video: false
@@ -1059,6 +1269,8 @@ catalog:
   label: 'Mistral: Mistral Medium 3.5'
   context_length: 262144
   assigned_by: heuristic
+  capability: 4.6
+  capability_source: measured
 - id: mistral-medium-3-5:batch
   provider: mistralai
   tier: medium
@@ -1069,6 +1281,8 @@ catalog:
   label: 'Mistral: Mistral Medium 3.5 (batch)'
   context_length: 262144
   assigned_by: heuristic
+  capability: 4.6
+  capability_source: measured
 - id: qwen3.5-plus-20260420
   provider: qwen
   tier: medium
@@ -1079,6 +1293,8 @@ catalog:
   label: 'Qwen: Qwen3.5 Plus 2026-04-20'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 17.9
+  capability_source: estimated
 - id: qwen3.6-flash
   provider: qwen
   tier: small
@@ -1089,16 +1305,20 @@ catalog:
   label: 'Qwen: Qwen3.6 Flash'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 15.8
+  capability_source: estimated
 - id: qwen3.6-35b-a3b
   provider: qwen
   tier: small
-  cost: 0.0001
+  cost: 5.0e-05
   supports_image: true
   supports_video: true
   supports_audio: false
   label: 'Qwen: Qwen3.6 35B A3B'
   context_length: 262144
   assigned_by: heuristic
+  capability: 10.0
+  capability_source: estimated
 - id: qwen3.6-27b
   provider: qwen
   tier: medium
@@ -1109,6 +1329,8 @@ catalog:
   label: 'Qwen: Qwen3.6 27B'
   context_length: 262144
   assigned_by: heuristic
+  capability: 18.2
+  capability_source: estimated
 - id: gpt-5.5-pro
   provider: openai
   tier: large
@@ -1119,6 +1341,8 @@ catalog:
   label: 'OpenAI: GPT-5.5 Pro'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 38.2
+  capability_source: estimated
 - id: gpt-5.5-pro:batch
   provider: openai
   tier: large
@@ -1129,6 +1353,8 @@ catalog:
   label: 'OpenAI: GPT-5.5 Pro (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 38.2
+  capability_source: estimated
 - id: gpt-5.5
   provider: openai
   tier: large
@@ -1139,6 +1365,8 @@ catalog:
   label: 'OpenAI: GPT-5.5'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 30.2
+  capability_source: estimated
 - id: gpt-5.5:batch
   provider: openai
   tier: large
@@ -1149,16 +1377,20 @@ catalog:
   label: 'OpenAI: GPT-5.5 (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 30.2
+  capability_source: estimated
 - id: deepseek-v4-pro
   provider: deepseek
-  tier: medium
-  cost: 0.0009
+  tier: large
+  cost: 0.00128
   supports_image: false
   supports_video: false
   supports_audio: false
   label: 'DeepSeek: DeepSeek V4 Pro 0423'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 20.8
+  capability_source: measured
 - id: deepseek-v4-flash
   provider: deepseek
   tier: small
@@ -1169,6 +1401,8 @@ catalog:
   label: 'DeepSeek: DeepSeek V4 Flash 0423'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 12.2
+  capability_source: estimated
 - id: gpt-5.4-image-2
   provider: openai
   tier: large
@@ -1179,6 +1413,8 @@ catalog:
   label: 'OpenAI: GPT-5.4 Image 2'
   context_length: 272000
   assigned_by: heuristic
+  capability: 32.0
+  capability_source: estimated
 - id: claude-opus-4.7
   provider: anthropic
   tier: large
@@ -1189,6 +1425,8 @@ catalog:
   label: 'Anthropic: Claude Opus 4.7'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 29.3
+  capability_source: estimated
 - id: claude-opus-4.7:batch
   provider: anthropic
   tier: large
@@ -1199,6 +1437,8 @@ catalog:
   label: 'Anthropic: Claude Opus 4.7 (batch)'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 29.3
+  capability_source: estimated
 - id: gemma-4-26b-a4b-it
   provider: google
   tier: small
@@ -1209,6 +1449,8 @@ catalog:
   label: 'Google: Gemma 4 26B A4B'
   context_length: 262144
   assigned_by: heuristic
+  capability: 10.0
+  capability_source: estimated
 - id: gemma-4-26b-a4b-it:free
   provider: google
   tier: small
@@ -1219,6 +1461,8 @@ catalog:
   label: 'Google: Gemma 4 26B A4B  (free)'
   context_length: 262144
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gemma-4-31b-it
   provider: google
   tier: small
@@ -1229,6 +1473,8 @@ catalog:
   label: 'Google: Gemma 4 31B'
   context_length: 262144
   assigned_by: heuristic
+  capability: 4.4
+  capability_source: measured
 - id: gemma-4-31b-it:free
   provider: google
   tier: small
@@ -1239,6 +1485,8 @@ catalog:
   label: 'Google: Gemma 4 31B (free)'
   context_length: 262144
   assigned_by: heuristic
+  capability: 4.4
+  capability_source: measured
 - id: qwen3.6-plus
   provider: qwen
   tier: medium
@@ -1249,6 +1497,8 @@ catalog:
   label: 'Qwen: Qwen3.6 Plus'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 15.6
+  capability_source: estimated
 - id: lyria-3-pro-preview
   provider: google
   tier: small
@@ -1259,6 +1509,8 @@ catalog:
   label: 'Google: Lyria 3 Pro Preview'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: lyria-3-clip-preview
   provider: google
   tier: small
@@ -1269,6 +1521,8 @@ catalog:
   label: 'Google: Lyria 3 Clip Preview'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-5.4-nano
   provider: openai
   tier: small
@@ -1279,6 +1533,8 @@ catalog:
   label: 'OpenAI: GPT-5.4 Nano'
   context_length: 400000
   assigned_by: heuristic
+  capability: 11.6
+  capability_source: estimated
 - id: gpt-5.4-nano:batch
   provider: openai
   tier: small
@@ -1289,6 +1545,8 @@ catalog:
   label: 'OpenAI: GPT-5.4 Nano (batch)'
   context_length: 400000
   assigned_by: heuristic
+  capability: 11.6
+  capability_source: estimated
 - id: gpt-5.4-mini
   provider: openai
   tier: medium
@@ -1299,6 +1557,8 @@ catalog:
   label: 'OpenAI: GPT-5.4 Mini'
   context_length: 400000
   assigned_by: heuristic
+  capability: 17.5
+  capability_source: estimated
 - id: gpt-5.4-mini:batch
   provider: openai
   tier: medium
@@ -1309,6 +1569,8 @@ catalog:
   label: 'OpenAI: GPT-5.4 Mini (batch)'
   context_length: 400000
   assigned_by: heuristic
+  capability: 17.5
+  capability_source: estimated
 - id: mistral-small-2603
   provider: mistralai
   tier: small
@@ -1319,16 +1581,20 @@ catalog:
   label: 'Mistral: Mistral Small 4'
   context_length: 262144
   assigned_by: heuristic
+  capability: 4.3
+  capability_source: measured
 - id: qwen3.5-9b
   provider: qwen
   tier: small
-  cost: 0.000154
+  cost: 0.00017
   supports_image: true
   supports_video: true
   supports_audio: false
   label: 'Qwen: Qwen3.5-9B'
   context_length: 262144
   assigned_by: heuristic
+  capability: 10.2
+  capability_source: estimated
 - id: gpt-5.4-pro
   provider: openai
   tier: large
@@ -1339,6 +1605,8 @@ catalog:
   label: 'OpenAI: GPT-5.4 Pro'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 32.7
+  capability_source: estimated
 - id: gpt-5.4-pro:batch
   provider: openai
   tier: large
@@ -1349,6 +1617,8 @@ catalog:
   label: 'OpenAI: GPT-5.4 Pro (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 32.7
+  capability_source: estimated
 - id: gpt-5.4
   provider: openai
   tier: large
@@ -1359,6 +1629,8 @@ catalog:
   label: 'OpenAI: GPT-5.4'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 21.6
+  capability_source: estimated
 - id: gpt-5.4:batch
   provider: openai
   tier: medium
@@ -1369,6 +1641,8 @@ catalog:
   label: 'OpenAI: GPT-5.4 (batch)'
   context_length: 1050000
   assigned_by: heuristic
+  capability: 21.6
+  capability_source: estimated
 - id: gemini-3.1-flash-lite-preview
   provider: google
   tier: small
@@ -1379,6 +1653,8 @@ catalog:
   label: 'Google: Gemini 3.1 Flash Lite Preview'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 6.2
+  capability_source: measured
 - id: gemini-3.1-flash-image-preview
   provider: google
   tier: medium
@@ -1389,6 +1665,8 @@ catalog:
   label: 'Google: Nano Banana 2 (Gemini 3.1 Flash Image Preview)'
   context_length: 65536
   assigned_by: heuristic
+  capability: 13.7
+  capability_source: estimated
 - id: qwen3.5-35b-a3b
   provider: qwen
   tier: small
@@ -1399,19 +1677,23 @@ catalog:
   label: 'Qwen: Qwen3.5-35B-A3B'
   context_length: 262144
   assigned_by: heuristic
+  capability: 7.9
+  capability_source: estimated
 - id: qwen3.5-27b
   provider: qwen
   tier: medium
-  cost: 0.0003
+  cost: 0.00026
   supports_image: true
   supports_video: true
   supports_audio: false
   label: 'Qwen: Qwen3.5-27B'
   context_length: 262144
   assigned_by: heuristic
+  capability: 10.7
+  capability_source: estimated
 - id: qwen3.5-122b-a10b
   provider: qwen
-  tier: small
+  tier: medium
   cost: 0.00026
   supports_image: true
   supports_video: true
@@ -1419,6 +1701,8 @@ catalog:
   label: 'Qwen: Qwen3.5-122B-A10B'
   context_length: 262144
   assigned_by: heuristic
+  capability: 10.7
+  capability_source: estimated
 - id: qwen3.5-flash-02-23
   provider: qwen
   tier: small
@@ -1429,6 +1713,8 @@ catalog:
   label: 'Qwen: Qwen3.5-Flash'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 4.5
+  capability_source: estimated
 - id: gemini-3.1-pro-preview-customtools
   provider: google
   tier: large
@@ -1439,6 +1725,8 @@ catalog:
   label: 'Google: Gemini 3.1 Pro Preview Custom Tools'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 19.8
+  capability_source: estimated
 - id: gpt-5.3-codex
   provider: openai
   tier: large
@@ -1449,6 +1737,8 @@ catalog:
   label: 'OpenAI: GPT-5.3-Codex'
   context_length: 400000
   assigned_by: heuristic
+  capability: 19.0
+  capability_source: estimated
 - id: gemini-3.1-pro-preview
   provider: google
   tier: large
@@ -1459,6 +1749,8 @@ catalog:
   label: 'Google: Gemini 3.1 Pro Preview'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 19.1
+  capability_source: estimated
 - id: gemini-3.1-pro-preview:batch
   provider: google
   tier: medium
@@ -1469,6 +1761,8 @@ catalog:
   label: 'Google: Gemini 3.1 Pro Preview (batch)'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 19.1
+  capability_source: estimated
 - id: claude-sonnet-4.6
   provider: anthropic
   tier: large
@@ -1479,9 +1773,11 @@ catalog:
   label: 'Anthropic: Claude Sonnet 4.6'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 20.7
+  capability_source: estimated
 - id: claude-sonnet-4.6:batch
   provider: anthropic
-  tier: medium
+  tier: large
   cost: 0.0015
   supports_image: true
   supports_video: false
@@ -1489,9 +1785,11 @@ catalog:
   label: 'Anthropic: Claude Sonnet 4.6 (batch)'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 20.7
+  capability_source: estimated
 - id: qwen3.5-plus-02-15
   provider: qwen
-  tier: small
+  tier: medium
   cost: 0.00026
   supports_image: true
   supports_video: true
@@ -1499,6 +1797,8 @@ catalog:
   label: 'Qwen: Qwen3.5 Plus 2026-02-15'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 9.6
+  capability_source: estimated
 - id: qwen3.5-397b-a17b
   provider: qwen
   tier: medium
@@ -1509,6 +1809,8 @@ catalog:
   label: 'Qwen: Qwen3.5 397B A17B'
   context_length: 262144
   assigned_by: heuristic
+  capability: 12.1
+  capability_source: estimated
 - id: claude-opus-4.6
   provider: anthropic
   tier: large
@@ -1519,6 +1821,8 @@ catalog:
   label: 'Anthropic: Claude Opus 4.6'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 21.5
+  capability_source: estimated
 - id: claude-opus-4.6:batch
   provider: anthropic
   tier: large
@@ -1529,6 +1833,8 @@ catalog:
   label: 'Anthropic: Claude Opus 4.6 (batch)'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 21.5
+  capability_source: estimated
 - id: qwen3-coder-next
   provider: qwen
   tier: small
@@ -1539,6 +1845,8 @@ catalog:
   label: 'Qwen: Qwen3 Coder Next'
   context_length: 262144
   assigned_by: heuristic
+  capability: 4.8
+  capability_source: estimated
 - id: gpt-audio
   provider: openai
   tier: large
@@ -1549,6 +1857,8 @@ catalog:
   label: 'OpenAI: GPT Audio'
   context_length: 128000
   assigned_by: heuristic
+  capability: 16.7
+  capability_source: estimated
 - id: gpt-audio-mini
   provider: openai
   tier: medium
@@ -1559,6 +1869,8 @@ catalog:
   label: 'OpenAI: GPT Audio Mini'
   context_length: 128000
   assigned_by: heuristic
+  capability: 10.3
+  capability_source: estimated
 - id: gpt-5.2-codex
   provider: openai
   tier: large
@@ -1569,6 +1881,8 @@ catalog:
   label: 'OpenAI: GPT-5.2-Codex'
   context_length: 400000
   assigned_by: heuristic
+  capability: 14.6
+  capability_source: estimated
 - id: gemini-3-flash-preview
   provider: google
   tier: medium
@@ -1579,6 +1893,8 @@ catalog:
   label: 'Google: Gemini 3 Flash Preview'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 5.9
+  capability_source: estimated
 - id: gemini-3-flash-preview:batch
   provider: google
   tier: small
@@ -1589,6 +1905,8 @@ catalog:
   label: 'Google: Gemini 3 Flash Preview (batch)'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 5.9
+  capability_source: estimated
 - id: gpt-5.2-chat
   provider: openai
   tier: large
@@ -1599,6 +1917,8 @@ catalog:
   label: 'OpenAI: GPT-5.2 Chat'
   context_length: 128000
   assigned_by: heuristic
+  capability: 10.7
+  capability_source: estimated
 - id: gpt-5.2-pro
   provider: openai
   tier: large
@@ -1609,6 +1929,8 @@ catalog:
   label: 'OpenAI: GPT-5.2 Pro'
   context_length: 400000
   assigned_by: heuristic
+  capability: 21.8
+  capability_source: estimated
 - id: gpt-5.2-pro:batch
   provider: openai
   tier: large
@@ -1619,6 +1941,8 @@ catalog:
   label: 'OpenAI: GPT-5.2 Pro (batch)'
   context_length: 400000
   assigned_by: heuristic
+  capability: 21.8
+  capability_source: estimated
 - id: gpt-5.2
   provider: openai
   tier: large
@@ -1629,6 +1953,8 @@ catalog:
   label: 'OpenAI: GPT-5.2'
   context_length: 400000
   assigned_by: heuristic
+  capability: 10.7
+  capability_source: estimated
 - id: gpt-5.2:batch
   provider: openai
   tier: medium
@@ -1639,6 +1965,8 @@ catalog:
   label: 'OpenAI: GPT-5.2 (batch)'
   context_length: 400000
   assigned_by: heuristic
+  capability: 10.7
+  capability_source: estimated
 - id: devstral-2512
   provider: mistralai
   tier: medium
@@ -1649,6 +1977,8 @@ catalog:
   label: 'Mistral: Devstral 2 2512'
   context_length: 262144
   assigned_by: heuristic
+  capability: 4.0
+  capability_source: estimated
 - id: gpt-5.1-codex-max
   provider: openai
   tier: medium
@@ -1659,6 +1989,8 @@ catalog:
   label: 'OpenAI: GPT-5.1-Codex-Max'
   context_length: 400000
   assigned_by: heuristic
+  capability: 8.6
+  capability_source: estimated
 - id: ministral-14b-2512
   provider: mistralai
   tier: small
@@ -1669,6 +2001,8 @@ catalog:
   label: 'Mistral: Ministral 3 14B 2512'
   context_length: 262144
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: ministral-8b-2512
   provider: mistralai
   tier: small
@@ -1679,6 +2013,8 @@ catalog:
   label: 'Mistral: Ministral 3 8B 2512'
   context_length: 262144
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: ministral-3b-2512
   provider: mistralai
   tier: small
@@ -1689,6 +2025,8 @@ catalog:
   label: 'Mistral: Ministral 3 3B 2512'
   context_length: 131072
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: mistral-large-2512
   provider: mistralai
   tier: medium
@@ -1699,9 +2037,11 @@ catalog:
   label: 'Mistral: Mistral Large 3 2512'
   context_length: 262144
   assigned_by: heuristic
+  capability: 4.2
+  capability_source: estimated
 - id: deepseek-v3.2
   provider: deepseek
-  tier: small
+  tier: medium
   cost: 0.00026
   supports_image: false
   supports_video: false
@@ -1709,6 +2049,8 @@ catalog:
   label: 'DeepSeek: DeepSeek V3.2'
   context_length: 163840
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: claude-opus-4.5
   provider: anthropic
   tier: large
@@ -1719,6 +2061,8 @@ catalog:
   label: 'Anthropic: Claude Opus 4.5'
   context_length: 200000
   assigned_by: heuristic
+  capability: 13.7
+  capability_source: estimated
 - id: claude-opus-4.5:batch
   provider: anthropic
   tier: large
@@ -1729,6 +2073,8 @@ catalog:
   label: 'Anthropic: Claude Opus 4.5 (batch)'
   context_length: 200000
   assigned_by: heuristic
+  capability: 13.7
+  capability_source: estimated
 - id: gemini-3-pro-image-preview
   provider: google
   tier: large
@@ -1739,6 +2085,8 @@ catalog:
   label: 'Google: Nano Banana Pro (Gemini 3 Pro Image Preview)'
   context_length: 65536
   assigned_by: heuristic
+  capability: 9.1
+  capability_source: estimated
 - id: gpt-5.1
   provider: openai
   tier: medium
@@ -1749,6 +2097,8 @@ catalog:
   label: 'OpenAI: GPT-5.1'
   context_length: 400000
   assigned_by: heuristic
+  capability: 6.3
+  capability_source: estimated
 - id: gpt-5.1:batch
   provider: openai
   tier: medium
@@ -1759,6 +2109,8 @@ catalog:
   label: 'OpenAI: GPT-5.1 (batch)'
   context_length: 400000
   assigned_by: heuristic
+  capability: 6.3
+  capability_source: estimated
 - id: gpt-5.1-codex
   provider: openai
   tier: medium
@@ -1769,6 +2121,8 @@ catalog:
   label: 'OpenAI: GPT-5.1-Codex'
   context_length: 400000
   assigned_by: heuristic
+  capability: 6.3
+  capability_source: estimated
 - id: gpt-5.1-codex-mini
   provider: openai
   tier: small
@@ -1779,6 +2133,8 @@ catalog:
   label: 'OpenAI: GPT-5.1-Codex-Mini'
   context_length: 400000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: voxtral-small-24b-2507
   provider: mistralai
   tier: small
@@ -1789,6 +2145,8 @@ catalog:
   label: 'Mistral: Voxtral Small 24B 2507'
   context_length: 32768
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-oss-safeguard-20b
   provider: openai
   tier: small
@@ -1799,6 +2157,8 @@ catalog:
   label: 'OpenAI: gpt-oss-safeguard-20b'
   context_length: 131072
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-5-image-mini
   provider: openai
   tier: large
@@ -1809,6 +2169,8 @@ catalog:
   label: 'OpenAI: GPT-5 Image Mini'
   context_length: 400000
   assigned_by: heuristic
+  capability: 6.3
+  capability_source: estimated
 - id: claude-haiku-4.5
   provider: anthropic
   tier: medium
@@ -1819,6 +2181,8 @@ catalog:
   label: 'Anthropic: Claude Haiku 4.5'
   context_length: 200000
   assigned_by: heuristic
+  capability: 7.4
+  capability_source: measured
 - id: claude-haiku-4.5:batch
   provider: anthropic
   tier: medium
@@ -1829,6 +2193,8 @@ catalog:
   label: 'Anthropic: Claude Haiku 4.5 (batch)'
   context_length: 200000
   assigned_by: heuristic
+  capability: 7.4
+  capability_source: measured
 - id: qwen3-vl-8b-instruct
   provider: qwen
   tier: small
@@ -1839,6 +2205,8 @@ catalog:
   label: 'Qwen: Qwen3 VL 8B Instruct'
   context_length: 262144
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-5-image
   provider: openai
   tier: large
@@ -1849,6 +2217,8 @@ catalog:
   label: 'OpenAI: GPT-5 Image'
   context_length: 400000
   assigned_by: heuristic
+  capability: 12.2
+  capability_source: estimated
 - id: gemini-2.5-flash-image
   provider: google
   tier: medium
@@ -1859,6 +2229,8 @@ catalog:
   label: 'Google: Nano Banana (Gemini 2.5 Flash Image)'
   context_length: 32768
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: qwen3-vl-30b-a3b-instruct
   provider: qwen
   tier: small
@@ -1869,6 +2241,8 @@ catalog:
   label: 'Qwen: Qwen3 VL 30B A3B Instruct'
   context_length: 262144
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-5-pro
   provider: openai
   tier: large
@@ -1879,6 +2253,8 @@ catalog:
   label: 'OpenAI: GPT-5 Pro'
   context_length: 400000
   assigned_by: heuristic
+  capability: 13.2
+  capability_source: estimated
 - id: gpt-5-pro:batch
   provider: openai
   tier: large
@@ -1889,6 +2265,8 @@ catalog:
   label: 'OpenAI: GPT-5 Pro (batch)'
   context_length: 400000
   assigned_by: heuristic
+  capability: 13.2
+  capability_source: estimated
 - id: claude-sonnet-4.5
   provider: anthropic
   tier: large
@@ -1899,9 +2277,11 @@ catalog:
   label: 'Anthropic: Claude Sonnet 4.5'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 5.2
+  capability_source: estimated
 - id: claude-sonnet-4.5:batch
   provider: anthropic
-  tier: medium
+  tier: large
   cost: 0.0015
   supports_image: true
   supports_video: false
@@ -1909,6 +2289,8 @@ catalog:
   label: 'Anthropic: Claude Sonnet 4.5 (batch)'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 5.2
+  capability_source: estimated
 - id: deepseek-v3.2-exp
   provider: deepseek
   tier: medium
@@ -1919,6 +2301,8 @@ catalog:
   label: 'DeepSeek: DeepSeek V3.2 Exp'
   context_length: 163840
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: qwen3-vl-235b-a22b-instruct
   provider: qwen
   tier: small
@@ -1929,6 +2313,8 @@ catalog:
   label: 'Qwen: Qwen3 VL 235B A22B Instruct'
   context_length: 262144
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: deepseek-v3.1-terminus
   provider: deepseek
   tier: medium
@@ -1939,6 +2325,8 @@ catalog:
   label: 'DeepSeek: DeepSeek V3.1 Terminus'
   context_length: 163840
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: qwen3-coder-flash
   provider: qwen
   tier: small
@@ -1949,6 +2337,8 @@ catalog:
   label: 'Qwen: Qwen3 Coder Flash'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: qwen3-next-80b-a3b-instruct
   provider: qwen
   tier: small
@@ -1959,6 +2349,8 @@ catalog:
   label: 'Qwen: Qwen3 Next 80B A3B Instruct'
   context_length: 262144
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: deepseek-chat-v3.1
   provider: deepseek
   tier: small
@@ -1969,6 +2361,8 @@ catalog:
   label: 'DeepSeek: DeepSeek V3.1'
   context_length: 163840
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: mistral-medium-3.1
   provider: mistralai
   tier: medium
@@ -1979,6 +2373,8 @@ catalog:
   label: 'Mistral: Mistral Medium 3.1'
   context_length: 131072
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-5
   provider: openai
   tier: medium
@@ -1989,6 +2385,8 @@ catalog:
   label: 'OpenAI: GPT-5'
   context_length: 400000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-5:batch
   provider: openai
   tier: medium
@@ -1999,6 +2397,8 @@ catalog:
   label: 'OpenAI: GPT-5 (batch)'
   context_length: 400000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-5-mini
   provider: openai
   tier: small
@@ -2009,6 +2409,8 @@ catalog:
   label: 'OpenAI: GPT-5 Mini'
   context_length: 400000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-5-mini:batch
   provider: openai
   tier: small
@@ -2019,6 +2421,8 @@ catalog:
   label: 'OpenAI: GPT-5 Mini (batch)'
   context_length: 400000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-5-nano
   provider: openai
   tier: small
@@ -2029,6 +2433,8 @@ catalog:
   label: 'OpenAI: GPT-5 Nano'
   context_length: 400000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-5-nano:batch
   provider: openai
   tier: small
@@ -2039,16 +2445,20 @@ catalog:
   label: 'OpenAI: GPT-5 Nano (batch)'
   context_length: 400000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-oss-120b
   provider: openai
   tier: small
-  cost: 0.00015
+  cost: 5.0e-05
   supports_image: false
   supports_video: false
   supports_audio: false
   label: 'OpenAI: gpt-oss-120b'
   context_length: 131072
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: measured
 - id: gpt-oss-120b:batch
   provider: openai
   tier: small
@@ -2059,16 +2469,20 @@ catalog:
   label: 'OpenAI: gpt-oss-120b (batch)'
   context_length: 131072
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: measured
 - id: gpt-oss-20b
   provider: openai
   tier: small
-  cost: 1.8e-05
+  cost: 3.0e-05
   supports_image: false
   supports_video: false
   supports_audio: false
   label: 'OpenAI: gpt-oss-20b'
   context_length: 131072
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-oss-20b:batch
   provider: openai
   tier: small
@@ -2079,6 +2493,8 @@ catalog:
   label: 'OpenAI: gpt-oss-20b (batch)'
   context_length: 131072
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: claude-opus-4.1
   provider: anthropic
   tier: large
@@ -2089,6 +2505,8 @@ catalog:
   label: 'Anthropic: Claude Opus 4.1'
   context_length: 200000
   assigned_by: heuristic
+  capability: 6.4
+  capability_source: estimated
 - id: claude-opus-4.1:batch
   provider: anthropic
   tier: large
@@ -2099,6 +2517,8 @@ catalog:
   label: 'Anthropic: Claude Opus 4.1 (batch)'
   context_length: 200000
   assigned_by: heuristic
+  capability: 6.4
+  capability_source: estimated
 - id: codestral-2508
   provider: mistralai
   tier: medium
@@ -2109,16 +2529,20 @@ catalog:
   label: 'Mistral: Codestral 2508'
   context_length: 256000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: qwen3-coder-30b-a3b-instruct
   provider: qwen
   tier: small
-  cost: 0.00015
+  cost: 7.0e-05
   supports_image: false
   supports_video: false
   supports_audio: false
   label: 'Qwen: Qwen3 Coder 30B A3B Instruct'
   context_length: 262144
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: qwen3-30b-a3b-instruct-2507
   provider: qwen
   tier: small
@@ -2129,6 +2553,8 @@ catalog:
   label: 'Qwen: Qwen3 30B A3B Instruct 2507'
   context_length: 262144
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: qwen3-235b-a22b-thinking-2507
   provider: qwen
   tier: medium
@@ -2139,6 +2565,8 @@ catalog:
   label: 'Qwen: Qwen3 235B A22B Thinking 2507'
   context_length: 128000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: qwen3-coder
   provider: qwen
   tier: medium
@@ -2149,6 +2577,8 @@ catalog:
   label: 'Qwen: Qwen3 Coder 480B A35B'
   context_length: 262144
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gemini-2.5-flash-lite
   provider: google
   tier: small
@@ -2159,6 +2589,8 @@ catalog:
   label: 'Google: Gemini 2.5 Flash Lite'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: qwen3-235b-a22b-2507
   provider: qwen
   tier: small
@@ -2169,6 +2601,8 @@ catalog:
   label: 'Qwen: Qwen3 235B A22B Instruct 2507'
   context_length: 262144
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: mistral-small-3.2-24b-instruct
   provider: mistralai
   tier: small
@@ -2179,6 +2613,8 @@ catalog:
   label: 'Mistral: Mistral Small 3.2 24B'
   context_length: 256000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gemini-2.5-flash
   provider: google
   tier: medium
@@ -2189,6 +2625,8 @@ catalog:
   label: 'Google: Gemini 2.5 Flash'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gemini-2.5-pro
   provider: google
   tier: medium
@@ -2199,6 +2637,8 @@ catalog:
   label: 'Google: Gemini 2.5 Pro'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: o3-pro
   provider: openai
   tier: large
@@ -2209,6 +2649,8 @@ catalog:
   label: 'OpenAI: o3 Pro'
   context_length: 200000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gemini-2.5-pro-preview
   provider: google
   tier: medium
@@ -2219,16 +2661,20 @@ catalog:
   label: 'Google: Gemini 2.5 Pro Preview 06-05'
   context_length: 1048576
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: deepseek-r1-0528
   provider: deepseek
   tier: medium
-  cost: 0.0005
+  cost: 0.000571
   supports_image: false
   supports_video: false
   supports_audio: false
   label: 'DeepSeek: R1 0528'
   context_length: 163840
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: mistral-medium-3
   provider: mistralai
   tier: medium
@@ -2239,6 +2685,8 @@ catalog:
   label: 'Mistral: Mistral Medium 3'
   context_length: 131072
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: llama-guard-4-12b
   provider: meta-llama
   tier: small
@@ -2249,6 +2697,8 @@ catalog:
   label: 'Meta: Llama Guard 4 12B'
   context_length: 163840
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: qwen3-30b-a3b
   provider: qwen
   tier: small
@@ -2259,6 +2709,8 @@ catalog:
   label: 'Qwen: Qwen3 30B A3B'
   context_length: 40960
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: qwen3-14b
   provider: qwen
   tier: small
@@ -2269,6 +2721,8 @@ catalog:
   label: 'Qwen: Qwen3 14B'
   context_length: 40960
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: qwen3-32b
   provider: qwen
   tier: small
@@ -2279,6 +2733,8 @@ catalog:
   label: 'Qwen: Qwen3 32B'
   context_length: 131072
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: o3
   provider: openai
   tier: large
@@ -2289,6 +2745,8 @@ catalog:
   label: 'OpenAI: o3'
   context_length: 200000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: o3:batch
   provider: openai
   tier: medium
@@ -2299,6 +2757,8 @@ catalog:
   label: 'OpenAI: o3 (batch)'
   context_length: 200000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: o4-mini:batch
   provider: openai
   tier: medium
@@ -2309,6 +2769,8 @@ catalog:
   label: 'OpenAI: o4 Mini (batch)'
   context_length: 200000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-4.1
   provider: openai
   tier: large
@@ -2319,6 +2781,8 @@ catalog:
   label: 'OpenAI: GPT-4.1'
   context_length: 1047576
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-4.1:batch
   provider: openai
   tier: medium
@@ -2329,6 +2793,8 @@ catalog:
   label: 'OpenAI: GPT-4.1 (batch)'
   context_length: 1047576
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-4.1-mini
   provider: openai
   tier: medium
@@ -2339,6 +2805,8 @@ catalog:
   label: 'OpenAI: GPT-4.1 Mini'
   context_length: 1047576
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-4.1-mini:batch
   provider: openai
   tier: small
@@ -2349,6 +2817,8 @@ catalog:
   label: 'OpenAI: GPT-4.1 Mini (batch)'
   context_length: 1047576
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-4.1-nano
   provider: openai
   tier: small
@@ -2359,6 +2829,8 @@ catalog:
   label: 'OpenAI: GPT-4.1 Nano'
   context_length: 1047576
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-4.1-nano:batch
   provider: openai
   tier: small
@@ -2369,6 +2841,8 @@ catalog:
   label: 'OpenAI: GPT-4.1 Nano (batch)'
   context_length: 1047576
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: llama-4-maverick
   provider: meta-llama
   tier: medium
@@ -2379,6 +2853,8 @@ catalog:
   label: 'Meta: Llama 4 Maverick'
   context_length: 524288
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: llama-4-scout
   provider: meta-llama
   tier: small
@@ -2389,16 +2865,20 @@ catalog:
   label: 'Meta: Llama 4 Scout'
   context_length: 1310720
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: deepseek-chat-v3-0324
   provider: deepseek
-  tier: medium
-  cost: 0.00029
+  tier: small
+  cost: 0.00025
   supports_image: false
   supports_video: false
   supports_audio: false
   label: 'DeepSeek: DeepSeek V3 0324'
   context_length: 163840
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: mistral-small-3.1-24b-instruct
   provider: mistralai
   tier: medium
@@ -2409,16 +2889,20 @@ catalog:
   label: 'Mistral: Mistral Small 3.1 24B'
   context_length: 128000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gemma-3-4b-it
   provider: google
   tier: small
-  cost: 5.0e-05
+  cost: 4.0e-05
   supports_image: true
   supports_video: false
   supports_audio: false
   label: 'Google: Gemma 3 4B'
   context_length: 131072
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gemma-3-12b-it
   provider: google
   tier: small
@@ -2429,6 +2913,8 @@ catalog:
   label: 'Google: Gemma 3 12B'
   context_length: 131072
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gemma-3-27b-it
   provider: google
   tier: small
@@ -2439,6 +2925,8 @@ catalog:
   label: 'Google: Gemma 3 27B'
   context_length: 131072
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: mistral-saba
   provider: mistralai
   tier: small
@@ -2449,6 +2937,8 @@ catalog:
   label: 'Mistral: Saba'
   context_length: 32768
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: qwen2.5-vl-72b-instruct
   provider: qwen
   tier: medium
@@ -2459,9 +2949,11 @@ catalog:
   label: 'Qwen: Qwen2.5 VL 72B Instruct'
   context_length: 128000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: qwen-plus
   provider: qwen
-  tier: small
+  tier: medium
   cost: 0.00026
   supports_image: false
   supports_video: false
@@ -2469,6 +2961,8 @@ catalog:
   label: 'Qwen: Qwen-Plus'
   context_length: 1000000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: o3-mini:batch
   provider: openai
   tier: medium
@@ -2479,6 +2973,8 @@ catalog:
   label: 'OpenAI: o3 Mini (batch)'
   context_length: 200000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: mistral-small-24b-instruct-2501
   provider: mistralai
   tier: small
@@ -2489,9 +2985,11 @@ catalog:
   label: 'Mistral: Mistral Small 3'
   context_length: 32768
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: deepseek-chat
   provider: deepseek
-  tier: small
+  tier: medium
   cost: 0.000257
   supports_image: false
   supports_video: false
@@ -2499,6 +2997,8 @@ catalog:
   label: 'DeepSeek: DeepSeek V3'
   context_length: 163840
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: llama-3.3-70b-instruct
   provider: meta-llama
   tier: medium
@@ -2509,6 +3009,8 @@ catalog:
   label: 'Meta: Llama 3.3 70B Instruct'
   context_length: 131072
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-4o-2024-11-20
   provider: openai
   tier: large
@@ -2519,6 +3021,8 @@ catalog:
   label: 'OpenAI: GPT-4o (2024-11-20)'
   context_length: 128000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: mistral-large-2407
   provider: mistralai
   tier: large
@@ -2529,6 +3033,8 @@ catalog:
   label: Mistral Large 2407
   context_length: 131072
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: qwen-2.5-coder-32b-instruct
   provider: qwen
   tier: medium
@@ -2539,6 +3045,8 @@ catalog:
   label: Qwen2.5 Coder 32B Instruct
   context_length: 32768
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: llama-3.2-1b-instruct
   provider: meta-llama
   tier: small
@@ -2549,16 +3057,20 @@ catalog:
   label: 'Meta: Llama 3.2 1B Instruct'
   context_length: 60000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: llama-3.2-3b-instruct
   provider: meta-llama
   tier: small
-  cost: 5.1e-05
+  cost: 5.0e-05
   supports_image: false
   supports_video: false
   supports_audio: false
   label: 'Meta: Llama 3.2 3B Instruct'
   context_length: 131072
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: qwen-2.5-72b-instruct
   provider: qwen
   tier: medium
@@ -2569,6 +3081,8 @@ catalog:
   label: Qwen2.5 72B Instruct
   context_length: 32768
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-4o-2024-08-06
   provider: openai
   tier: large
@@ -2579,6 +3093,8 @@ catalog:
   label: 'OpenAI: GPT-4o (2024-08-06)'
   context_length: 128000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: llama-3.1-70b-instruct
   provider: meta-llama
   tier: medium
@@ -2589,16 +3105,20 @@ catalog:
   label: 'Meta: Llama 3.1 70B Instruct'
   context_length: 131072
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: llama-3.1-8b-instruct
   provider: meta-llama
   tier: small
-  cost: 2.0e-05
+  cost: 5.0e-05
   supports_image: false
   supports_video: false
   supports_audio: false
   label: 'Meta: Llama 3.1 8B Instruct'
   context_length: 131072
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: mistral-nemo
   provider: mistralai
   tier: small
@@ -2609,6 +3129,8 @@ catalog:
   label: 'Mistral: Mistral Nemo'
   context_length: 131072
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-4o-mini
   provider: openai
   tier: small
@@ -2619,6 +3141,8 @@ catalog:
   label: 'OpenAI: GPT-4o-mini'
   context_length: 128000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-4o-mini-2024-07-18
   provider: openai
   tier: small
@@ -2629,6 +3153,8 @@ catalog:
   label: 'OpenAI: GPT-4o-mini (2024-07-18)'
   context_length: 128000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-4o-mini:batch
   provider: openai
   tier: small
@@ -2639,6 +3165,8 @@ catalog:
   label: 'OpenAI: GPT-4o-mini (batch)'
   context_length: 128000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gemma-2-27b-it
   provider: google
   tier: medium
@@ -2649,6 +3177,8 @@ catalog:
   label: 'Google: Gemma 2 27B'
   context_length: 8192
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-4o
   provider: openai
   tier: large
@@ -2659,6 +3189,8 @@ catalog:
   label: 'OpenAI: GPT-4o'
   context_length: 128000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-4o-2024-05-13
   provider: openai
   tier: large
@@ -2669,6 +3201,8 @@ catalog:
   label: 'OpenAI: GPT-4o (2024-05-13)'
   context_length: 128000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-4o:batch
   provider: openai
   tier: medium
@@ -2679,6 +3213,8 @@ catalog:
   label: 'OpenAI: GPT-4o (batch)'
   context_length: 128000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: mixtral-8x22b-instruct
   provider: mistralai
   tier: large
@@ -2689,6 +3225,8 @@ catalog:
   label: 'Mistral: Mixtral 8x22B Instruct'
   context_length: 65536
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-4-turbo:batch
   provider: openai
   tier: large
@@ -2699,6 +3237,8 @@ catalog:
   label: 'OpenAI: GPT-4 Turbo (batch)'
   context_length: 128000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: mistral-large
   provider: mistralai
   tier: large
@@ -2709,6 +3249,8 @@ catalog:
   label: Mistral Large
   context_length: 128000
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-3.5-turbo-0613
   provider: openai
   tier: medium
@@ -2719,6 +3261,8 @@ catalog:
   label: 'OpenAI: GPT-3.5 Turbo (older v0613)'
   context_length: 4095
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-3.5-turbo-16k
   provider: openai
   tier: large
@@ -2729,6 +3273,8 @@ catalog:
   label: 'OpenAI: GPT-3.5 Turbo 16k'
   context_length: 16385
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
 - id: gpt-4
   provider: openai
   tier: large
@@ -2739,3 +3285,953 @@ catalog:
   label: 'OpenAI: GPT-4'
   context_length: 8191
   assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
+- id: pixtral-large-2502
+  provider: mistralai
+  tier: large
+  cost: 0.002
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'Mistral: Pixtral Large 2502'
+  context_length: 128000
+  assigned_by: heuristic
+  capability: 49.0
+  capability_source: estimated
+- id: gemini-4-neon
+  provider: google
+  tier: large
+  cost: 0.003
+  supports_image: true
+  supports_video: true
+  supports_audio: true
+  label: 'Google: Gemini 4 Neon'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 61.4
+  capability_source: measured
+- id: gemini-4-neon:batch
+  provider: google
+  tier: large
+  cost: 0.0015
+  supports_image: true
+  supports_video: true
+  supports_audio: true
+  label: 'Google: Gemini 4 Neon (batch)'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 61.4
+  capability_source: measured
+- id: muse-ember
+  provider: meta
+  tier: small
+  cost: 0.0001
+  supports_image: true
+  supports_video: true
+  supports_audio: true
+  label: 'Meta: Muse Ember'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 36.0
+  capability_source: measured
+- id: glm-5.3-flashx-legal
+  provider: z-ai
+  tier: medium
+  cost: 0.00037
+  supports_image: true
+  supports_video: true
+  supports_audio: false
+  label: 'Z.ai: GLM 5.3 FlashX Legal'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 39.6
+  capability_source: estimated
+- id: kimi-k3.1-pro
+  provider: moonshotai
+  tier: small
+  cost: 0.00024
+  supports_image: true
+  supports_video: true
+  supports_audio: false
+  label: 'MoonshotAI: Kimi K3.1 Pro'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 46.5
+  capability_source: measured
+- id: kimi-k3.1-pro:batch
+  provider: moonshotai
+  tier: medium
+  cost: 0.000372
+  supports_image: true
+  supports_video: true
+  supports_audio: false
+  label: 'MoonshotAI: Kimi K3.1 Pro (batch)'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 46.5
+  capability_source: measured
+- id: minimax-m3.1-flash
+  provider: minimax
+  tier: small
+  cost: 0.00015
+  supports_image: true
+  supports_video: true
+  supports_audio: false
+  label: 'MiniMax: MiniMax M3.1 Flash'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 29.1
+  capability_source: measured
+- id: muse-spark-open
+  provider: meta
+  tier: medium
+  cost: 0.00125
+  supports_image: true
+  supports_video: true
+  supports_audio: true
+  label: 'Meta: Muse Spark Open'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 24.9
+  capability_source: measured
+- id: nemotron-3.5-super-vl
+  provider: nvidia
+  tier: small
+  cost: 0.00015
+  supports_image: true
+  supports_video: true
+  supports_audio: false
+  label: 'NVIDIA: Nemotron 3.5 Super VL'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 13.6
+  capability_source: measured
+- id: nemotron-3.5-super-vl:free
+  provider: nvidia
+  tier: small
+  cost: 0.0
+  supports_image: true
+  supports_video: true
+  supports_audio: false
+  label: 'NVIDIA: Nemotron 3.5 Super VL (free)'
+  context_length: 1000000
+  assigned_by: heuristic
+  capability: 13.6
+  capability_source: measured
+- id: muse-wonder
+  provider: meta
+  tier: large
+  cost: 0.004
+  supports_image: true
+  supports_video: true
+  supports_audio: true
+  label: 'Meta: Muse Wonder'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 43.6
+  capability_source: measured
+- id: glm-5.3-prime
+  provider: z-ai
+  tier: large
+  cost: 0.00168
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'Z.ai: GLM 5.3 Prime'
+  context_length: 1000000
+  assigned_by: heuristic
+  capability: 42.0
+  capability_source: estimated
+- id: command-a-plus
+  provider: cohere
+  tier: medium
+  cost: 0.0003
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'Cohere: Command A+'
+  context_length: 192000
+  assigned_by: heuristic
+  capability: 6.2
+  capability_source: measured
+- id: grok-4.7
+  provider: x-ai
+  tier: large
+  cost: 0.002
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'SpaceXSI: Grok 4.7'
+  context_length: 500000
+  assigned_by: heuristic
+  capability: 35.5
+  capability_source: measured
+- id: grok-4.7:batch
+  provider: x-ai
+  tier: large
+  cost: 0.0016
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'SpaceXSI: Grok 4.7 (batch)'
+  context_length: 500000
+  assigned_by: heuristic
+  capability: 35.5
+  capability_source: measured
+- id: glm-5.3-flashx
+  provider: z-ai
+  tier: medium
+  cost: 0.00037
+  supports_image: true
+  supports_video: true
+  supports_audio: false
+  label: 'Z.ai: GLM 5.3 FlashX'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 34.6
+  capability_source: estimated
+- id: muse-spark-1.3-contributor
+  provider: meta
+  tier: small
+  cost: 0.0001
+  supports_image: true
+  supports_video: true
+  supports_audio: false
+  label: 'Meta: Muse Spark 1.3 Contributor'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 27.1
+  capability_source: estimated
+- id: muse-spark-1.3
+  provider: meta
+  tier: medium
+  cost: 0.00125
+  supports_image: true
+  supports_video: true
+  supports_audio: false
+  label: 'Meta: Muse Spark 1.3'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 36.6
+  capability_source: measured
+- id: glm-5.3-flash
+  provider: z-ai
+  tier: small
+  cost: 0.00012
+  supports_image: true
+  supports_video: true
+  supports_audio: false
+  label: 'Z.ai: GLM 5.3 Flash'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 27.8
+  capability_source: measured
+- id: glm-5.3-flash:batch
+  provider: z-ai
+  tier: small
+  cost: 2.3e-05
+  supports_image: true
+  supports_video: true
+  supports_audio: false
+  label: 'Z.ai: GLM 5.3 Flash (batch)'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 27.8
+  capability_source: measured
+- id: muse-spark-1.2-contributor
+  provider: meta
+  tier: small
+  cost: 0.0001
+  supports_image: true
+  supports_video: true
+  supports_audio: false
+  label: 'Meta: Muse Spark 1.2 Contributor'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 25.8
+  capability_source: estimated
+- id: glm-5.3
+  provider: z-ai
+  tier: small
+  cost: 7.0e-05
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'Z.ai: GLM 5.3'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 31.7
+  capability_source: measured
+- id: glm-5.3:batch
+  provider: z-ai
+  tier: medium
+  cost: 0.00028
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'Z.ai: GLM 5.3 (batch)'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 31.7
+  capability_source: measured
+- id: grok-4.6
+  provider: x-ai
+  tier: large
+  cost: 0.002
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'SpaceXSI: Grok 4.6'
+  context_length: 500000
+  assigned_by: heuristic
+  capability: 31.0
+  capability_source: measured
+- id: grok-4.6:batch
+  provider: x-ai
+  tier: large
+  cost: 0.0016
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'SpaceXSI: Grok 4.6 (batch)'
+  context_length: 500000
+  assigned_by: heuristic
+  capability: 31.0
+  capability_source: measured
+- id: nemotron-3.5-lightning
+  provider: nvidia
+  tier: small
+  cost: 5.0e-05
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'NVIDIA: Nemotron 3.5 Lightning'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 5.5
+  capability_source: measured
+- id: nemotron-3.5-lightning:free
+  provider: nvidia
+  tier: small
+  cost: 0.0
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'NVIDIA: Nemotron 3.5 Lightning (free)'
+  context_length: 1000000
+  assigned_by: heuristic
+  capability: 5.5
+  capability_source: measured
+- id: muse-glimmer-30b
+  provider: meta
+  tier: medium
+  cost: 0.00035
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'Meta: Muse Glimmer 30B'
+  context_length: 131072
+  assigned_by: heuristic
+  capability: 6.3
+  capability_source: measured
+- id: muse-glimmer-30b:batch
+  provider: meta
+  tier: small
+  cost: 0.00024
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'Meta: Muse Glimmer 30B (batch)'
+  context_length: 131072
+  assigned_by: heuristic
+  capability: 6.3
+  capability_source: measured
+- id: muse-spark-1.2
+  provider: meta
+  tier: medium
+  cost: 0.00125
+  supports_image: true
+  supports_video: true
+  supports_audio: false
+  label: 'Meta: Muse Spark 1.2'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 35.3
+  capability_source: estimated
+- id: kimi-k3
+  provider: moonshotai
+  tier: small
+  cost: 0.000192
+  supports_image: true
+  supports_video: true
+  supports_audio: false
+  label: 'MoonshotAI: Kimi K3'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 17.4
+  capability_source: measured
+- id: kimi-k3:batch
+  provider: moonshotai
+  tier: large
+  cost: 0.00228
+  supports_image: true
+  supports_video: true
+  supports_audio: false
+  label: 'MoonshotAI: Kimi K3 (batch)'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 17.4
+  capability_source: measured
+- id: muse-spark-1.1
+  provider: meta
+  tier: medium
+  cost: 0.00125
+  supports_image: true
+  supports_video: true
+  supports_audio: false
+  label: 'Meta: Muse Spark 1.1'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 33.1
+  capability_source: estimated
+- id: grok-4.5
+  provider: x-ai
+  tier: large
+  cost: 0.002
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'SpaceXSI: Grok 4.5'
+  context_length: 500000
+  assigned_by: heuristic
+  capability: 34.3
+  capability_source: estimated
+- id: glm-5.2
+  provider: z-ai
+  tier: medium
+  cost: 0.00062
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'Z.ai: GLM 5.2'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 26.7
+  capability_source: estimated
+- id: glm-5.2:batch
+  provider: z-ai
+  tier: medium
+  cost: 0.000322
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'Z.ai: GLM 5.2 (batch)'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 26.8
+  capability_source: estimated
+- id: kimi-k2.7-code
+  provider: moonshotai
+  tier: medium
+  cost: 0.0006
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'MoonshotAI: Kimi K2.7 Code'
+  context_length: 262144
+  assigned_by: heuristic
+  capability: 26.1
+  capability_source: estimated
+- id: nemotron-3-ultra-550b-a55b
+  provider: nvidia
+  tier: medium
+  cost: 0.0005
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'NVIDIA: Nemotron 3 Ultra'
+  context_length: 262144
+  assigned_by: heuristic
+  capability: 11.8
+  capability_source: measured
+- id: nemotron-3-ultra-550b-a55b:free
+  provider: nvidia
+  tier: small
+  cost: 0.0
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'NVIDIA: Nemotron 3 Ultra (free)'
+  context_length: 1000000
+  assigned_by: heuristic
+  capability: 11.8
+  capability_source: measured
+- id: minimax-m3
+  provider: minimax
+  tier: medium
+  cost: 0.0003
+  supports_image: true
+  supports_video: true
+  supports_audio: false
+  label: 'MiniMax: MiniMax M3'
+  context_length: 1048576
+  assigned_by: heuristic
+  capability: 18.9
+  capability_source: measured
+- id: minimax-m3:batch
+  provider: minimax
+  tier: small
+  cost: 0.000224
+  supports_image: true
+  supports_video: true
+  supports_audio: false
+  label: 'MiniMax: MiniMax M3 (batch)'
+  context_length: 524288
+  assigned_by: heuristic
+  capability: 18.9
+  capability_source: measured
+- id: grok-4.3
+  provider: x-ai
+  tier: medium
+  cost: 0.00125
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'SpaceXSI: Grok 4.3'
+  context_length: 1000000
+  assigned_by: heuristic
+  capability: 24.7
+  capability_source: estimated
+- id: grok-4.3:batch
+  provider: x-ai
+  tier: medium
+  cost: 0.001
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'SpaceXSI: Grok 4.3 (batch)'
+  context_length: 1000000
+  assigned_by: heuristic
+  capability: 26.8
+  capability_source: estimated
+- id: nemotron-3-nano-omni-30b-a3b-reasoning:free
+  provider: nvidia
+  tier: small
+  cost: 0.0
+  supports_image: true
+  supports_video: true
+  supports_audio: true
+  label: 'NVIDIA: Nemotron 3 Nano Omni (free)'
+  context_length: 256000
+  assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
+- id: kimi-k2.6
+  provider: moonshotai
+  tier: medium
+  cost: 0.00065
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'MoonshotAI: Kimi K2.6'
+  context_length: 262144
+  assigned_by: heuristic
+  capability: 20.6
+  capability_source: estimated
+- id: glm-5.1
+  provider: z-ai
+  tier: large
+  cost: 0.0014
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'Z.ai: GLM 5.1'
+  context_length: 204800
+  assigned_by: heuristic
+  capability: 22.6
+  capability_source: estimated
+- id: glm-5v-turbo
+  provider: z-ai
+  tier: medium
+  cost: 0.0012
+  supports_image: true
+  supports_video: true
+  supports_audio: false
+  label: 'Z.ai: GLM 5V Turbo'
+  context_length: 202752
+  assigned_by: heuristic
+  capability: 21.3
+  capability_source: estimated
+- id: grok-4.20-multi-agent
+  provider: x-ai
+  tier: medium
+  cost: 0.00125
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'SpaceXSI: Grok 4.20 Multi-Agent'
+  context_length: 2000000
+  assigned_by: heuristic
+  capability: 21.4
+  capability_source: estimated
+- id: grok-4.20
+  provider: x-ai
+  tier: medium
+  cost: 0.00125
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'SpaceXSI: Grok 4.20'
+  context_length: 2000000
+  assigned_by: heuristic
+  capability: 21.4
+  capability_source: estimated
+- id: minimax-m2.7
+  provider: minimax
+  tier: medium
+  cost: 0.0006
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'MiniMax: MiniMax M2.7'
+  context_length: 196608
+  assigned_by: heuristic
+  capability: 16.7
+  capability_source: estimated
+- id: glm-5-turbo
+  provider: z-ai
+  tier: medium
+  cost: 0.0012
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'Z.ai: GLM 5 Turbo'
+  context_length: 202752
+  assigned_by: heuristic
+  capability: 19.4
+  capability_source: estimated
+- id: nemotron-3-super-120b-a12b
+  provider: nvidia
+  tier: small
+  cost: 7.5e-05
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'NVIDIA: Nemotron 3 Super'
+  context_length: 262144
+  assigned_by: heuristic
+  capability: 6.7
+  capability_source: estimated
+- id: minimax-m2.5
+  provider: minimax
+  tier: medium
+  cost: 0.00027
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'MiniMax: MiniMax M2.5'
+  context_length: 198000
+  assigned_by: heuristic
+  capability: 9.4
+  capability_source: estimated
+- id: glm-5
+  provider: z-ai
+  tier: medium
+  cost: 0.001
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'Z.ai: GLM 5'
+  context_length: 204800
+  assigned_by: heuristic
+  capability: 15.1
+  capability_source: estimated
+- id: kimi-k2.5
+  provider: moonshotai
+  tier: medium
+  cost: 0.0005
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'MoonshotAI: Kimi K2.5'
+  context_length: 262144
+  assigned_by: heuristic
+  capability: 10.3
+  capability_source: estimated
+- id: glm-4.7-flash
+  provider: z-ai
+  tier: small
+  cost: 6.1e-05
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'Z.ai: GLM 4.7 Flash'
+  context_length: 200000
+  assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
+- id: glm-4.7
+  provider: z-ai
+  tier: medium
+  cost: 0.0006
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'Z.ai: GLM 4.7'
+  context_length: 204800
+  assigned_by: heuristic
+  capability: 7.2
+  capability_source: estimated
+- id: nemotron-3-nano-30b-a3b
+  provider: nvidia
+  tier: small
+  cost: 6.0e-05
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'NVIDIA: Nemotron 3 Nano 30B A3B'
+  context_length: 262144
+  assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
+- id: glm-4.6v
+  provider: z-ai
+  tier: medium
+  cost: 0.0003
+  supports_image: true
+  supports_video: true
+  supports_audio: false
+  label: 'Z.ai: GLM 4.6V'
+  context_length: 131072
+  assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
+- id: nova-2-lite-v1
+  provider: amazon
+  tier: medium
+  cost: 0.0003
+  supports_image: true
+  supports_video: true
+  supports_audio: false
+  label: 'Amazon: Nova 2 Lite'
+  context_length: 1000000
+  assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
+- id: nova-premier-v1
+  provider: amazon
+  tier: large
+  cost: 0.0025
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'Amazon: Nova Premier 1.0'
+  context_length: 1000000
+  assigned_by: heuristic
+  capability: 8.0
+  capability_source: estimated
+- id: sonar-pro-search
+  provider: perplexity
+  tier: large
+  cost: 0.003
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'Perplexity: Sonar Pro Search'
+  context_length: 200000
+  assigned_by: heuristic
+  capability: 8.7
+  capability_source: estimated
+- id: glm-4.6
+  provider: z-ai
+  tier: medium
+  cost: 0.0005
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'Z.ai: GLM 4.6'
+  context_length: 204800
+  assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
+- id: glm-4.5v
+  provider: z-ai
+  tier: medium
+  cost: 0.0006
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'Z.ai: GLM 4.5V'
+  context_length: 65536
+  assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
+- id: glm-4.5
+  provider: z-ai
+  tier: medium
+  cost: 0.0006
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'Z.ai: GLM 4.5'
+  context_length: 131072
+  assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
+- id: glm-4.5-air
+  provider: z-ai
+  tier: small
+  cost: 0.00013
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'Z.ai: GLM 4.5 Air'
+  context_length: 131072
+  assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
+- id: command-a
+  provider: cohere
+  tier: large
+  cost: 0.0025
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'Cohere: Command A'
+  context_length: 256000
+  assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
+- id: sonar-reasoning-pro
+  provider: perplexity
+  tier: large
+  cost: 0.002
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'Perplexity: Sonar Reasoning Pro'
+  context_length: 128000
+  assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
+- id: sonar-pro
+  provider: perplexity
+  tier: large
+  cost: 0.003
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'Perplexity: Sonar Pro'
+  context_length: 200000
+  assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
+- id: sonar-deep-research
+  provider: perplexity
+  tier: large
+  cost: 0.002
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'Perplexity: Sonar Deep Research'
+  context_length: 128000
+  assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
+- id: sonar
+  provider: perplexity
+  tier: medium
+  cost: 0.001
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'Perplexity: Sonar'
+  context_length: 127072
+  assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
+- id: phi-4
+  provider: microsoft
+  tier: small
+  cost: 7.0e-05
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'Microsoft: Phi 4'
+  context_length: 16384
+  assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
+- id: command-r7b-12-2024
+  provider: cohere
+  tier: small
+  cost: 3.7e-05
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'Cohere: Command R7B (12-2024)'
+  context_length: 128000
+  assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
+- id: nova-lite-v1
+  provider: amazon
+  tier: small
+  cost: 6.0e-05
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'Amazon: Nova Lite 1.0'
+  context_length: 300000
+  assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
+- id: nova-micro-v1
+  provider: amazon
+  tier: small
+  cost: 3.5e-05
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'Amazon: Nova Micro 1.0'
+  context_length: 128000
+  assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
+- id: nova-pro-v1
+  provider: amazon
+  tier: medium
+  cost: 0.0008
+  supports_image: true
+  supports_video: false
+  supports_audio: false
+  label: 'Amazon: Nova Pro 1.0'
+  context_length: 300000
+  assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
+- id: command-r-08-2024
+  provider: cohere
+  tier: small
+  cost: 0.00015
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'Cohere: Command R (08-2024)'
+  context_length: 128000
+  assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated
+- id: command-r-plus-08-2024
+  provider: cohere
+  tier: large
+  cost: 0.0025
+  supports_image: false
+  supports_video: false
+  supports_audio: false
+  label: 'Cohere: Command R+ (08-2024)'
+  context_length: 128000
+  assigned_by: heuristic
+  capability: 3.8
+  capability_source: estimated

@@ -98,10 +98,25 @@ class TierClassifier:
             return self._constant, 1.0
         if self._clf is None:
             raise ClassifierError("classifier is not fitted; call fit() first")
+        proba = self.predict_proba(metadata, text, image_bytes)
+        tier = max(proba, key=lambda t: proba[t])
+        return tier, proba[tier]
+
+    def predict_proba(
+        self, metadata: dict[str, str], text: str, image_bytes: bytes | None = None
+    ) -> dict[str, float]:
+        """Probability per tier the classifier was trained on (sums to 1)."""
+        if self._constant is not None:
+            return {self._constant: 1.0}
+        if self._clf is None:
+            raise ClassifierError("classifier is not fitted; call fit() first")
         x = self._vector(self._metadata_encoder.known_only(metadata), text, image_bytes)
         proba = self._clf.predict_proba(x.reshape(1, -1))[0]
-        index = int(proba.argmax())
-        return str(self._clf.classes_[index]), float(proba[index])
+        return {str(tier): float(p) for tier, p in zip(self._clf.classes_, proba, strict=True)}
+
+    @property
+    def metadata_fields(self) -> list[str]:
+        return self._metadata_encoder.field_names
 
     @property
     def uses_images(self) -> bool:

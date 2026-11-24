@@ -34,6 +34,8 @@ export interface CatalogEntry {
   label: string
   // P1 — PLAN-v2.md §7. Empty until an admin assigns a tier via PUT /v1/catalog/{id}.
   assigned_by?: string
+  capability?: number | null
+  capability_source?: string
 }
 
 /** Catalog-only sentinel — never routable until an admin assigns a real tier. */
@@ -142,4 +144,27 @@ export interface Decision {
   classifier_outcome: string | null
   fallback_outcome: string | null
   optimize_for: OptimizeFor
+  tier_scores?: Record<string, number> | null
+  tier_scores_kind?: string | null
+  candidates?: {
+    id: string
+    provider: string
+    tier: string
+    cost: number
+    capability?: number | null
+    capability_source?: string
+  }[]
+  pool_size?: number | null
+  signals?: {
+    text_chars?: number
+    text_words?: number
+    metadata?: Record<string, string>
+    image_bytes?: number
+    modality?: string
+    providers?: string[]
+    selection_size?: number | null
+    path?: string
+    metadata_used?: string[]
+    metadata_ignored?: string[]
+  }
 }

@@ -12,13 +12,13 @@ if the exact tier has no match in the current selection (G2 in PLAN-v2.md §3).
   - "cost": cheapest (the original behaviour; stays the default so nothing changes for
     callers that don't opt in).
   - "accuracy": the candidate with the highest human quality rating for this request's
-    (model_id, metadata-field value) pair, cost as tiebreaker. Falls back to "cost" with a
-    visible note when no ratings exist for any candidate — honest about why.
-  - "balanced": `quality / log1p(cost + 1)` as a bluntly-labelled heuristic; same
-    fall-back-to-cost behaviour when ratings are missing.
+    (model_id, metadata-field value) pair, cost as tiebreaker.
+  - "balanced": `quality / log1p(cost + 1)` as a bluntly-labelled heuristic.
 
-Unreviewed models (G4) stay eligible in every mode — accuracy mode just can't score them, so
-if the pool is all unreviewed, the mode falls back to cost with a note.
+When no candidate has a rating, accuracy and balanced rank by each entry's benchmark
+`capability` (accuracy: most capable first; balanced: the cheapest model at or above the median
+capability), or by price when no capability is recorded either — always with a visible note,
+so the three modes differ instead of all collapsing to the cheapest model.
 
 No model is called from here or anywhere else in this package (ARCHITECTURE.md §1) — this
 module only picks a model id string from a config file, same discipline as tiers.py.
@@ -27,8 +27,9 @@ module only picks a model id string from a config file, same discipline as tiers
 from __future__ import annotations
 
 import math
-from collections.abc import Mapping
-from dataclasses import dataclass
+import statistics
+from collections.abc import Collection, Mapping
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Literal
 
@@ -48,63 +49,82 @@ def _passes_quality(
     return score is None or score >= min_quality
 
 
+def _provider_filter(provider: str | Collection[str] | None) -> frozenset[str] | None:
+    """None = any provider. A string may list several, comma-separated."""
+    if provider is None:
+        return None
+    names = provider.split(",") if isinstance(provider, str) else provider
+    wanted = frozenset(p.strip().lower() for p in names if p.strip())
+    return wanted or None
+
+
+def _rank_by_mode(
+    candidates: list[CatalogEntry],
+    mode: OptimizeFor,
+    quality: Mapping[tuple[str, str], float] | None,
+    quality_value: str | None,
+) -> tuple[list[CatalogEntry], str | None]:
+    """All candidates, best first for `mode`, plus a note when the ranking needed explaining.
+
+    Cost: cheapest first, id as a stable tiebreaker. Accuracy: highest human rating for
+    (id, quality_value), then cost, then id. Balanced: `rating / log1p(cost + 1)`. Rated models
+    rank ahead of unrated ones. With no ratings at all, accuracy and balanced use benchmark
+    `capability`, then price as a last-resort proxy — and say which one they used.
+    """
+    if not candidates:  # defensive; callers already guard this
+        raise RuleError("no candidates to choose from")
+    by_cost = sorted(candidates, key=lambda e: (e.cost, e.id))
+    if mode == "cost":
+        return by_cost, None
+
+    rated: list[tuple[CatalogEntry, float]] = []
+    if quality is not None and quality_value:
+        rated = [(e, r) for e in candidates if (r := quality.get((e.id, quality_value))) is not None]
+    if rated:
+        if mode == "accuracy":
+            rated.sort(key=lambda pair: (-pair[1], pair[0].cost, pair[0].id))
+        else:
+            rated.sort(key=lambda pair: (-(pair[1] / math.log1p(pair[0].cost + 1.0)), pair[0].cost, pair[0].id))
+        rated_ids = {e.id for e, _ in rated}
+        return [e for e, _ in rated] + [e for e in by_cost if e.id not in rated_ids], None
+
+    why = (
+        "no quality ratings were provided"
+        if quality is None or not quality_value
+        else f"no candidate has a rating for value='{quality_value}'"
+    )
+    scored = [(e, e.capability) for e in candidates if e.capability is not None]
+    if scored:
+        unscored = [e for e in by_cost if e.capability is None]
+        if mode == "accuracy":
+            scored.sort(key=lambda pair: (-pair[1], pair[0].cost, pair[0].id))
+            ordered = [e for e, _ in scored]
+            how = "highest benchmark capability first"
+        else:
+            median = statistics.median(c for _, c in scored)
+            strong = sorted((e for e, c in scored if c >= median), key=lambda e: (e.cost, e.id))
+            weaker = [e for e, c in sorted(scored, key=lambda pair: (-pair[1], pair[0].cost)) if c < median]
+            ordered = strong + weaker
+            how = f"cheapest model at or above the median capability {median:.0f}"
+        return ordered + unscored, f"optimize_for='{mode}' requested but {why}; ranked by benchmark capability ({how})"
+    if mode == "accuracy":
+        ordered = sorted(candidates, key=lambda e: (-e.cost, e.id))
+        how = "priciest first"
+    else:
+        middle = (len(by_cost) - 1) // 2
+        ordered = [e for _, e in sorted(enumerate(by_cost), key=lambda p: (abs(p[0] - middle), p[0]))]
+        how = "median price first"
+    return ordered, f"optimize_for='{mode}' requested but {why}; ranked by price as a capability proxy ({how})"
+
+
 def _choose_by_mode(
     candidates: list[CatalogEntry],
     mode: OptimizeFor,
     quality: Mapping[tuple[str, str], float] | None,
     quality_value: str | None,
 ) -> tuple[CatalogEntry, str | None]:
-    """Pick one entry from a non-empty candidate list using the chosen mode.
-
-    Cost mode is the original behaviour: cheapest, with model id as a stable tiebreaker.
-    Accuracy mode maximises the recorded human rating for (id, quality_value) — cost is the
-    tiebreaker (cheapest wins among equally-rated), then id. Balanced mode maximises
-    `rating / log1p(cost + 1)` on the same rated subset.
-
-    Accuracy and balanced modes need ratings. If the caller didn't supply any, or none of the
-    candidates has a rating for this quality_value, both modes fall back to cost and return a
-    note that says exactly why — rather than silently pretending the request was ranked by
-    quality when it wasn't.
-    """
-    if not candidates:  # defensive; callers already guard this
-        raise RuleError("no candidates to choose from")
-    if mode == "cost":
-        return min(candidates, key=lambda e: (e.cost, e.id)), None
-
-    # accuracy / balanced both need ratings for THIS request's quality_value.
-    # Distinguish "caller didn't pass a quality map at all" (None) from "caller passed
-    # an empty map" ({}) — both mean no ratings, but the note should say so honestly.
-    # Using `is None` (not `not quality`) so an empty dict still reaches the
-    # "no candidate has a rating" branch below.
-    if quality is None or not quality_value:
-        chosen = min(candidates, key=lambda e: (e.cost, e.id))
-        return chosen, (
-            f"optimize_for='{mode}' requested but no quality ratings were provided; "
-            "used cost instead"
-        )
-    scored = [(e, quality.get((e.id, quality_value))) for e in candidates]
-    rated = [(e, r) for e, r in scored if r is not None]
-    if not rated:
-        chosen = min(candidates, key=lambda e: (e.cost, e.id))
-        return chosen, (
-            f"optimize_for='{mode}' requested but no candidate has a rating for "
-            f"value='{quality_value}'; used cost instead"
-        )
-    # Sort by (primary score DESC, cost ASC, id ASC) so the first entry is the winner.
-    # Using sorted() for the id tiebreak because negating a string is awkward in a max() key.
-    if mode == "accuracy":
-        ordered = sorted(rated, key=lambda pair: (-pair[1], pair[0].cost, pair[0].id))
-        return ordered[0][0], None
-    # balanced
-    ordered = sorted(
-        rated,
-        key=lambda pair: (
-            -(pair[1] / math.log1p(pair[0].cost + 1.0)),
-            pair[0].cost,
-            pair[0].id,
-        ),
-    )
-    return ordered[0][0], None
+    ranked, note = _rank_by_mode(candidates, mode, quality, quality_value)
+    return ranked[0], note
 
 
 def _compose_note(*notes: str | None) -> str | None:
@@ -125,6 +145,11 @@ class CatalogEntry:
     label: str = ""
     context_length: int | None = None
     assigned_by: str = ""
+    capability: float | None = None
+    """Benchmark capability (Artificial Analysis intelligence index scale). Ranks accuracy and
+    balanced picks when no human ratings exist; see experiments/enrich_capability.py."""
+    capability_source: str = ""
+    """"measured" (published index) or "estimated" (fit on price + release date)."""
     """Informational only (tokens) — not used in `pick()`. Refreshable from a live source via
     `experiments/sync_catalog.py`; see capability.py.
 
@@ -136,6 +161,15 @@ class CatalogEntry:
     PUT /v1/catalog/{id}. Empty for rows that have never been reviewed through the UI.
     `tier == UNREVIEWED` means the entry is never a pick() candidate (G5).
     """
+
+
+@dataclass(frozen=True)
+class Ranking:
+    ranked: list[CatalogEntry]
+    """Candidates in the bucket that was picked from, best first."""
+    note: str | None
+    pool_size: int
+    """Models left after the selection/provider/modality filters, across all tiers."""
 
 
 @dataclass(frozen=True)
@@ -153,7 +187,7 @@ class ModelCatalog:
         tier_rank: dict[str, int],
         *,
         selected: set[str] | None = None,
-        provider: str | None = None,
+        provider: str | Collection[str] | None = None,
         needs_image: bool = False,
         needs_video: bool = False,
         needs_audio: bool = False,
@@ -162,7 +196,38 @@ class ModelCatalog:
         min_quality: float | None = None,
         optimize_for: OptimizeFor = "cost",
     ) -> tuple[CatalogEntry, str | None]:
-        """One entry from `tier`, chosen by `optimize_for` from the selection/provider/modality
+        """`pick_ranked(...)`'s winner and note."""
+        ranking = self.pick_ranked(
+            tier,
+            tier_rank,
+            selected=selected,
+            provider=provider,
+            needs_image=needs_image,
+            needs_video=needs_video,
+            needs_audio=needs_audio,
+            quality=quality,
+            quality_value=quality_value,
+            min_quality=min_quality,
+            optimize_for=optimize_for,
+        )
+        return ranking.ranked[0], ranking.note
+
+    def pick_ranked(
+        self,
+        tier: str,
+        tier_rank: dict[str, int],
+        *,
+        selected: set[str] | None = None,
+        provider: str | Collection[str] | None = None,
+        needs_image: bool = False,
+        needs_video: bool = False,
+        needs_audio: bool = False,
+        quality: Mapping[tuple[str, str], float] | None = None,
+        quality_value: str | None = None,
+        min_quality: float | None = None,
+        optimize_for: OptimizeFor = "cost",
+    ) -> Ranking:
+        """Entries from `tier`, ranked by `optimize_for`, from the selection/provider/modality
         filter, with an optional quality floor layered on top.
 
         `needs_image` / `needs_video` / `needs_audio` (P3 — PLAN-v2.md §6) each drop candidates
@@ -178,32 +243,26 @@ class ModelCatalog:
         it is dropped (noted) rather than failing the request — a stale catalog shouldn't be
         able to block every request.
 
-        `optimize_for` controls which of the candidates wins (P2 — PLAN-v2.md §5):
-          - "cost" (default): cheapest. Unchanged behaviour, so existing callers see no
-            difference.
-          - "accuracy": candidate with the highest human rating for (id, quality_value); cost
-            is the tiebreaker, id for determinism. Fall back to cost + note when ratings are
-            missing — honest rather than silent.
-          - "balanced": `rating / log1p(cost + 1)` on the rated subset; same fallback.
+        `optimize_for` orders the candidates (P2 — PLAN-v2.md §5); see `_rank_by_mode`.
 
         P1 (PLAN-v2.md §7 / G5): entries with `tier == UNREVIEWED` are **always** excluded,
         even when listed in `selected`. An admin must assign a real tier before resolve()
         will pick them.
 
-        Returns `(entry, note)`. `note` is `None` when nothing needed explaining; otherwise it
-        describes the tier substitution and/or quality-floor effect and/or optimize_for
-        fall-back, joined by `; ` — never silently combined, never silently dropped.
+        `note` is `None` when nothing needed explaining; otherwise it describes the tier
+        substitution and/or quality-floor effect and/or optimize_for proxy, joined by `; `.
         """
         if optimize_for not in VALID_OPTIMIZE_FOR:
             raise RuleError(
                 f"optimize_for must be one of {VALID_OPTIMIZE_FOR!r}; got '{optimize_for}'"
             )
+        providers = _provider_filter(provider)
         candidates = [
             e
             for e in self.entries
             if e.tier != UNREVIEWED_TIER
             and (selected is None or e.id in selected)
-            and (provider is None or e.provider == provider)
+            and (providers is None or e.provider.lower() in providers)
             and (not needs_image or e.supports_image)
             and (not needs_video or e.supports_video)
             and (not needs_audio or e.supports_audio)
@@ -211,9 +270,11 @@ class ModelCatalog:
         if not candidates:
             raise RuleError(
                 "no catalog model matches the current selection/provider/modality requirement "
-                f"(selected={sorted(selected) if selected else 'all'}, provider={provider or 'any'}, "
+                f"(selected={sorted(selected) if selected else 'all'}, "
+                f"provider={','.join(sorted(providers)) if providers else 'any'}, "
                 f"needs_image={needs_image}, needs_video={needs_video}, needs_audio={needs_audio})"
             )
+        pool_size = len(candidates)
 
         quality_note: str | None = None
         if quality and min_quality is not None and quality_value is not None:
@@ -234,8 +295,8 @@ class ModelCatalog:
             raise RuleError(f"'{tier}' is not a declared tier")
         exact = [e for e in candidates if e.tier == tier]
         if exact:
-            chosen, mode_note = _choose_by_mode(exact, optimize_for, quality, quality_value)
-            return chosen, _compose_note(quality_note, mode_note)
+            ranked, mode_note = _rank_by_mode(exact, optimize_for, quality, quality_value)
+            return Ranking(ranked, _compose_note(quality_note, mode_note), pool_size)
         above = [e for e in candidates if tier_rank.get(e.tier, -1) > wanted_rank]
         if above:
             # Pick the lowest-rank tier that's still above the decided one (G2: never
@@ -243,12 +304,12 @@ class ModelCatalog:
             # doesn't jump to a much larger tier just because something there is rated higher.
             lowest_above = min(tier_rank.get(e.tier, 0) for e in above)
             at_lowest = [e for e in above if tier_rank.get(e.tier, -1) == lowest_above]
-            chosen, mode_note = _choose_by_mode(at_lowest, optimize_for, quality, quality_value)
+            ranked, mode_note = _rank_by_mode(at_lowest, optimize_for, quality, quality_value)
             tier_note = (
-                f"no '{tier}' model in the current selection; used '{chosen.tier}' model "
-                f"'{chosen.id}' instead — never downgraded below the decided tier"
+                f"no '{tier}' model in the current selection; used '{ranked[0].tier}' model "
+                f"'{ranked[0].id}' instead — never downgraded below the decided tier"
             )
-            return chosen, _compose_note(tier_note, quality_note, mode_note)
+            return Ranking(ranked, _compose_note(tier_note, quality_note, mode_note), pool_size)
         raise RuleError(
             f"no catalog model at tier '{tier}' or above is available in the current "
             "selection/provider/modality filters"
@@ -258,7 +319,7 @@ class ModelCatalog:
         self,
         *,
         selected: set[str] | None = None,
-        provider: str | None = None,
+        provider: str | Collection[str] | None = None,
         needs_image: bool = False,
         needs_video: bool = False,
         needs_audio: bool = False,
@@ -281,10 +342,11 @@ class ModelCatalog:
         else:
             wanted = {s.lower() for s in selected}
             candidates = [e for e in self.entries if e.id.lower() in wanted]
+        providers = _provider_filter(provider)
         candidates = [
             e
             for e in candidates
-            if (provider is None or e.provider == provider)
+            if (providers is None or e.provider.lower() in providers)
             and (not needs_image or e.supports_image)
             and (not needs_video or e.supports_video)
             and (not needs_audio or e.supports_audio)
@@ -294,7 +356,7 @@ class ModelCatalog:
             raise RuleError(
                 "no catalog model matches the current selection/provider/modality filters "
                 f"(selected={selected_desc}, "
-                f"provider={provider or 'any'}, needs_image={needs_image}, "
+                f"provider={','.join(sorted(providers)) if providers else 'any'}, needs_image={needs_image}, "
                 f"needs_video={needs_video}, needs_audio={needs_audio})"
             )
 
@@ -355,6 +417,8 @@ def load_catalog(path: str | Path) -> ModelCatalog:
                 label=str(entry.get("label") or entry["id"]).strip(),
                 context_length=context_length,
                 assigned_by=str(entry.get("assigned_by") or "").strip(),
+                capability=float(entry["capability"]) if entry.get("capability") is not None else None,
+                capability_source=str(entry.get("capability_source") or "").strip(),
             )
         )
     return ModelCatalog(entries=tuple(entries))
@@ -377,6 +441,9 @@ def entry_to_yaml_dict(entry: CatalogEntry) -> dict[str, object]:
         row["context_length"] = entry.context_length
     if entry.assigned_by:
         row["assigned_by"] = entry.assigned_by
+    if entry.capability is not None:
+        row["capability"] = round(entry.capability, 1)
+        row["capability_source"] = entry.capability_source
     return row
 
 
@@ -455,18 +522,5 @@ def label_catalog_tiers(
         if keep:
             entries.append(e)
             continue
-        entries.append(
-            CatalogEntry(
-                id=e.id,
-                provider=e.provider,
-                tier=id_to_tier[e.id],
-                cost=e.cost,
-                supports_image=e.supports_image,
-                supports_video=e.supports_video,
-                supports_audio=e.supports_audio,
-                label=e.label,
-                context_length=e.context_length,
-                assigned_by="heuristic",
-            )
-        )
+        entries.append(replace(e, tier=id_to_tier[e.id], assigned_by="heuristic"))
     return ModelCatalog(entries=tuple(entries))

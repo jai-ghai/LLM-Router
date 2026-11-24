@@ -6,6 +6,7 @@ user testing this themselves, not a multi-user production store (see service/app
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import uuid
 from pathlib import Path
@@ -127,18 +128,7 @@ class Store:
             current = next(e for e in catalog.entries if e.id == model_id)
         except StopIteration as exc:
             raise RuleError(f"no catalog entry with id '{model_id}'") from exc
-        updated = CatalogEntry(
-            id=current.id,
-            provider=current.provider,
-            tier=tier,
-            cost=current.cost,
-            supports_image=current.supports_image,
-            supports_video=current.supports_video,
-            supports_audio=current.supports_audio,
-            label=current.label,
-            context_length=current.context_length,
-            assigned_by=assigned_by,
-        )
+        updated = dataclasses.replace(current, tier=tier, assigned_by=assigned_by)
         new_catalog = replace_entry(catalog, updated)
         document = {"catalog": [entry_to_yaml_dict(e) for e in new_catalog.entries]}
         self.catalog_path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")

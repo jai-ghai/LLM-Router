@@ -19,7 +19,9 @@ the decision step — not that proxy.
 
 1. **Rules** — metadata match → tier (+ optional per-rule `optimize_for`).
 2. **Classifier** — requests with an image or domain metadata: if trained and confidence ≥
-   `min_confidence` → predicted tier. Metadata fields the classifier was not trained on are ignored.
+   `min_confidence`, the classifier gives P(needs at least each tier) and `optimize_for` takes the
+   highest tier whose chance clears its threshold (cost 70%, balanced 50%, accuracy 30%).
+   Metadata fields the classifier was not trained on are ignored (listed in `signals.metadata_ignored`).
 3. **Quality head** — plain-text requests (no domain metadata) when `data/quality_head.joblib`
    exists: predicts each tier's score and takes the cheapest tier within the `optimize_for` margin
    (accuracy 0.03, balanced 0.06, cost 0.10).
@@ -27,8 +29,18 @@ the decision step — not that proxy.
 5. **QC-risk escalation** — when `data/qc_risk.joblib` exists and the request carries text and
    `channel_name`: the riskiest ~20% of sub-stories (by predicted QC fix) are raised to `large`.
    Never lowers a tier, never overrides a rule.
-6. **Catalog pick** — within the tier, pick by `optimize_for`: `cost` | `accuracy` | `balanced`.  
-   Models marked `UNREVIEWED` are never selected.
+6. **Catalog pick** — within the tier, pick by `optimize_for`: `cost` takes the cheapest;
+   `accuracy` the highest benchmark capability; `balanced` the cheapest model at or above the
+   tier's median capability. Human quality ratings, when present, replace capability.
+   Capability is the Artificial Analysis intelligence index from OpenRouter where measured, else
+   estimated from price and release date (shown with `~`). Refresh it with
+   `python experiments/enrich_capability.py`. Models marked `UNREVIEWED` are never selected.
+
+`provider` accepts one or several comma-separated providers (`provider=anthropic,google`). The
+decision returns `tier_scores` (the evidence for the tier), `candidates` (the top 8 of the tier),
+`pool_size`, and `signals` (what the router received: text size, metadata used and ignored, image
+bytes, modality, providers). A video is never uploaded: the browser sends one still frame plus
+`modality=video`, which limits the pick to models that accept video.
 
 ## Run locally
 

@@ -11,6 +11,21 @@ import { FilmStrip, UploadSimple, X } from '@phosphor-icons/react'
 import { Box, Button, CircularProgress, IconButton, Stack, Typography } from '@mui/material'
 import { useEffect, useId, useRef, useState } from 'react'
 
+/** What was captured from the picked file, and what is actually sent to the router. */
+export interface MediaInfo {
+  kind: 'image' | 'video'
+  sourceName: string
+  sourceType: string
+  sourceBytes: number
+  width?: number
+  height?: number
+  durationSec?: number
+  frameAtSec?: number
+  sentName: string
+  sentType: string
+  sentBytes: number
+}
+
 /**
  * Thumbnail or video clip. Videos are never uploaded as-is — a mid-clip JPEG is
  * extracted in the browser and that still is what the router receives.
@@ -25,7 +40,7 @@ export function ImagePicker({
   sourceName = null,
 }: {
   value: File | null
-  onChange: (file: File | null, meta?: { kind: 'image' | 'video'; sourceName: string } | null) => void
+  onChange: (file: File | null, meta?: MediaInfo | null) => void
   compact?: boolean
   inline?: boolean
   hint?: string
@@ -59,15 +74,27 @@ export function ImagePicker({
       onChange(null, null)
       return
     }
+    const source = { sourceName: file.name, sourceType: file.type || 'unknown', sourceBytes: file.size }
     if (file.type.startsWith('image/')) {
-      onChange(file, { kind: 'image', sourceName: file.name })
+      const size = await imageSize(file)
+      onChange(file, { kind: 'image', ...source, ...size, sentName: file.name, sentType: file.type, sentBytes: file.size })
       return
     }
     if (file.type.startsWith('video/') || /\.(mp4|mov|webm|mkv|m4v|avi)$/i.test(file.name)) {
       setBusy(true)
       try {
-        const still = await extractVideoThumbnail(file)
-        onChange(still, { kind: 'video', sourceName: file.name })
+        const { still, width, height, durationSec, frameAtSec } = await extractVideoThumbnail(file)
+        onChange(still, {
+          kind: 'video',
+          ...source,
+          width,
+          height,
+          durationSec,
+          frameAtSec,
+          sentName: still.name,
+          sentType: still.type,
+          sentBytes: still.size,
+        })
       } catch (err) {
         setLocalError(err instanceof Error ? err.message : 'Could not read a frame from that video.')
         onChange(null, null)
@@ -222,8 +249,22 @@ export function ImagePicker({
   )
 }
 
+async function imageSize(file: File): Promise<{ width?: number; height?: number }> {
+  try {
+    const bitmap = await createImageBitmap(file)
+    const size = { width: bitmap.width, height: bitmap.height }
+    bitmap.close()
+    return size
+  } catch {
+    return {}
+  }
+}
+
 /** Seek ~35% into the clip and encode one JPEG still. */
-export function extractVideoThumbnail(file: File, atRatio = 0.35): Promise<File> {
+export function extractVideoThumbnail(
+  file: File,
+  atRatio = 0.35,
+): Promise<{ still: File; width: number; height: number; durationSec: number; frameAtSec: number }> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file)
     const video = document.createElement('video')
@@ -268,7 +309,13 @@ export function extractVideoThumbnail(file: File, atRatio = 0.35): Promise<File>
               return
             }
             const base = file.name.replace(/\.[^.]+$/, '') || 'clip'
-            resolve(new File([blob], `${base}_thumb.jpg`, { type: 'image/jpeg' }))
+            resolve({
+              still: new File([blob], `${base}_thumb.jpg`, { type: 'image/jpeg' }),
+              width: w,
+              height: h,
+              durationSec: Number.isFinite(video.duration) ? video.duration : 0,
+              frameAtSec: video.currentTime,
+            })
           },
           'image/jpeg',
           0.92,

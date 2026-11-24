@@ -3,8 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+import yaml
 
-from gradist.catalog import CatalogEntry, ModelCatalog, load_catalog
+from gradist.catalog import CatalogEntry, ModelCatalog, entry_to_yaml_dict, load_catalog
 from gradist.rules import RuleError
 
 RANK = {"small": 0, "medium": 1, "large": 2}
@@ -151,9 +152,9 @@ def test_pick_accuracy_picks_highest_rated_when_ratings_exist() -> None:
     assert note is None  # cleanest path — no fall-back, no floor, nothing to explain
 
 
-def test_pick_accuracy_falls_back_to_cost_with_note_when_no_ratings() -> None:
-    # No ratings exist for this (model, qc_review) pair at all. Accuracy mode has nothing to
-    # rank with, so it must fall back to cost AND say so — silent fall-back would be dishonest.
+def test_pick_accuracy_without_ratings_uses_price_as_capability_proxy() -> None:
+    # No ratings exist for this (model, qc_review) pair at all. Accuracy mode ranks by price
+    # instead (priciest first) AND says so, so it never silently equals cost mode.
     catalog = ModelCatalog(
         entries=(
             CatalogEntry("a", "gemini", "medium", cost=1),
@@ -167,8 +168,66 @@ def test_pick_accuracy_falls_back_to_cost_with_note_when_no_ratings() -> None:
         quality_value="qc_review",
         optimize_for="accuracy",
     )
-    assert entry.id == "a"  # cheapest
-    assert note is not None and "accuracy" in note and "no candidate has a rating" in note
+    assert entry.id == "b"
+    assert note is not None and "no candidate has a rating" in note and "price as a capability proxy" in note
+
+
+def test_three_modes_differ_without_ratings() -> None:
+    catalog = ModelCatalog(
+        entries=tuple(CatalogEntry(name, "gemini", "medium", cost=cost) for name, cost in [("a", 1), ("b", 3), ("c", 9)])
+    )
+    picks = {mode: catalog.pick("medium", RANK, optimize_for=mode)[0].id for mode in ("cost", "balanced", "accuracy")}
+    assert picks == {"cost": "a", "balanced": "b", "accuracy": "c"}
+
+
+def test_capability_beats_price_when_no_ratings() -> None:
+    # An old, pricey model must not win accuracy over a newer, cheaper, more capable one.
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("old-pricey", "openai", "large", cost=30, capability=25.0, capability_source="estimated"),
+            CatalogEntry("new-strong", "anthropic", "large", cost=4, capability=59.0, capability_source="measured"),
+            CatalogEntry("mid", "google", "large", cost=2, capability=50.0, capability_source="measured"),
+        )
+    )
+    accuracy, note = catalog.pick("large", RANK, optimize_for="accuracy")
+    assert accuracy.id == "new-strong"
+    assert note is not None and "benchmark capability" in note
+    assert catalog.pick("large", RANK, optimize_for="balanced")[0].id == "mid"
+    assert catalog.pick("large", RANK, optimize_for="cost")[0].id == "mid"
+
+
+def test_capability_survives_a_yaml_round_trip(tmp_path: Path) -> None:
+    entry = CatalogEntry("m", "openai", "large", cost=1, capability=51.25, capability_source="measured")
+    path = tmp_path / "catalog.yaml"
+    path.write_text(yaml.safe_dump({"catalog": [entry_to_yaml_dict(entry)]}), encoding="utf-8")
+    loaded = load_catalog(path).entries[0]
+    assert (loaded.capability, loaded.capability_source) == (51.2, "measured")
+
+
+def test_pick_ranked_returns_the_whole_bucket_best_first() -> None:
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("a", "gemini", "medium", cost=2),
+            CatalogEntry("b", "openai", "medium", cost=1),
+            CatalogEntry("c", "openai", "large", cost=9),
+        )
+    )
+    ranking = catalog.pick_ranked("medium", RANK)
+    assert [e.id for e in ranking.ranked] == ["b", "a"]
+    assert ranking.pool_size == 3
+
+
+def test_pick_accepts_several_providers() -> None:
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("g", "gemini", "medium", cost=1),
+            CatalogEntry("o", "openai", "medium", cost=2),
+            CatalogEntry("a", "anthropic", "medium", cost=3),
+        )
+    )
+    assert catalog.pick("medium", RANK, provider={"openai", "anthropic"})[0].id == "o"
+    assert catalog.pick("medium", RANK, provider="anthropic, OpenAI")[0].id == "o"
+    assert catalog.pick("medium", RANK, provider="anthropic")[0].id == "a"
 
 
 def test_pick_accuracy_respects_min_quality_floor() -> None:

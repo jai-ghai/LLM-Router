@@ -451,6 +451,8 @@ def create_app(
                     "label": e.label,
                     # P1 — who last assigned the tier (empty until an admin reviews).
                     "assigned_by": e.assigned_by,
+                    "capability": e.capability,
+                    "capability_source": e.capability_source,
                 }
                 for e in state.catalog.entries
             ]

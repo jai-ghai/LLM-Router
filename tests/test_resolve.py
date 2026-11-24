@@ -6,7 +6,7 @@ from gradist.catalog import CatalogEntry, ModelCatalog
 from gradist.classifier import TierClassifier
 from gradist.features import HashingEmbedder, MetadataEncoder
 from gradist.labels import TierLabel
-from gradist.resolve import resolve, validate_setup
+from gradist.resolve import resolve, tier_by_need, validate_setup
 from gradist.rules import Rule, RuleError, RuleSet
 from gradist.tiers import TierSpec, TierTable
 
@@ -131,6 +131,53 @@ def test_resolve_with_a_catalog_honours_the_caller_s_selection() -> None:
         {"channel_type": "sports"}, "x", rules, TIERS, catalog=CATALOG, selected_models={"pricey-small"}
     )
     assert decision.model_name == "pricey-small"
+
+
+RANKS = {"small": 0, "medium": 1, "large": 2}
+
+
+@pytest.mark.parametrize(
+    ("mode", "expected"),
+    [("cost", "medium"), ("balanced", "large"), ("accuracy", "large")],
+)
+def test_tier_by_need_moves_with_the_dial(mode: str, expected: str) -> None:
+    tier, at_least = tier_by_need({"small": 0.2, "medium": 0.3, "large": 0.5}, RANKS, mode)  # type: ignore[arg-type]
+    assert tier == expected
+    assert at_least == pytest.approx({"small": 1.0, "medium": 0.8, "large": 0.5})
+
+
+def test_tier_by_need_cost_stays_small_when_unsure() -> None:
+    assert tier_by_need({"small": 0.4, "medium": 0.35, "large": 0.25}, RANKS, "cost")[0] == "small"
+    assert tier_by_need({"small": 0.4, "medium": 0.35, "large": 0.25}, RANKS, "accuracy")[0] == "medium"
+
+
+def test_classifier_decision_carries_tier_evidence_and_signals() -> None:
+    decision = resolve(
+        {"channel_type": "sports", "duration": "<30s"}, SPORTS[0], RuleSet(), TIERS, classifier=_trained_classifier()
+    )
+    assert decision.tier_scores_kind == "P(needs ≥ tier)"
+    assert decision.tier_scores is not None and set(decision.tier_scores) == {"small", "medium", "large"}
+    assert decision.signals["path"] == "domain classifier"
+    assert decision.signals["metadata_used"] == ["channel_type"]
+    assert decision.signals["metadata_ignored"] == ["duration"]
+
+
+def test_catalog_decision_lists_the_shortlist_and_honours_several_providers() -> None:
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("g-s", "gemini", "small", cost=1),
+            CatalogEntry("a-s", "anthropic", "small", cost=2),
+            CatalogEntry("o-s", "openai", "small", cost=3),
+        )
+    )
+    rules = RuleSet(rules=(Rule.create({"channel_type": "news"}, "small"),))
+    decision = resolve(
+        {"channel_type": "news"}, "x", rules, TIERS, catalog=catalog, provider="openai,anthropic"
+    )
+    assert decision.model_name == "a-s"
+    assert [c["id"] for c in decision.candidates] == ["a-s", "o-s"]
+    assert decision.pool_size == 2
+    assert decision.signals["providers"] == ["anthropic", "openai"]
 
 
 def test_empty_request_uses_fallback_not_confident_classifier() -> None:

@@ -137,6 +137,9 @@ def add_new_entries(
         bid = bare_id(cap.id)
         if bid.lower() in existing:
             continue
+        # OpenRouter prices meta-routers (dynamic pricing) as negative — not a model to route to.
+        if cap.cost_per_1k_prompt is not None and cap.cost_per_1k_prompt < 0:
+            continue
         row: dict[str, Any] = {
             "id": bid,
             "provider": cap.provider,
