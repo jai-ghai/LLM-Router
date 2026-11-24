@@ -64,6 +64,12 @@ def test_unknown_metadata_value_still_predicts_from_text() -> None:
     assert tier == "large"  # text alone still carries the signal
 
 
+def test_predict_ignores_fields_the_classifier_was_not_trained_on() -> None:
+    clf = _trained()
+    tier, _ = clf.predict({"channel_type": "sports", "duration": "<30s"}, "the goal in the match final")
+    assert tier == "large"
+
+
 def test_save_and_load_round_trip(tmp_path: Path) -> None:
     clf = _trained()
     path = tmp_path / "clf.joblib"

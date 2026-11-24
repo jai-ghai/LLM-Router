@@ -18,12 +18,26 @@ the decision step — not that proxy.
 ## How resolve works
 
 1. **Rules** — metadata match → tier (+ optional per-rule `optimize_for`).
-2. **Classifier** — if trained and confidence ≥ `min_confidence` → predicted tier.
-3. **Fallback** — otherwise the configured low-confidence fallback.
-4. **Catalog pick** — within the tier, pick by `optimize_for`: `cost` | `accuracy` | `balanced`.  
+2. **Classifier** — requests with an image or domain metadata: if trained and confidence ≥
+   `min_confidence` → predicted tier. Metadata fields the classifier was not trained on are ignored.
+3. **Quality head** — plain-text requests (no domain metadata) when `data/quality_head.joblib`
+   exists: predicts each tier's score and takes the cheapest tier within the `optimize_for` margin
+   (accuracy 0.03, balanced 0.06, cost 0.10).
+4. **Fallback** — otherwise the configured low-confidence fallback.
+5. **QC-risk escalation** — when `data/qc_risk.joblib` exists and the request carries text and
+   `channel_name`: the riskiest ~20% of sub-stories (by predicted QC fix) are raised to `large`.
+   Never lowers a tier, never overrides a rule.
+6. **Catalog pick** — within the tier, pick by `optimize_for`: `cost` | `accuracy` | `balanced`.  
    Models marked `UNREVIEWED` are never selected.
 
 ## Run locally
+
+Put the variables below in `.env` (gitignored) and run `scripts\start.ps1`: it starts the API on
+8000 and the UI on 5174 in two windows. `ui/.env.local` must point `VITE_API_BASE` at port 8000.
+A trained classifier, quality head and QC-risk head are reloaded from `data/` on every start, so
+`POST /v1/train` is only needed after examples or judgments change.
+
+Or by hand:
 
 ```powershell
 # API

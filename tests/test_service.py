@@ -609,3 +609,24 @@ def test_rating_modal_judged_by_is_session_user(catalog_client: TestClient) -> N
     ratings = catalog_client.get("/v1/quality").json()["ratings"]
     assert {r["judged_by"] for r in ratings} == {"tester"}
     assert all(r["judged_by"] != "NOT-THE-SESSION-USER" for r in ratings)
+
+
+def test_trained_classifier_survives_a_restart(tmp_path: Path) -> None:
+    client = _authed_client(tmp_path)
+    for tier, text in [("small", "fix a typo"), ("large", "analyse the election debate")]:
+        example = client.post("/v1/examples", data={"metadata": json.dumps({"channel_type": tier}), "text": text})
+        client.post("/v1/judgments", json={"example_id": example.json()["example_id"], "tier": tier})
+    assert client.post("/v1/train").status_code == 200
+
+    store = Store(tmp_path / "data")
+    restarted = TestClient(
+        create_app(TIERS, store, UsersStore(path=store.root / "users.jsonl"), SessionConfig(secret="s"))
+    )
+    assert restarted.post("/v1/auth/login", json={"username": "tester", "password": "tester-pw"}).status_code == 200
+    status = restarted.get("/v1/status").json()
+    assert status["trained"] is True
+    assert status["n_labels_last_trained_on"] == 2
+    decision = restarted.post(
+        "/v1/resolve", data={"metadata": json.dumps({"channel_type": "large"}), "text": "analyse the election debate"}
+    ).json()
+    assert decision["reason"].startswith("classifier")

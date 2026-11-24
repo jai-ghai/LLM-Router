@@ -98,7 +98,7 @@ class TierClassifier:
             return self._constant, 1.0
         if self._clf is None:
             raise ClassifierError("classifier is not fitted; call fit() first")
-        x = self._vector(metadata, text, image_bytes)
+        x = self._vector(self._metadata_encoder.known_only(metadata), text, image_bytes)
         proba = self._clf.predict_proba(x.reshape(1, -1))[0]
         index = int(proba.argmax())
         return str(self._clf.classes_[index]), float(proba[index])

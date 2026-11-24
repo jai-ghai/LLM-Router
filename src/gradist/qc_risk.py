@@ -59,7 +59,7 @@ class QcRiskHead:
         return bool(text.strip()) and bool(str(metadata.get(REQUIRED_FIELD, "")).strip())
 
     def risk(self, metadata: dict[str, str], text: str) -> float:
-        return float(self.risk_of_vectors(self.vectors([metadata], [text]))[0])
+        return float(self.risk_of_vectors(self.vectors([self._encoder.known_only(metadata)], [text]))[0])
 
     def save(self, path: str | Path) -> None:
         joblib.dump(

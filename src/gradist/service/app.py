@@ -31,8 +31,10 @@ taken from the session user — client-supplied values are ignored, not trusted.
 
 from __future__ import annotations
 
+import json
 import threading
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Annotated, Any
 
 import yaml
@@ -195,6 +197,7 @@ class AppState:
         self.classifier_uses_images: bool = False
         self.quality_head: TierQualityHead | None = None
         self.qc_risk: QcRiskHead | None = None
+        self.loaded_n_labels: int | None = None
         self.last_report: EvalReport | None = None
         self._image_embedder: Dinov2Embedder | None = None
         self._image_lock = threading.Lock()
@@ -207,6 +210,49 @@ class AppState:
             if self._image_embedder is None:
                 self._image_embedder = Dinov2Embedder()
             return self._image_embedder
+
+
+MINILM = "sentence-transformers/all-MiniLM-L6-v2"
+
+
+def _classifier_meta_path(store: Store) -> Path:
+    return store.root / "classifier.meta.json"
+
+
+def _load_saved_models(state: AppState, store: Store) -> None:
+    """Reload what training saved, so a restart doesn't silently come back untrained.
+
+    The classifier is only reloaded with the exact embedders recorded in its sidecar — a
+    different text/image embedder would change the feature width it was fitted on.
+    """
+    root = store.root
+    head_path, risk_path = root / "quality_head.joblib", root / "qc_risk.joblib"
+    meta_path = _classifier_meta_path(store)
+    meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else None
+    needs_minilm = head_path.exists() or risk_path.exists() or (meta or {}).get("text_embedder") == "minilm"
+    minilm: SentenceTransformerEmbedder | None = None
+    if needs_minilm:
+        try:
+            minilm = SentenceTransformerEmbedder(MINILM)
+        except ImportError:
+            minilm = None
+    if minilm is not None and head_path.exists():
+        state.quality_head = TierQualityHead.load(head_path, minilm)
+    if minilm is not None and risk_path.exists():
+        state.qc_risk = QcRiskHead.load(risk_path, minilm)
+    if meta is None or not store.classifier_path.exists():
+        return
+    text_embedder: Embedder | None = minilm if meta["text_embedder"] == "minilm" else HashingEmbedder()
+    if text_embedder is None:
+        return
+    state.classifier = TierClassifier.load(
+        store.classifier_path,
+        MetadataEncoder(meta["fields"]),
+        text_embedder,
+        state.image_embedder() if meta["uses_images"] else None,
+    )
+    state.classifier_uses_images = bool(meta["uses_images"])
+    state.loaded_n_labels = meta.get("n_labels")
 
 
 def create_app(
@@ -243,17 +289,7 @@ def create_app(
     )
 
     state = AppState(tiers, store, users, allow_read_without_auth, catalog, quality_field)
-    head_path = store.root / "quality_head.joblib"
-    risk_path = store.root / "qc_risk.joblib"
-    if head_path.exists() or risk_path.exists():
-        try:
-            minilm = SentenceTransformerEmbedder("sentence-transformers/all-MiniLM-L6-v2")
-        except ImportError:
-            minilm = None
-        if minilm is not None and head_path.exists():
-            state.quality_head = TierQualityHead.load(head_path, minilm)
-        if minilm is not None and risk_path.exists():
-            state.qc_risk = QcRiskHead.load(risk_path, minilm)
+    _load_saved_models(state, store)
     # The auth dependency reads `request.app.state.users` to look up sessions.
     app.state.users = users
 
@@ -651,20 +687,29 @@ def create_app(
             )
         uses_images = any(label.image_path for label in labels)
         fields = _infer_fields(examples)
-        encoder = MetadataEncoder(fields) if fields else MetadataEncoder({"_unused": []})
+        encoder_fields = fields or {"_unused": []}
+        encoder = MetadataEncoder(encoder_fields)
         image_embedder = state.image_embedder() if uses_images else None
         # Prefer a small sentence embedder when installed — content dynamics for HF/text labels.
         text_embedder: Embedder
         try:
-            text_embedder = SentenceTransformerEmbedder("sentence-transformers/all-MiniLM-L6-v2")
+            text_embedder = SentenceTransformerEmbedder(MINILM)
+            text_kind = "minilm"
         except ImportError:
             text_embedder = HashingEmbedder()
+            text_kind = "hashing"
         classifier = TierClassifier(encoder, text_embedder, image_embedder)
         try:
             classifier.fit(labels)
         except ClassifierError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         classifier.save(store.classifier_path)
+        _classifier_meta_path(store).write_text(
+            json.dumps(
+                {"text_embedder": text_kind, "uses_images": uses_images, "fields": encoder_fields, "n_labels": len(labels)}
+            ),
+            encoding="utf-8",
+        )
         state.classifier = classifier
         state.classifier_uses_images = uses_images
         baseline = tiers.low_confidence_fallback
@@ -702,7 +747,7 @@ def create_app(
             unreviewed = sum(1 for e in state.catalog.entries if e.tier == UNREVIEWED_TIER)
         return Status(
             trained=state.classifier is not None,
-            n_labels_last_trained_on=report.n if report else None,
+            n_labels_last_trained_on=report.n if report else state.loaded_n_labels,
             uses_images=state.classifier_uses_images,
             quality_field=state.quality_field,
             catalog_configured=state.catalog is not None,

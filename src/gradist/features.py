@@ -89,6 +89,10 @@ class MetadataEncoder:
     def width(self) -> int:
         return sum(len(cols) for cols in self._columns.values())
 
+    def known_only(self, metadata: dict[str, str]) -> dict[str, str]:
+        """`metadata` without undeclared fields — for live requests, which may carry anything."""
+        return {k: v for k, v in metadata.items() if k in self._columns}
+
     def bucket_label(self, field: str, value: str | None) -> str:
         """Which column `value` falls into for `field`: the value itself, or "__unknown__"."""
         if field not in self._columns:

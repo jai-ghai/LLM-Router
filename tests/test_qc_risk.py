@@ -62,6 +62,11 @@ def test_high_risk_sub_story_is_escalated() -> None:
     assert "escalated 'medium' to 'large'" in decision.reason
 
 
+def test_extra_request_fields_do_not_break_escalation() -> None:
+    decision = resolve({**RISKY, "request_id": "abc"}, RISKY_TEXT, RuleSet(), TIERS, qc_risk=_head())
+    assert decision.tier == "large"
+
+
 def test_low_risk_sub_story_is_left_alone() -> None:
     decision = resolve(SAFE, SAFE_TEXT, RuleSet(), TIERS, qc_risk=_head())
     assert decision.tier == "medium"

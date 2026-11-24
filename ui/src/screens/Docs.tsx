@@ -111,9 +111,13 @@ export function Docs() {
       <Panel title="How a request is resolved">
         <P>Order is fixed:</P>
         <Code>{`1. Rules — if metadata matches a rule → that tier (and optional optimize_for)
-2. Classifier — if trained and confidence ≥ min_confidence → predicted tier
-3. Fallback — low-confidence / untrained → configured fallback model
-4. Catalog pick — within the tier, pick a concrete model by optimize_for:
+2. Classifier — image or domain metadata, trained, confidence ≥ min_confidence → predicted tier
+3. Quality head — plain text: cheapest tier whose predicted score is within the
+   optimize_for margin of the best
+4. Fallback — low-confidence / untrained → configured fallback model
+5. QC-risk escalation — riskiest ~20% of sub-stories (text + channel_name) → large;
+   never lowers a tier, never overrides a rule
+6. Catalog pick — within the tier, pick a concrete model by optimize_for:
      cost | accuracy | balanced
    UNREVIEWED models are never selected.`}</Code>
         <Shot src="/docs/images/playground.png" caption="Playground — try a resolve with metadata, optional image, and optimize_for." />
