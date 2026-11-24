@@ -10,3 +10,12 @@ ui/dist/
 
 data/
 *.joblib
+
+.env
+.env.*
+ui/.env.local
+ui/tsconfig.tsbuildinfo
+
+# Third-party checkouts used for reference only.
+LLMRouter/
+tabson-python-inferencing/
