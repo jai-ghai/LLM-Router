@@ -1,4 +1,4 @@
-import { ArrowClockwise, Copy, Download, Image as ImageIcon, MagnifyingGlass, Star } from '@phosphor-icons/react'
+import { ArrowClockwise, Copy, Image as ImageIcon, MagnifyingGlass, Star } from '@phosphor-icons/react'
 import {
   Alert,
   Box,
@@ -34,7 +34,7 @@ import type { HistoryEntry } from '../types'
  * quality.py) — a model nobody has rated is never penalized at resolve time.
  *
  * P3 (PLAN-v2.md §6): the Rate modal no longer asks for a name — judged_by is the session
- * user (P0). When TIERROUTER_QUALITY_FIELD is configured, the modal shows that field's
+ * user (P0). When GRADIST_QUALITY_FIELD is configured, the modal shows that field's
  * value from the row's metadata (read-only; Q5.5.b = no re-tag at rating time).
  */
 export function History({ refreshKey }: { refreshKey: number }) {
@@ -130,8 +130,8 @@ export function History({ refreshKey }: { refreshKey: number }) {
         title="Request logs"
         lede="Inspect routing decisions, confidence, and resolution reasons."
         actions={
-          <Button variant="contained" startIcon={<Download size={14} weight="bold" />}>
-            Export decisions
+          <Button startIcon={<ArrowClockwise size={14} />} onClick={() => void load()}>
+            Refresh
           </Button>
         }
       />
@@ -177,7 +177,6 @@ export function History({ refreshKey }: { refreshKey: number }) {
             <MenuItem value="Classifier">Classifier</MenuItem>
             <MenuItem value="Fallback">Fallback</MenuItem>
           </TextField>
-          <Button startIcon={<ArrowClockwise size={14} />} onClick={() => void load()}>Refresh</Button>
         </Stack>
 
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.4fr 1fr' }, gap: 2, alignItems: 'start' }}>
@@ -365,7 +364,7 @@ export function History({ refreshKey }: { refreshKey: number }) {
                   <Rating value={rating} onChange={(_, v) => setRating(v)} />
                 </Stack>
                 {/* P3: quality-field chip is read-only from the row's metadata (Q5.5.b = no re-tag).
-                    Hidden entirely when the deployment has no TIERROUTER_QUALITY_FIELD. */}
+                    Hidden entirely when the deployment has no GRADIST_QUALITY_FIELD. */}
                 {qualityField && (
                   <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
                     <Typography sx={{ fontSize: 12, color: PALETTE.textMuted }}>{qualityField}:</Typography>

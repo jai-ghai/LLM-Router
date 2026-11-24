@@ -163,23 +163,35 @@ export function Users() {
 
         <Box sx={{ width: { xs: '100%', md: 340 }, flexShrink: 0 }}>
         <Panel title="Invite an operator">
-          <Box component="form" onSubmit={onCreate} noValidate>
+          {/* autoComplete off + new-password: browsers otherwise paste the signed-in
+              operator's login into this "create someone else" form. */}
+          <Box component="form" onSubmit={onCreate} noValidate autoComplete="off">
             <Stack spacing={2}>
               <TextField
                 label="Username"
+                name="new-operator-username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 size="small"
                 required
+                autoComplete="off"
+                slotProps={{
+                  htmlInput: { autoComplete: 'off', 'data-1p-ignore': true, 'data-lpignore': 'true' },
+                }}
               />
               <TextField
                 label="Password"
+                name="new-operator-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 size="small"
                 required
-                helperText="Max 72 bytes (bcrypt limit). Share once; admins reset via CLI."
+                autoComplete="new-password"
+                slotProps={{
+                  htmlInput: { autoComplete: 'new-password', 'data-1p-ignore': true, 'data-lpignore': 'true' },
+                }}
+                helperText="Share this password once. The operator can change it later with an admin."
               />
               <TextField
                 select

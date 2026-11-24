@@ -1,24 +1,31 @@
-import { Bell, MagnifyingGlass, GearSix, BookOpen, SignOut } from '@phosphor-icons/react'
+import { Bell, BookOpen, GearSix, MagnifyingGlass, SignOut } from '@phosphor-icons/react'
 import {
   Alert,
   AppBar,
   Avatar,
+  Badge,
   Box,
+  Dialog,
+  DialogContent,
   Divider,
   Drawer,
   IconButton,
+  List,
+  ListItemButton,
+  ListItemText,
   Menu,
   MenuItem,
   Stack,
+  TextField,
   Toolbar,
   Typography,
 } from '@mui/material'
-import { useEffect, useState, type MouseEvent } from 'react'
+import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { api, describeError } from './api'
 import { AuthProvider, useAuth } from './auth'
 import { Nav, type PageKey } from './Nav'
-import { PageTransition, StateTag } from './components/Primitives'
-import { Catalog } from './screens/Catalog'
+import { PageTransition } from './components/Primitives'
+import { Docs } from './screens/Docs'
 import { Evaluate } from './screens/Evaluate'
 import { Examples } from './screens/Examples'
 import { History } from './screens/History'
@@ -27,7 +34,7 @@ import { Login } from './screens/Login'
 import { Overview } from './screens/Overview'
 import { Resolve } from './screens/Resolve'
 import { Rules } from './screens/Rules'
-import { Tiers } from './screens/Tiers'
+import { Settings } from './screens/Settings'
 import { Train } from './screens/Train'
 import { Users } from './screens/Users'
 import { PALETTE } from './theme'
@@ -38,8 +45,6 @@ const DRAWER_WIDTH = 248
 const PAGE_TITLES: Record<PageKey, string> = {
   overview: 'Overview',
   rules: 'Routing rules',
-  tiers: 'Model tiers',
-  catalog: 'Model catalog',
   examples: 'Examples',
   judging: 'Human judging',
   train: 'Train',
@@ -47,7 +52,20 @@ const PAGE_TITLES: Record<PageKey, string> = {
   history: 'Request logs',
   resolve: 'Playground',
   users: 'Operators',
+  settings: 'Settings',
+  docs: 'Documentation',
 }
+
+const LADDER_PAGES = new Set<PageKey>(['rules', 'examples', 'judging', 'train', 'evaluate'])
+
+const SEARCHABLE: { key: PageKey; label: string; adminOnly?: boolean; hideWhenCatalog?: boolean }[] = (
+  Object.entries(PAGE_TITLES) as [PageKey, string][]
+).map(([key, label]) => ({
+  key,
+  label,
+  adminOnly: key === 'users',
+  hideWhenCatalog: LADDER_PAGES.has(key),
+}))
 
 /**
  * Entry component — wraps everything in AuthProvider so every screen can call useAuth().
@@ -86,10 +104,29 @@ function AuthenticatedShell() {
   const [tiers, setTiers] = useState<TiersResponse | null>(null)
   const [status, setStatus] = useState<Status | null>(null)
   const [lastTrainResult, setLastTrainResult] = useState<TrainResult | null>(null)
-  const [selectedModels, setSelectedModels] = useState<Set<string> | null>(null)
   const [historyRefresh, setHistoryRefresh] = useState(0)
   const [historyCount, setHistoryCount] = useState(0)
   const [userMenuAnchor, setUserMenuAnchor] = useState<HTMLElement | null>(null)
+  const [bellAnchor, setBellAnchor] = useState<HTMLElement | null>(null)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const unreviewed = status?.unreviewed_count ?? 0
+  // null until /v1/status returns — avoids sidebar showing Training then yanking it away.
+  const catalogConfigured: boolean | null = status == null ? null : Boolean(status.catalog_configured)
+  const catalogOn = catalogConfigured === true
+  const searchHits = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    return SEARCHABLE.filter((item) => {
+      if (item.adminOnly && user?.role !== 'admin') return false
+      // Match Nav: hide ladder pages until we know catalog is off.
+      if (catalogConfigured !== false && item.hideWhenCatalog) return false
+      return !q || item.label.toLowerCase().includes(q)
+    })
+  }, [searchQuery, user?.role, catalogConfigured])
+
+  // Hybrid: catalog no longer hides ladder pages — keep user's active route.
+  void LADDER_PAGES
 
   async function check() {
     setOnline('checking')
@@ -131,12 +168,6 @@ function AuthenticatedShell() {
     }
   }
 
-  // Environment pill: "Production" when the service is up, "Offline" when it is not,
-  // "Preview" while still checking — matches the badge in the Figma header without
-  // needing extra config.
-  const envTone = online === 'online' ? 'good' : online === 'offline' ? 'critical' : 'default'
-  const envLabel = online === 'online' ? 'Production' : online === 'offline' ? 'Offline' : 'Preview'
-
   return (
     <Box sx={{ display: 'flex', minHeight: '100dvh', bgcolor: PALETTE.canvas }}>
       <Drawer
@@ -161,10 +192,10 @@ function AuthenticatedShell() {
             }}
             aria-hidden
           >
-            tr
+            gd
           </Box>
           <Typography sx={{ fontWeight: 700, fontSize: 16, letterSpacing: '-0.015em', color: PALETTE.text }}>
-            tierrouter
+            Gradist
           </Typography>
         </Box>
         <Divider />
@@ -173,9 +204,8 @@ function AuthenticatedShell() {
             active={active}
             onNavigate={setActive}
             historyCount={historyCount}
-            workspaceName="Acme AI"
-            workspaceTag={online === 'offline' ? 'Service offline' : 'Sample workspace'}
             role={user?.role ?? null}
+            catalogConfigured={catalogConfigured}
           />
         </Box>
 
@@ -202,68 +232,98 @@ function AuthenticatedShell() {
               {online === 'online' ? 'Connected' : online === 'offline' ? 'Offline' : '—'}
             </Typography>
           </Stack>
-          <Stack direction="row" sx={{ justifyContent: 'space-between', mt: 0.25 }}>
-            <Typography sx={{ fontSize: 11, color: PALETTE.textMuted }}>Classifier</Typography>
-            <Typography sx={{ fontSize: 11, color: PALETTE.textMuted, fontWeight: 600 }}>
-              {status?.trained ? `trained · ${status.n_labels_last_trained_on ?? 0} labels` : 'not trained'}
-            </Typography>
-          </Stack>
-        </Box>
-        <Divider />
-        <Box sx={{ px: 1, py: 1 }}>
-          <Stack
-            component="a"
-            href="https://github.com/"
-            target="_blank"
-            rel="noreferrer"
-            direction="row"
-            spacing={1.25}
-            sx={{
-              alignItems: 'center',
-              px: 1.25,
-              py: 0.85,
-              borderRadius: '8px',
-              textDecoration: 'none',
-              color: PALETTE.textMuted,
-              '&:hover': { bgcolor: PALETTE.subtle, color: PALETTE.text },
-            }}
-          >
-            <BookOpen size={16} />
-            <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Documentation</Typography>
-          </Stack>
-          <Stack
-            direction="row"
-            spacing={1.25}
-            sx={{
-              alignItems: 'center',
-              px: 1.25,
-              py: 0.85,
-              borderRadius: '8px',
-              color: PALETTE.textMuted,
-              cursor: 'pointer',
-              '&:hover': { bgcolor: PALETTE.subtle, color: PALETTE.text },
-            }}
-          >
-            <GearSix size={16} />
-            <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Settings</Typography>
-          </Stack>
+          {/* Sidebar footer — AuthenticatedShell only. Status from /v1/status. */}
+          {status != null && !status.catalog_configured && (
+            <Stack direction="row" sx={{ justifyContent: 'space-between', mt: 0.25 }}>
+              <Typography sx={{ fontSize: 11, color: PALETTE.textMuted }}>Classifier</Typography>
+              <Typography sx={{ fontSize: 11, color: PALETTE.textMuted, fontWeight: 600 }}>
+                {status.trained
+                  ? `trained · ${status.n_labels_last_trained_on ?? 0}${status.uses_images ? ' · images' : ''}`
+                  : 'not trained'}
+              </Typography>
+            </Stack>
+          )}
+          {catalogOn && (
+            <Stack direction="row" sx={{ justifyContent: 'space-between', mt: 0.25 }}>
+              <Typography sx={{ fontSize: 11, color: PALETTE.textMuted }}>Catalog</Typography>
+              <Typography sx={{ fontSize: 11, color: PALETTE.textMuted, fontWeight: 600 }}>configured</Typography>
+            </Stack>
+          )}
         </Box>
       </Drawer>
 
       <Box component="main" sx={{ flexGrow: 1, minWidth: 0 }}>
         <AppBar position="sticky" sx={{ zIndex: (t) => t.zIndex.drawer - 1 }} elevation={0}>
-          <Toolbar variant="dense" sx={{ gap: 1.5 }}>
-            <Typography sx={{ fontSize: 12.5, color: PALETTE.textMuted, flex: 1, minWidth: 0 }}>
-              Workspace <Box component="span" sx={{ mx: 0.75, color: PALETTE.textFaint }}>/</Box>
-              <Box component="span" sx={{ color: PALETTE.text, fontWeight: 600 }}>{PAGE_TITLES[active]}</Box>
+          <Toolbar variant="dense" sx={{ gap: 1 }}>
+            <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: PALETTE.text, flex: 1, minWidth: 0 }}>
+              {PAGE_TITLES[active]}
             </Typography>
-            <StateTag label={envLabel} tone={envTone} size="small" />
-            <IconButton size="small" aria-label="Search" sx={{ color: PALETTE.textMuted }}>
+            <IconButton
+              size="small"
+              aria-label="Search pages"
+              onClick={() => {
+                setSearchQuery('')
+                setSearchOpen(true)
+              }}
+              sx={{ color: PALETTE.textMuted }}
+            >
               <MagnifyingGlass size={16} />
             </IconButton>
-            <IconButton size="small" aria-label="Notifications" sx={{ color: PALETTE.textMuted }}>
-              <Bell size={16} />
-            </IconButton>
+            {/* Catalog-only: UNREVIEWED model alerts. Hidden in ladder mode (noise). */}
+            {catalogOn && (
+              <>
+                <IconButton
+                  size="small"
+                  aria-label="Alerts"
+                  onClick={(e) => {
+                    setBellAnchor(e.currentTarget)
+                    void api.status().then(setStatus).catch(() => undefined)
+                  }}
+                  sx={{ color: PALETTE.textMuted }}
+                >
+                  <Badge
+                    color="error"
+                    badgeContent={unreviewed}
+                    max={99}
+                    invisible={unreviewed === 0}
+                    sx={{ '& .MuiBadge-badge': { fontSize: 10, height: 16, minWidth: 16 } }}
+                  >
+                    <Bell size={16} />
+                  </Badge>
+                </IconButton>
+                <Menu
+                  anchorEl={bellAnchor}
+                  open={Boolean(bellAnchor)}
+                  onClose={() => setBellAnchor(null)}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                  slotProps={{ paper: { sx: { minWidth: 260, mt: 0.5 } } }}
+                >
+                  {unreviewed > 0 ? (
+                    <MenuItem
+                      onClick={() => {
+                        setActive('resolve')
+                        setBellAnchor(null)
+                      }}
+                      sx={{ fontSize: 13, whiteSpace: 'normal', alignItems: 'flex-start' }}
+                    >
+                      <Box>
+                        <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
+                          {unreviewed} model{unreviewed === 1 ? '' : 's'} still UNREVIEWED
+                        </Typography>
+                        <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted }}>
+                          Assign tiers when creating a task in Playground.
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ) : (
+                    <Box sx={{ px: 2, py: 1.5 }}>
+                      <Typography sx={{ fontSize: 13, color: PALETTE.textMuted }}>No pending alerts.</Typography>
+                    </Box>
+                  )}
+                </Menu>
+              </>
+            )}
             <Stack
               direction="row"
               spacing={0.75}
@@ -303,6 +363,26 @@ function AuthenticatedShell() {
                 </Typography>
               </Box>
               <Divider />
+              <MenuItem
+                onClick={() => {
+                  setActive('docs')
+                  setUserMenuAnchor(null)
+                }}
+                sx={{ fontSize: 13 }}
+              >
+                <BookOpen size={14} style={{ marginRight: 8 }} />
+                Documentation
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setActive('settings')
+                  setUserMenuAnchor(null)
+                }}
+                sx={{ fontSize: 13 }}
+              >
+                <GearSix size={14} style={{ marginRight: 8 }} />
+                Settings
+              </MenuItem>
               {user?.role === 'admin' && (
                 <MenuItem
                   onClick={() => {
@@ -315,10 +395,6 @@ function AuthenticatedShell() {
                   Operators
                 </MenuItem>
               )}
-              <MenuItem onClick={() => setUserMenuAnchor(null)} sx={{ fontSize: 13 }}>
-                <BookOpen size={14} style={{ marginRight: 8 }} />
-                Documentation
-              </MenuItem>
               <Divider />
               <MenuItem
                 onClick={() => {
@@ -334,31 +410,57 @@ function AuthenticatedShell() {
           </Toolbar>
         </AppBar>
 
+        <Dialog open={searchOpen} onClose={() => setSearchOpen(false)} fullWidth maxWidth="xs">
+          <DialogContent sx={{ pt: 2 }}>
+            <TextField
+              autoFocus
+              fullWidth
+              size="small"
+              placeholder="Jump to a page…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              slotProps={{ htmlInput: { 'aria-label': 'Search pages' } }}
+            />
+            <List dense sx={{ mt: 1, maxHeight: 320, overflowY: 'auto' }}>
+              {searchHits.map((item) => (
+                <ListItemButton
+                  key={item.key}
+                  onClick={() => {
+                    setActive(item.key)
+                    setSearchOpen(false)
+                  }}
+                >
+                  <ListItemText primary={item.label} slotProps={{ primary: { sx: { fontSize: 13.5 } } }} />
+                </ListItemButton>
+              ))}
+              {searchHits.length === 0 && (
+                <Typography sx={{ px: 2, py: 1.5, fontSize: 13, color: PALETTE.textMuted }}>No pages match.</Typography>
+              )}
+            </List>
+          </DialogContent>
+        </Dialog>
+
         <Box sx={{ p: 3, maxWidth: 1360, mx: 'auto' }}>
           {online === 'offline' && (
             <Alert severity="error" sx={{ mb: 2 }}>
-              Cannot reach the service at {import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'}: {error}. Start it
-              with TIERROUTER_TIERS and TIERROUTER_DATA set, then uvicorn tierrouter.service.main:create --factory.
+              Cannot reach the Gradist service{import.meta.env.VITE_API_BASE ? ` at ${import.meta.env.VITE_API_BASE}` : ''}.
+              {error ? ` ${error}` : ''} Check that the API is running, then refresh.
             </Alert>
           )}
           <PageTransition routeKey={active}>
             {active === 'overview' && <Overview tiers={tiers} onlineStatus={online} onNavigate={setActive} />}
             {active === 'rules' && <Rules tierNames={tiers?.tiers.map((t) => t.name) ?? []} />}
-            {active === 'tiers' && <Tiers tiers={tiers} />}
-            {active === 'catalog' && (
-              <Catalog
-                selected={selectedModels}
-                onChange={setSelectedModels}
-                tierNames={tiers?.tiers.map((t) => t.name) ?? []}
-              />
-            )}
             {active === 'examples' && <Examples />}
             {active === 'judging' && <HumanJudging tierNames={tiers?.tiers.map((t) => t.name) ?? []} />}
             {active === 'train' && <Train onTrained={(r) => void onTrained(r)} result={lastTrainResult} />}
             {active === 'evaluate' && <Evaluate result={lastTrainResult} />}
             {active === 'history' && <History refreshKey={historyRefresh} />}
-            {active === 'resolve' && <Resolve tiers={tiers} selectedModels={selectedModels} onResolved={onResolved} />}
+            {active === 'resolve' && (
+              <Resolve tiers={tiers} catalogConfigured={catalogOn} onResolved={onResolved} />
+            )}
             {active === 'users' && <Users />}
+            {active === 'settings' && <Settings />}
+            {active === 'docs' && <Docs />}
           </PageTransition>
         </Box>
       </Box>

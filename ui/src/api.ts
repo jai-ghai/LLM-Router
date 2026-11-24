@@ -79,10 +79,12 @@ export const api = {
   createUser: (input: { username: string; password: string; role: 'admin' | 'member'; notes?: string }) =>
     request<AuthResponse>('/v1/users', json({ ...input, notes: input.notes ?? '' })),
   updateUser: (userId: string, patch: { disabled: boolean }) =>
-    request<AuthResponse>(`/v1/users/${encodeURIComponent(userId)}`, { method: 'PUT', ...json(patch) }),
+    // method after ...json(...) — json() defaults to POST and would overwrite PUT.
+    request<AuthResponse>(`/v1/users/${encodeURIComponent(userId)}`, { ...json(patch), method: 'PUT' }),
   tiers: (signal?: AbortSignal) => request<TiersResponse>('/v1/tiers', { signal }),
   rules: (signal?: AbortSignal) => request<RulesResponse>('/v1/rules', { signal }),
-  saveRules: (rules: RuleEntry[]) => request<RulesResponse>('/v1/rules', { method: 'PUT', ...json({ rules }) }),
+  saveRules: (rules: RuleEntry[]) =>
+    request<RulesResponse>('/v1/rules', { ...json({ rules }), method: 'PUT' }),
   addExample: (input: ExampleInput) =>
     request<ExampleRow>('/v1/examples', { method: 'POST', body: toFormData(input) }),
   examples: (signal?: AbortSignal) => request<{ examples: ExampleRow[] }>('/v1/examples', { signal }),
@@ -99,8 +101,26 @@ export const api = {
   // P1 — admin-only tier assignment / demotion. Returns the full catalog after update.
   updateCatalogTier: (modelId: string, tier: string) =>
     request<{ catalog: CatalogEntry[] }>(`/v1/catalog/${encodeURIComponent(modelId)}`, {
-      method: 'PUT',
       ...json({ tier }),
+      method: 'PUT',
+    }),
+  // Called by Catalog.tsx (admin "Label by cost") → POST /v1/catalog/label-tiers.
+  labelCatalogTiers: (force = true) =>
+    request<{ catalog: CatalogEntry[] }>(
+      `/v1/catalog/label-tiers${force ? '?force=true' : ''}`,
+      { method: 'POST' },
+    ),
+  // Called by Catalog.tsx + Resolve.tsx for task→model pools (user: map selective models to a task).
+  taskPools: (signal?: AbortSignal) =>
+    request<{ pools: Record<string, string[]> }>('/v1/task-pools', { signal }),
+  saveTaskPool: (task: string, models: string[]) =>
+    request<{ pools: Record<string, string[]> }>(`/v1/task-pools/${encodeURIComponent(task)}`, {
+      ...json({ models }),
+      method: 'PUT',
+    }),
+  deleteTaskPool: (task: string) =>
+    request<{ pools: Record<string, string[]> }>(`/v1/task-pools/${encodeURIComponent(task)}`, {
+      method: 'DELETE',
     }),
   history: (limit = 50, signal?: AbortSignal) =>
     request<{ history: HistoryEntry[] }>(`/v1/history?limit=${limit}`, { signal }),
@@ -120,6 +140,7 @@ export const api = {
       provider?: string
       minConfidence?: number
       selectedModels?: string[] | null
+      task?: string
       minQuality?: number
       optimizeFor?: OptimizeFor
     },
@@ -128,6 +149,7 @@ export const api = {
     if (input.provider) form.set('provider', input.provider)
     if (input.minConfidence !== undefined) form.set('min_confidence', String(input.minConfidence))
     if (input.selectedModels) form.set('selected_models', JSON.stringify(input.selectedModels))
+    if (input.task) form.set('task', input.task)
     if (input.minQuality !== undefined) form.set('min_quality', String(input.minQuality))
     if (input.optimizeFor) form.set('optimize_for', input.optimizeFor)
     return request<Decision>('/v1/resolve', { method: 'POST', body: form })
