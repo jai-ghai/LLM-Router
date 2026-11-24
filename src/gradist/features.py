@@ -61,6 +61,7 @@ class SentenceTransformerEmbedder:
                 "sentence-transformers is not installed. Install with: pip install .[embeddings]"
             ) from exc
         self._model = SentenceTransformer(model_name)
+        self.model_name = model_name
 
     def embed(self, texts: list[str]) -> Vector:
         vectors = self._model.encode(texts, normalize_embeddings=True)
@@ -152,6 +153,7 @@ class Dinov2Embedder:
         self._model = AutoModel.from_pretrained(model_name)
         self._model.eval()
         self.width = int(self._model.config.hidden_size)
+        self.model_name = model_name
 
     def embed(self, images: list[bytes]) -> Vector:
         from PIL import Image

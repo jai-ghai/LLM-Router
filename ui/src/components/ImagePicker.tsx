@@ -35,6 +35,8 @@ export function ImagePicker({
   onChange,
   compact = false,
   inline = false,
+  card = false,
+  media = null,
   hint,
   sourceKind = null,
   sourceName = null,
@@ -43,6 +45,9 @@ export function ImagePicker({
   onChange: (file: File | null, meta?: MediaInfo | null) => void
   compact?: boolean
   inline?: boolean
+  /** Full-width drop zone; once filled, shows the extracted frame beside the file facts. */
+  card?: boolean
+  media?: MediaInfo | null
   hint?: string
   sourceKind?: 'image' | 'video' | null
   sourceName?: string | null
@@ -52,6 +57,7 @@ export function ImagePicker({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [localError, setLocalError] = useState('')
+  const [dragOver, setDragOver] = useState(false)
 
   useEffect(() => {
     if (!value) {
@@ -129,7 +135,12 @@ export function ImagePicker({
       type="file"
       accept="image/*,video/*,.mp4,.mov,.webm,.mkv,.m4v,.avi"
       hidden
-      onChange={(e) => void handleFiles(e.target.files)}
+      onChange={(e) => {
+        const input = e.currentTarget
+        void handleFiles(input.files).finally(() => {
+          input.value = ''
+        })
+      }}
     />
   )
 
@@ -187,6 +198,109 @@ export function ImagePicker({
       {inline && preview}
     </Stack>
   )
+
+  if (card) {
+    const facts: string[] = []
+    if (media) {
+      if (media.kind === 'video') {
+        facts.push(`Video · ${formatDuration(media.durationSec ?? 0)} · ${media.width}×${media.height}`)
+        facts.push(`Frame at ${formatDuration(media.frameAtSec ?? 0)} (35% into the clip)`)
+      } else if (media.width) {
+        facts.push(`Image · ${media.width}×${media.height}`)
+      }
+      facts.push(`Sends ${media.sentType.replace('image/', '').toUpperCase()} · ${formatSize(media.sentBytes)}`)
+    }
+    return (
+      <Box
+        onDragOver={(e) => {
+          e.preventDefault()
+          setDragOver(true)
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault()
+          setDragOver(false)
+          void handleFiles(e.dataTransfer.files)
+        }}
+        sx={{
+          border: '1px dashed',
+          borderStyle: value ? 'solid' : 'dashed',
+          borderColor: dragOver ? 'primary.main' : 'divider',
+          bgcolor: dragOver ? 'action.hover' : 'transparent',
+          borderRadius: '10px',
+          p: 1.5,
+          transition: 'border-color 120ms, background-color 120ms',
+        }}
+      >
+        {fileInput}
+        {value && previewUrl ? (
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'center' } }}>
+            <Box
+              component="img"
+              src={previewUrl}
+              alt={media?.kind === 'video' ? 'Frame extracted from the video' : 'Uploaded image'}
+              sx={{
+                width: 192,
+                aspectRatio: '16 / 9',
+                objectFit: 'contain',
+                bgcolor: '#0b0b0c',
+                borderRadius: '8px',
+                flexShrink: 0,
+              }}
+            />
+            <Stack spacing={0.5} sx={{ minWidth: 0, flex: 1 }}>
+              <Typography sx={{ fontSize: 13, fontWeight: 600 }} noWrap title={media?.sourceName ?? value.name}>
+                {media?.sourceName ?? value.name}
+              </Typography>
+              {facts.map((f) => (
+                <Typography key={f} sx={{ fontSize: 12, color: 'text.secondary' }}>
+                  {f}
+                </Typography>
+              ))}
+              {media?.kind === 'video' && (
+                <Typography sx={{ fontSize: 11.5, color: 'text.secondary', opacity: 0.8 }}>
+                  The clip stays in your browser — only this frame is sent.
+                </Typography>
+              )}
+            </Stack>
+            <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
+              <Button size="small" variant="outlined" disabled={busy} onClick={() => inputRef.current?.click()} sx={{ height: 34, textTransform: 'none' }}>
+                Replace
+              </Button>
+              <IconButton size="small" aria-label="Remove media" onClick={clear} disabled={busy} sx={{ height: 34, width: 34 }}>
+                <X size={16} />
+              </IconButton>
+            </Stack>
+          </Stack>
+        ) : (
+          <Stack
+            direction="row"
+            spacing={1.5}
+            role="button"
+            tabIndex={0}
+            onClick={() => !busy && inputRef.current?.click()}
+            onKeyDown={(e) => {
+              if ((e.key === 'Enter' || e.key === ' ') && !busy) inputRef.current?.click()
+            }}
+            sx={{ alignItems: 'center', cursor: busy ? 'progress' : 'pointer', py: 0.5 }}
+          >
+            <Box sx={{ width: 40, height: 40, borderRadius: '8px', bgcolor: 'action.hover', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+              {busy ? <CircularProgress size={18} /> : <UploadSimple size={18} />}
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
+                {busy ? 'Extracting a frame…' : 'Add an image or video'}
+              </Typography>
+              <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>
+                {hint ?? 'Drop a file here or click to browse. A video stays in your browser; one frame is sent.'}
+              </Typography>
+            </Box>
+          </Stack>
+        )}
+        {localError && <Typography sx={{ fontSize: 11.5, color: 'error.main', mt: 1 }}>{localError}</Typography>}
+      </Box>
+    )
+  }
 
   if (inline) {
     return (
@@ -247,6 +361,17 @@ export function ImagePicker({
       )}
     </Stack>
   )
+}
+
+function formatDuration(sec: number): string {
+  const s = Math.round(sec)
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
+
+function formatSize(n: number): string {
+  if (n < 1024) return `${n} B`
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
+  return `${(n / 1024 / 1024).toFixed(2)} MB`
 }
 
 async function imageSize(file: File): Promise<{ width?: number; height?: number }> {

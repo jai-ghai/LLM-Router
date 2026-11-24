@@ -31,6 +31,10 @@ class ClassifierError(ValueError):
     """The classifier was asked to do something it cannot: fit on no data, or predict unfitted."""
 
 
+def _embedder_name(embedder: object) -> str:
+    return str(getattr(embedder, "model_name", None) or type(embedder).__name__)
+
+
 class TierClassifier:
     """fit(labels) once, then predict(metadata, text) -> (tier, confidence) many times.
 
@@ -113,6 +117,53 @@ class TierClassifier:
         x = self._vector(self._metadata_encoder.known_only(metadata), text, image_bytes)
         proba = self._clf.predict_proba(x.reshape(1, -1))[0]
         return {str(tier): float(p) for tier, p in zip(self._clf.classes_, proba, strict=True)}
+
+    def explain(self, metadata: dict[str, str], text: str, image_bytes: bytes | None = None) -> dict[str, Any]:
+        """What the classifier actually read from this request, and how much each input moved it.
+
+        `proba` is the same distribution `predict_proba` returns. `without_image`,
+        `without_text` and `without_metadata` re-score the request with that one part blanked
+        (no image flag, empty text, every field unknown), so a caller can show which input the
+        decision rests on. Blanked parts reuse the already-computed embeddings — the image is
+        embedded once.
+        """
+        known = self._metadata_encoder.known_only(metadata)
+        image_embedder = self._image_embedder
+        report: dict[str, Any] = {
+            "metadata_buckets": {k: self._metadata_encoder.bucket_label(k, v) for k, v in sorted(known.items())},
+            "metadata_columns": self._metadata_encoder.width,
+            "text_embedder": _embedder_name(self._text_embedder),
+            "image_embedder": _embedder_name(image_embedder) if image_embedder is not None else None,
+            "image_dims": image_embedder.width if image_embedder is not None else 0,
+            "image_used": image_embedder is not None and image_bytes is not None,
+        }
+        meta_vec = self._metadata_encoder.encode(known)
+        text_vec = self._text_embedder.embed([text])[0]
+        report["text_dims"] = int(text_vec.shape[0])
+        if self._constant is not None:
+            constant = {self._constant: 1.0}
+            report.update(proba=constant, without_image=constant, without_text=constant, without_metadata=constant)
+            return report
+        if self._clf is None:
+            raise ClassifierError("classifier is not fitted; call fit() first")
+
+        blank_image: list[Any] = []
+        image_part: list[Any] = []
+        if image_embedder is not None:
+            blank_image = [np.zeros(image_embedder.width, dtype=np.float64), np.array([0.0])]
+            image_part = (
+                [image_embedder.embed([image_bytes])[0], np.array([1.0])] if image_bytes is not None else blank_image
+            )
+
+        def score(meta: Any, txt: Any, img: list[Any]) -> dict[str, float]:
+            proba = self._clf.predict_proba(np.concatenate([meta, txt, *img]).reshape(1, -1))[0]
+            return {str(t): float(p) for t, p in zip(self._clf.classes_, proba, strict=True)}
+
+        report["proba"] = score(meta_vec, text_vec, image_part)
+        report["without_image"] = score(meta_vec, text_vec, blank_image)
+        report["without_text"] = score(meta_vec, self._text_embedder.embed([""])[0], image_part)
+        report["without_metadata"] = score(self._metadata_encoder.encode({}), text_vec, image_part)
+        return report
 
     @property
     def metadata_fields(self) -> list[str]:

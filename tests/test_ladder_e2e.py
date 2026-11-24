@@ -222,6 +222,31 @@ def test_unit_classifier_with_thumbnail_uses_image_bytes(tmp_path: Path) -> None
     assert small_decision.model_name == "g-small"
     assert embedder.calls
 
+    inputs = large_decision.signals["classifier_inputs"]
+    assert isinstance(inputs, dict)
+    assert inputs["image_used"] is True
+    assert inputs["image_dims"] == 4
+    assert inputs["text_dims"] == 64
+    assert inputs["metadata_buckets"] == {"channel_type": "news", "task": "headline"}
+    assert inputs["without_image"]["large"] < large_decision.tier_scores["large"]
+
+
+def test_explain_matches_predict_proba_and_embeds_the_image_once() -> None:
+    embedder = FakeImageEmbedder()
+    clf = TierClassifier(_encoder(), HashingEmbedder(n_features=64), embedder)
+    clf.fit(
+        [
+            TierLabel("a", {"channel_type": "news"}, NEWS[0], "small", "human", ""),
+            TierLabel("b", {"channel_type": "sports"}, SPORTS[0], "large", "human", ""),
+        ]
+    )
+    meta = {"channel_type": "sports", "not_a_field": "x"}
+    report = clf.explain(meta, SPORTS[1], RED_THUMB)
+    assert embedder.calls.count(RED_THUMB) == 1
+    assert report["proba"] == pytest.approx(clf.predict_proba(meta, SPORTS[1], RED_THUMB))
+    assert report["metadata_buckets"] == {"channel_type": "sports"}
+    assert set(report) >= {"without_image", "without_text", "without_metadata"}
+
 
 def _ladder_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     fake = FakeImageEmbedder()

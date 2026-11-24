@@ -166,5 +166,20 @@ export interface Decision {
     path?: string
     metadata_used?: string[]
     metadata_ignored?: string[]
+    classifier_inputs?: ClassifierInputs
   }
+}
+
+/** What the domain classifier read from a request, and its tier odds with one input blanked. */
+export interface ClassifierInputs {
+  metadata_buckets: Record<string, string>
+  metadata_columns: number
+  text_embedder: string
+  text_dims: number
+  image_embedder: string | null
+  image_dims: number
+  image_used: boolean
+  without_image: Record<string, number>
+  without_text: Record<string, number>
+  without_metadata: Record<string, number>
 }

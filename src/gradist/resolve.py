@@ -217,7 +217,9 @@ def resolve(
             classifier_outcome = reason
             fallback_outcome = "not needed"
         elif classifier is not None:
-            proba = classifier.predict_proba(metadata, text, image_bytes)
+            evidence = classifier.explain(metadata, text, image_bytes)
+            proba = evidence.pop("proba")
+            signals["classifier_inputs"] = evidence
             predicted_tier = max(proba, key=lambda t: proba[t])
             predicted_confidence = proba[predicted_tier]
             signals["path"] = "domain classifier"

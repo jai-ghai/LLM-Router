@@ -39,7 +39,11 @@ the decision step — not that proxy.
 `provider` accepts one or several comma-separated providers (`provider=anthropic,google`). The
 decision returns `tier_scores` (the evidence for the tier), `candidates` (the top 8 of the tier),
 `pool_size`, and `signals` (what the router received: text size, metadata used and ignored, image
-bytes, modality, providers). A video is never uploaded: the browser sends one still frame plus
+bytes, modality, providers). When the classifier decides, `signals.classifier_inputs` lists what it
+read (each metadata value and whether it was seen in training, the text and image embedders and
+their sizes) and the tier odds with the image, text or metadata removed — so you can see which
+input the decision rests on. The image part is a DINOv2 visual embedding of the frame; it does not
+read on-screen text. A video is never uploaded: the browser sends one still frame plus
 `modality=video`, which limits the pick to models that accept video.
 
 ## Run locally

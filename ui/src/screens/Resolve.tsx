@@ -1,9 +1,11 @@
 import { ArrowRight, ArrowCounterClockwise, Copy, MagnifyingGlass, Plus } from '@phosphor-icons/react'
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Checkbox,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -29,7 +31,7 @@ import { ImagePicker, type MediaInfo } from '../components/ImagePicker'
 import { MetadataFieldsEditor } from '../components/MetadataFieldsEditor'
 import { Mono, PageHead, Panel, StateTag } from '../components/Primitives'
 import { PALETTE, TONE_SOFT, tierTone } from '../theme'
-import type { CatalogEntry, Decision, OptimizeFor, TiersResponse } from '../types'
+import type { CatalogEntry, ClassifierInputs, Decision, OptimizeFor, TiersResponse } from '../types'
 
 /**
  * Playground — ladder (rules→classifier→fallback) or catalog task-pool pick.
@@ -91,6 +93,20 @@ export function Resolve({
         ? Array.from(new Set(tiers.tiers.flatMap((t) => Object.keys(t.models))))
         : []
   ).sort()
+  const inputsKey = JSON.stringify([
+    metadata,
+    text,
+    image ? [image.name, image.size, image.lastModified] : null,
+    selectedProviders,
+    minConfidence,
+    minQuality,
+    optimizeFor,
+    scope,
+    task,
+    Array.from(customIds).sort(),
+  ])
+  const [ranKey, setRanKey] = useState('')
+  const stale = decision !== null && ranKey !== inputsKey
   const taskNames = Object.keys(pools).sort()
   const poolCount = task && pools[task] ? pools[task].length : null
   const providerSuffix = selectedProviders.length ? ` · ${selectedProviders.join(', ')} only` : ''
@@ -202,8 +218,13 @@ export function Resolve({
     try {
       const usePool = !catalogConfigured || scope === 'pool'
       const useCustom = catalogConfigured && scope === 'custom'
-      if (catalogConfigured && scope === 'pool' && !task) throw new Error('Choose a task pool.')
-      if (useCustom && customIds.size === 0) throw new Error('Select at least one model.')
+      if (catalogConfigured && scope === 'pool' && !task) {
+        throw new Error('“Task pool” is selected but no pool is chosen — pick one, or switch to All models.')
+      }
+      if (useCustom && customIds.size === 0) {
+        setCustomPickerOpen(true)
+        throw new Error('“Pick models” is selected but no models are ticked — tick some, or switch to All models.')
+      }
       const meta = { ...metadata }
       if (usePool && task) meta.task = task
       const request = {
@@ -217,9 +238,10 @@ export function Resolve({
         minQuality: qualityField ? minQuality : undefined,
         optimizeFor,
       }
-      const { image: _image, ...fields } = request
-      setSent({ ...fields, media })
+      const runKey = inputsKey
+      setSent({ ...request, media })
       setDecision(await api.resolve(request))
+      setRanKey(runKey)
       onResolved()
     } catch (err) {
       setError(describeError(err))
@@ -287,38 +309,45 @@ export function Resolve({
               ) : (
                 <Box />
               )}
-              <TextField
-                select
+              <Autocomplete
+                multiple
                 size="small"
-                label="Providers"
+                options={providers}
                 value={selectedProviders}
-                onChange={(e) => {
-                  const v = e.target.value as unknown as string[] | string
-                  setSelectedProviders(typeof v === 'string' ? v.split(',') : v)
+                onChange={(_, v) => setSelectedProviders(v)}
+                disableCloseOnSelect
+                autoHighlight
+                limitTags={3}
+                getLimitTagsText={(more) => `+${more}`}
+                renderOption={(props, option, { selected }) => {
+                  const { key, ...rest } = props
+                  return (
+                    <li key={key} {...rest} style={{ ...rest.style, paddingTop: 2, paddingBottom: 2 }}>
+                      <Checkbox size="small" checked={selected} sx={{ p: 0.5, mr: 1 }} />
+                      <Typography sx={{ fontSize: 13, flex: 1 }}>{option}</Typography>
+                      <Typography component="span" sx={{ fontSize: 12, color: PALETTE.textMuted, pl: 2 }}>
+                        {providerCounts[option] ?? ''}
+                      </Typography>
+                    </li>
+                  )
                 }}
+                renderValue={(value, getItemProps) =>
+                  value.map((option, index) => {
+                    const { key, ...itemProps } = getItemProps({ index })
+                    return <Chip key={key} label={option} size="small" {...itemProps} sx={{ height: 22, fontSize: 12 }} />
+                  })
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Providers"
+                    placeholder={selectedProviders.length ? '' : 'Any provider — type to search'}
+                    slotProps={{ ...params.slotProps, inputLabel: { ...params.slotProps?.inputLabel, shrink: true } }}
+                  />
+                )}
+                sx={{ minWidth: 0, '& .MuiAutocomplete-inputRoot': { minHeight: 40, flexWrap: 'nowrap', overflow: 'hidden' } }}
                 fullWidth
-                slotProps={{
-                  select: {
-                    multiple: true,
-                    displayEmpty: true,
-                    renderValue: (v) => {
-                      const picked = v as string[]
-                      return picked.length ? picked.join(', ') : 'Any provider'
-                    },
-                  },
-                  inputLabel: { shrink: true },
-                }}
-              >
-                {providers.map((p) => (
-                  <MenuItem key={p} value={p} dense>
-                    <Checkbox size="small" checked={selectedProviders.includes(p)} sx={{ p: 0.5, mr: 1 }} />
-                    {p}
-                    <Typography component="span" sx={{ ml: 'auto', pl: 2, fontSize: 12, color: PALETTE.textMuted }}>
-                      {providerCounts[p] ?? ''}
-                    </Typography>
-                  </MenuItem>
-                ))}
-              </TextField>
+              />
               {catalogConfigured && (
                 <ToggleButtonGroup
                   size="small"
@@ -403,21 +432,20 @@ export function Resolve({
               placeholder="e.g. channel=Aaj Tak; genre=News — or paste segment text"
             />
 
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', md: '1fr auto' },
-                gap: 1.5,
-                alignItems: 'start',
-              }}
-            >
+            <Box>
+              <SectionLabel>Metadata</SectionLabel>
               <MetadataFieldsEditor value={metadata} onChange={setMetadata} size="small" />
+            </Box>
+
+            <Box>
+              <SectionLabel>Image or video</SectionLabel>
               <ImagePicker
+                card
                 value={image}
+                media={media}
                 onChange={onMediaChange}
                 sourceKind={mediaKind}
                 sourceName={media?.sourceName ?? null}
-                hint="Image or video — video → one still in-browser"
               />
             </Box>
 
@@ -470,11 +498,7 @@ export function Resolve({
               <Button
                 variant="contained"
                 onClick={() => void run()}
-                disabled={
-                  loading ||
-                  (catalogConfigured && scope === 'pool' && !task) ||
-                  (catalogConfigured && scope === 'custom' && customIds.size === 0)
-                }
+                disabled={loading}
                 endIcon={<ArrowRight size={16} />}
                 sx={{ flexShrink: 0, height: 40, px: 2.25, textTransform: 'none' }}
               >
@@ -499,6 +523,18 @@ export function Resolve({
           ) : null}
           {decision ? (
             <Stack spacing={1.75}>
+              {stale && (
+                <Alert
+                  severity="warning"
+                  action={
+                    <Button color="inherit" size="small" onClick={() => void run()} disabled={loading}>
+                      Pick again
+                    </Button>
+                  }
+                >
+                  You changed the request since this decision — it shows the previous inputs.
+                </Alert>
+              )}
               <Box
                 sx={{
                   p: 2,
@@ -529,6 +565,10 @@ export function Resolve({
               )}
 
               {sent && <RequestSent sent={sent} decision={decision} />}
+
+              {decision.signals?.classifier_inputs && decision.tier_scores && (
+                <ClassifierReading inputs={decision.signals.classifier_inputs} decision={decision} hasMedia={!!sent?.media} />
+              )}
 
               <Box>
                 <SectionLabel>Full reason</SectionLabel>
@@ -602,6 +642,7 @@ interface SentRequest {
   selectedModels: string[] | null
   minQuality?: number
   optimizeFor: OptimizeFor
+  image: File | null
   media: MediaInfo | null
 }
 
@@ -777,10 +818,161 @@ function RequestSent({ sent, decision }: { sent: SentRequest; decision: Decision
   return (
     <Box>
       <SectionLabel>What the router received</SectionLabel>
-      <KeyValues rows={rows} />
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ alignItems: 'flex-start' }}>
+        {sent.image && <SentFrame file={sent.image} caption={m?.kind === 'video' ? `Frame at ${(m.frameAtSec ?? 0).toFixed(1)} s` : 'Image sent'} />}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <KeyValues rows={rows} />
+        </Box>
+      </Stack>
       <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted, mt: 0.75 }}>
         No LLM is called here. Your app sends the original request (and the full video, if the chosen model accepts video) to {decision.model_name}.
       </Typography>
+    </Box>
+  )
+}
+
+/** The exact image bytes that went to the router (for a video: the extracted frame). */
+function SentFrame({ file, caption }: { file: File; caption: string }) {
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => {
+    const u = URL.createObjectURL(file)
+    setUrl(u)
+    return () => URL.revokeObjectURL(u)
+  }, [file])
+  if (!url) return null
+  return (
+    <Box sx={{ flexShrink: 0 }}>
+      <Box
+        component="img"
+        src={url}
+        alt={caption}
+        sx={{ width: 240, aspectRatio: '16 / 9', objectFit: 'contain', bgcolor: '#0b0b0c', borderRadius: '8px', display: 'block' }}
+      />
+      <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted, mt: 0.5 }}>{caption}</Typography>
+    </Box>
+  )
+}
+
+function atLeastByTier(proba: Record<string, number>): Record<string, number> {
+  const tiers = Object.keys(proba).sort((a, b) => (TIER_ORDER[b] ?? 0) - (TIER_ORDER[a] ?? 0))
+  const out: Record<string, number> = {}
+  let running = 0
+  for (const t of tiers) {
+    running += proba[t]
+    out[t] = Math.min(1, running)
+  }
+  return out
+}
+
+function dialTier(atLeast: Record<string, number>, mode: OptimizeFor): string {
+  const tiers = Object.keys(atLeast).sort((a, b) => (TIER_ORDER[b] ?? 0) - (TIER_ORDER[a] ?? 0))
+  return tiers.find((t) => atLeast[t] >= NEED_SHARE[mode] - 1e-9) ?? tiers[tiers.length - 1]
+}
+
+const pct = (v: number) => `${Math.round(v * 100)}%`
+
+/** What the domain classifier turned each input into, and how the tier odds move without it. */
+function ClassifierReading({ inputs, decision, hasMedia }: { inputs: ClassifierInputs; decision: Decision; hasMedia: boolean }) {
+  const mode = decision.optimize_for
+  const all = decision.tier_scores ?? {}
+  const tiers = Object.keys(all).sort((a, b) => (TIER_ORDER[a] ?? 0) - (TIER_ORDER[b] ?? 0))
+  const words = decision.signals?.text_words ?? 0
+  const buckets = Object.entries(inputs.metadata_buckets)
+
+  const read: [string, React.ReactNode][] = []
+  for (const [field, bucket] of buckets) {
+    const value = decision.signals?.metadata?.[field] ?? ''
+    read.push([
+      field,
+      bucket === '__unknown__' ? (
+        <span>
+          “{value}” — <b>not seen in training</b>, counted as an unknown value
+        </span>
+      ) : (
+        <span>“{value}” — a value it was trained on</span>
+      ),
+    ])
+  }
+  read.push([
+    'Text',
+    words
+      ? `${words} words → ${inputs.text_embedder} sentence embedding (${inputs.text_dims} numbers): the meaning of the wording, not keyword matching`
+      : 'empty — the text part carried no signal',
+  ])
+  if (inputs.image_embedder) {
+    read.push([
+      'Image',
+      inputs.image_used
+        ? `${inputs.image_embedder} visual embedding (${inputs.image_dims} numbers) of the frame: its overall look — layout, colours, people, on-screen graphics. It does not read the text in the frame (no OCR) and does not name objects.`
+        : 'none sent — the model saw an explicit “no image” flag',
+    ])
+  }
+
+  const variants: { label: string; atLeast: Record<string, number> }[] = [{ label: 'Everything (actual)', atLeast: all }]
+  if (inputs.image_used) variants.push({ label: 'Without the image', atLeast: atLeastByTier(inputs.without_image) })
+  if (words) variants.push({ label: 'Without the text', atLeast: atLeastByTier(inputs.without_text) })
+  if (buckets.length) variants.push({ label: 'Without the metadata', atLeast: atLeastByTier(inputs.without_metadata) })
+
+  const focus = decision.tier
+  const shifts = variants
+    .slice(1)
+    .map((v) => ({ label: v.label.replace('Without the ', ''), delta: (all[focus] ?? 0) - (v.atLeast[focus] ?? 0) }))
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+  const top = shifts[0]
+
+  return (
+    <Box>
+      <SectionLabel>What the classifier read</SectionLabel>
+      <KeyValues rows={read} />
+      {variants.length > 1 && (
+        <>
+          <SectionLabel>
+            <Box component="span" sx={{ display: 'block', mt: 1.75 }}>
+              What moved the decision
+            </Box>
+          </SectionLabel>
+          <Typography sx={{ fontSize: 12.5, color: PALETTE.textSecondary, mb: 1 }}>
+            Each row re-scores the same request with one input removed.
+            {top && Math.abs(top.delta) >= 0.05
+              ? ` The ${top.label} matters most: it ${top.delta > 0 ? 'raises' : 'lowers'} P(needs ≥ ${focus}) by ${Math.round(Math.abs(top.delta) * 100)} points.`
+              : ` No single input changes P(needs ≥ ${focus}) by more than 5 points.`}
+            {hasMedia && !inputs.image_used ? ' The image was not used by this classifier.' : ''}
+          </Typography>
+          <Box sx={{ border: `1px solid ${PALETTE.hairline}`, borderRadius: '8px', overflow: 'hidden' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Inputs</TableCell>
+                  {tiers.map((t) => (
+                    <TableCell key={t} align="right">
+                      P(≥ {t})
+                    </TableCell>
+                  ))}
+                  <TableCell align="right">{mode} picks</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {variants.map((v, i) => {
+                  const pick = dialTier(v.atLeast, mode)
+                  return (
+                    <TableRow key={v.label} selected={i === 0}>
+                      <TableCell>{v.label}</TableCell>
+                      {tiers.map((t) => (
+                        <TableCell key={t} align="right">
+                          <Mono size={12}>{pct(v.atLeast[t] ?? 0)}</Mono>
+                        </TableCell>
+                      ))}
+                      <TableCell align="right">
+                        <StateTag label={pick} tone={tierTone(pick)} size="small" />
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </Box>
+        </>
+      )}
     </Box>
   )
 }
