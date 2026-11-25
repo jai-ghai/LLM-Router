@@ -530,6 +530,9 @@ def create_app(
                     "assigned_by": e.assigned_by,
                     "capability": e.capability,
                     "capability_source": e.capability_source,
+                    "multilingual": e.multilingual,
+                    "multilingual_source": e.multilingual_source,
+                    "supports_structured_output": e.supports_structured_output,
                 }
                 for e in state.catalog.entries
             ]

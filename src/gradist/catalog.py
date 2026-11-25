@@ -150,6 +150,13 @@ class CatalogEntry:
     balanced picks when no human ratings exist; see experiments/enrich_capability.py."""
     capability_source: str = ""
     """"measured" (published index) or "estimated" (fit on price + release date)."""
+    multilingual: float | None = None
+    """Artificial Analysis multilingual index — the Hindi / Indian-language skill score.
+    See experiments/enrich_skills.py."""
+    multilingual_source: str = ""
+    """"measured" (published index, 0–1) or "estimated" (fit on capability, price and release date)."""
+    supports_structured_output: bool | None = None
+    """Whether the model accepts a JSON schema for its output; None when unknown."""
     """Informational only (tokens) — not used in `pick()`. Refreshable from a live source via
     `experiments/sync_catalog.py`; see capability.py.
 
@@ -419,6 +426,13 @@ def load_catalog(path: str | Path) -> ModelCatalog:
                 assigned_by=str(entry.get("assigned_by") or "").strip(),
                 capability=float(entry["capability"]) if entry.get("capability") is not None else None,
                 capability_source=str(entry.get("capability_source") or "").strip(),
+                multilingual=float(entry["multilingual"]) if entry.get("multilingual") is not None else None,
+                multilingual_source=str(entry.get("multilingual_source") or "").strip(),
+                supports_structured_output=(
+                    bool(entry["supports_structured_output"])
+                    if entry.get("supports_structured_output") is not None
+                    else None
+                ),
             )
         )
     return ModelCatalog(entries=tuple(entries))
@@ -444,6 +458,11 @@ def entry_to_yaml_dict(entry: CatalogEntry) -> dict[str, object]:
     if entry.capability is not None:
         row["capability"] = round(entry.capability, 1)
         row["capability_source"] = entry.capability_source
+    if entry.multilingual is not None:
+        row["multilingual"] = round(entry.multilingual, 3)
+        row["multilingual_source"] = entry.multilingual_source
+    if entry.supports_structured_output is not None:
+        row["supports_structured_output"] = entry.supports_structured_output
     return row
 
 

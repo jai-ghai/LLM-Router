@@ -124,7 +124,7 @@ flowchart LR
     TR --> CJ["classifier.joblib<br/>+ classifier.meta.json"]
     X --> QHT["train_quality_head.py"] --> QHJ["quality_head.joblib"]
     Q --> QCD["qc_outcome_dataset.py → train_qc_risk.py"] --> QCJ["qc_risk.joblib"]
-    OR["OpenRouter models list"] --> SY["sync_catalog / refresh_catalog /<br/>enrich_capability"] --> CY["config/catalog.yaml"]
+    OR["OpenRouter models list"] --> SY["sync_catalog / refresh_catalog /<br/>enrich_capability / enrich_skills"] --> CY["config/catalog.yaml"]
 ```
 
 Labels come from two places: rule-derived seed labels and human judgments (the Judging screen,

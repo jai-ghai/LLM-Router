@@ -147,6 +147,7 @@ endpoints remain for scripted retraining.
 | `qc_outcome_dataset.py` → `train_qc_risk.py` | Fit the QC-risk escalation head |
 | `sync_catalog.py --add-new` | Import new OpenRouter models as `UNREVIEWED` |
 | `refresh_catalog.py`, `enrich_capability.py` | Refresh prices/modalities and capability scores |
+| `enrich_skills.py` | Hindi/multilingual score (measured or estimated) and structured-output support per model; run after `enrich_capability.py` |
 
 ## Known limitations
 

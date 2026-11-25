@@ -204,6 +204,20 @@ def test_capability_survives_a_yaml_round_trip(tmp_path: Path) -> None:
     assert (loaded.capability, loaded.capability_source) == (51.2, "measured")
 
 
+def test_skill_scores_survive_a_yaml_round_trip_and_stay_unknown_when_absent(tmp_path: Path) -> None:
+    scored = CatalogEntry(
+        "m", "openai", "large", cost=1, multilingual=0.8564, multilingual_source="estimated",
+        supports_structured_output=False,
+    )
+    bare = CatalogEntry("n", "openai", "large", cost=1)
+    path = tmp_path / "catalog.yaml"
+    path.write_text(yaml.safe_dump({"catalog": [entry_to_yaml_dict(scored), entry_to_yaml_dict(bare)]}), encoding="utf-8")
+    loaded_scored, loaded_bare = load_catalog(path).entries
+    assert (loaded_scored.multilingual, loaded_scored.multilingual_source) == (0.856, "estimated")
+    assert loaded_scored.supports_structured_output is False
+    assert (loaded_bare.multilingual, loaded_bare.supports_structured_output) == (None, None)
+
+
 def test_pick_ranked_returns_the_whole_bucket_best_first() -> None:
     catalog = ModelCatalog(
         entries=(

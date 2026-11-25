@@ -11,6 +11,9 @@ catalog:
   assigned_by: heuristic
   capability: 54.9
   capability_source: estimated
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6.2-astra-pro:batch
   provider: openai
   tier: large
@@ -23,6 +26,9 @@ catalog:
   assigned_by: heuristic
   capability: 54.9
   capability_source: estimated
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6.2-astra
   provider: openai
   tier: large
@@ -35,6 +41,9 @@ catalog:
   assigned_by: heuristic
   capability: 62.1
   capability_source: measured
+  multilingual: 0.922
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6.2-astra:batch
   provider: openai
   tier: large
@@ -47,6 +56,9 @@ catalog:
   assigned_by: heuristic
   capability: 62.1
   capability_source: measured
+  multilingual: 0.922
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6.2-sol-pro
   provider: openai
   tier: large
@@ -59,6 +71,9 @@ catalog:
   assigned_by: heuristic
   capability: 48.8
   capability_source: estimated
+  multilingual: 0.901
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6.2-sol-pro:batch
   provider: openai
   tier: medium
@@ -71,6 +86,9 @@ catalog:
   assigned_by: heuristic
   capability: 48.8
   capability_source: estimated
+  multilingual: 0.901
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6.2-sol
   provider: openai
   tier: large
@@ -83,6 +101,9 @@ catalog:
   assigned_by: heuristic
   capability: 57.3
   capability_source: measured
+  multilingual: 0.876
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6.2-sol:batch
   provider: openai
   tier: medium
@@ -95,6 +116,9 @@ catalog:
   assigned_by: heuristic
   capability: 57.3
   capability_source: measured
+  multilingual: 0.876
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen4-max
   provider: qwen
   tier: large
@@ -107,6 +131,9 @@ catalog:
   assigned_by: heuristic
   capability: 42.9
   capability_source: measured
+  multilingual: 0.903
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-4-hydrogen
   provider: google
   tier: large
@@ -119,6 +146,9 @@ catalog:
   assigned_by: heuristic
   capability: 53.9
   capability_source: measured
+  multilingual: 0.872
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-4-hydrogen:batch
   provider: google
   tier: medium
@@ -131,6 +161,9 @@ catalog:
   assigned_by: heuristic
   capability: 53.9
   capability_source: measured
+  multilingual: 0.872
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-4-carbon
   provider: google
   tier: large
@@ -143,6 +176,9 @@ catalog:
   assigned_by: heuristic
   capability: 60.0
   capability_source: measured
+  multilingual: 0.865
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-4-carbon:batch
   provider: google
   tier: medium
@@ -155,6 +191,9 @@ catalog:
   assigned_by: heuristic
   capability: 60.0
   capability_source: measured
+  multilingual: 0.865
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: claude-fable-5.2
   provider: anthropic
   tier: large
@@ -167,6 +206,9 @@ catalog:
   assigned_by: heuristic
   capability: 64.6
   capability_source: measured
+  multilingual: 0.912
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: claude-fable-5.2:batch
   provider: anthropic
   tier: large
@@ -179,6 +221,9 @@ catalog:
   assigned_by: heuristic
   capability: 64.6
   capability_source: measured
+  multilingual: 0.912
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-omni-1.2-flash
   provider: google
   tier: large
@@ -191,6 +236,9 @@ catalog:
   assigned_by: heuristic
   capability: 46.2
   capability_source: estimated
+  multilingual: 0.892
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: gemini-omni-1.1-flash
   provider: google
   tier: large
@@ -203,6 +251,9 @@ catalog:
   assigned_by: heuristic
   capability: 46.1
   capability_source: estimated
+  multilingual: 0.892
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: gpt-6.1-terra-pro
   provider: openai
   tier: medium
@@ -215,6 +266,9 @@ catalog:
   assigned_by: heuristic
   capability: 43.3
   capability_source: estimated
+  multilingual: 0.88
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6.1-terra-pro:batch
   provider: openai
   tier: medium
@@ -227,6 +281,9 @@ catalog:
   assigned_by: heuristic
   capability: 43.3
   capability_source: estimated
+  multilingual: 0.88
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6.1-terra
   provider: openai
   tier: medium
@@ -239,6 +296,9 @@ catalog:
   assigned_by: heuristic
   capability: 51.3
   capability_source: measured
+  multilingual: 0.856
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6.1-terra:batch
   provider: openai
   tier: medium
@@ -251,6 +311,9 @@ catalog:
   assigned_by: heuristic
   capability: 51.3
   capability_source: measured
+  multilingual: 0.856
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: deepseek-v4.1-flash-1017
   provider: deepseek
   tier: small
@@ -263,6 +326,9 @@ catalog:
   assigned_by: heuristic
   capability: 32.6
   capability_source: measured
+  multilingual: 0.757
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: deepseek-v4.1-flash-1017:batch
   provider: deepseek
   tier: small
@@ -275,6 +341,9 @@ catalog:
   assigned_by: heuristic
   capability: 32.6
   capability_source: measured
+  multilingual: 0.793
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-4-argon
   provider: google
   tier: large
@@ -287,6 +356,9 @@ catalog:
   assigned_by: heuristic
   capability: 50.4
   capability_source: measured
+  multilingual: 0.885
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-4-argon:batch
   provider: google
   tier: medium
@@ -299,6 +371,9 @@ catalog:
   assigned_by: heuristic
   capability: 50.4
   capability_source: measured
+  multilingual: 0.885
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: claude-haiku-5.5
   provider: anthropic
   tier: small
@@ -311,6 +386,9 @@ catalog:
   assigned_by: heuristic
   capability: 36.5
   capability_source: measured
+  multilingual: 0.794
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: claude-haiku-5.5:batch
   provider: anthropic
   tier: small
@@ -323,6 +401,9 @@ catalog:
   assigned_by: heuristic
   capability: 36.5
   capability_source: measured
+  multilingual: 0.794
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-nano-banana-2.1
   provider: google
   tier: large
@@ -335,6 +416,9 @@ catalog:
   assigned_by: heuristic
   capability: 42.9
   capability_source: estimated
+  multilingual: 0.893
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: mistral-large-4-0
   provider: mistralai
   tier: medium
@@ -347,6 +431,9 @@ catalog:
   assigned_by: heuristic
   capability: 26.1
   capability_source: measured
+  multilingual: 0.909
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6.1-sol-pro
   provider: openai
   tier: large
@@ -359,6 +446,9 @@ catalog:
   assigned_by: heuristic
   capability: 43.4
   capability_source: estimated
+  multilingual: 0.901
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6.1-sol-pro:batch
   provider: openai
   tier: medium
@@ -371,6 +461,9 @@ catalog:
   assigned_by: heuristic
   capability: 43.4
   capability_source: estimated
+  multilingual: 0.901
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6.1-sol
   provider: openai
   tier: large
@@ -383,6 +476,9 @@ catalog:
   assigned_by: heuristic
   capability: 54.6
   capability_source: measured
+  multilingual: 0.868
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6.1-sol:batch
   provider: openai
   tier: medium
@@ -395,6 +491,9 @@ catalog:
   assigned_by: heuristic
   capability: 54.6
   capability_source: measured
+  multilingual: 0.868
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: claude-sonnet-5.5
   provider: anthropic
   tier: large
@@ -407,6 +506,9 @@ catalog:
   assigned_by: heuristic
   capability: 54.5
   capability_source: measured
+  multilingual: 0.868
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: claude-sonnet-5.5:batch
   provider: anthropic
   tier: medium
@@ -419,6 +521,9 @@ catalog:
   assigned_by: heuristic
   capability: 54.5
   capability_source: measured
+  multilingual: 0.868
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3.8-max-prime
   provider: qwen
   tier: large
@@ -431,6 +536,9 @@ catalog:
   assigned_by: heuristic
   capability: 45.8
   capability_source: estimated
+  multilingual: 0.923
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6-luna-pro
   provider: openai
   tier: small
@@ -443,6 +551,9 @@ catalog:
   assigned_by: heuristic
   capability: 29.3
   capability_source: estimated
+  multilingual: 0.811
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6-luna-pro:batch
   provider: openai
   tier: small
@@ -455,6 +566,9 @@ catalog:
   assigned_by: heuristic
   capability: 29.3
   capability_source: estimated
+  multilingual: 0.811
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6-luna
   provider: openai
   tier: small
@@ -467,6 +581,9 @@ catalog:
   assigned_by: heuristic
   capability: 27.9
   capability_source: measured
+  multilingual: 0.815
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6-luna:batch
   provider: openai
   tier: small
@@ -479,6 +596,9 @@ catalog:
   assigned_by: heuristic
   capability: 27.9
   capability_source: measured
+  multilingual: 0.815
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6-sol-pro
   provider: openai
   tier: large
@@ -491,6 +611,9 @@ catalog:
   assigned_by: heuristic
   capability: 42.6
   capability_source: estimated
+  multilingual: 0.902
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6-sol-pro:batch
   provider: openai
   tier: medium
@@ -503,6 +626,9 @@ catalog:
   assigned_by: heuristic
   capability: 42.6
   capability_source: estimated
+  multilingual: 0.902
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6-sol
   provider: openai
   tier: large
@@ -515,6 +641,9 @@ catalog:
   assigned_by: heuristic
   capability: 44.2
   capability_source: measured
+  multilingual: 0.897
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6-sol:batch
   provider: openai
   tier: medium
@@ -527,6 +656,9 @@ catalog:
   assigned_by: heuristic
   capability: 44.2
   capability_source: measured
+  multilingual: 0.897
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: claude-opus-5.5
   provider: anthropic
   tier: large
@@ -539,6 +671,9 @@ catalog:
   assigned_by: heuristic
   capability: 59.1
   capability_source: measured
+  multilingual: 0.883
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: claude-opus-5.5:batch
   provider: anthropic
   tier: large
@@ -551,6 +686,9 @@ catalog:
   assigned_by: heuristic
   capability: 59.1
   capability_source: measured
+  multilingual: 0.883
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3.8-omni-flash
   provider: qwen
   tier: small
@@ -563,6 +701,9 @@ catalog:
   assigned_by: heuristic
   capability: 30.9
   capability_source: estimated
+  multilingual: 0.823
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: deepseek-v4.1-flash
   provider: deepseek
   tier: small
@@ -575,6 +716,9 @@ catalog:
   assigned_by: heuristic
   capability: 29.4
   capability_source: estimated
+  multilingual: 0.821
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: deepseek-v4.1-flash:batch
   provider: deepseek
   tier: small
@@ -587,6 +731,9 @@ catalog:
   assigned_by: heuristic
   capability: 27.9
   capability_source: estimated
+  multilingual: 0.811
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6-astra
   provider: openai
   tier: large
@@ -599,6 +746,9 @@ catalog:
   assigned_by: heuristic
   capability: 56.9
   capability_source: measured
+  multilingual: 0.923
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6-astra:batch
   provider: openai
   tier: large
@@ -611,6 +761,9 @@ catalog:
   assigned_by: heuristic
   capability: 56.9
   capability_source: measured
+  multilingual: 0.923
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6-astra-pro
   provider: openai
   tier: large
@@ -623,6 +776,9 @@ catalog:
   assigned_by: heuristic
   capability: 47.8
   capability_source: estimated
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-6-astra-pro:batch
   provider: openai
   tier: large
@@ -635,6 +791,9 @@ catalog:
   assigned_by: heuristic
   capability: 47.8
   capability_source: estimated
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3.8-max-0902
   provider: qwen
   tier: large
@@ -647,6 +806,9 @@ catalog:
   assigned_by: heuristic
   capability: 33.7
   capability_source: measured
+  multilingual: 0.922
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3.8-max-0902:batch
   provider: qwen
   tier: medium
@@ -659,6 +821,9 @@ catalog:
   assigned_by: heuristic
   capability: 33.7
   capability_source: measured
+  multilingual: 0.928
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-3.8-flash
   provider: google
   tier: medium
@@ -671,6 +836,9 @@ catalog:
   assigned_by: heuristic
   capability: 30.8
   capability_source: measured
+  multilingual: 0.892
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-3.8-flash:batch
   provider: google
   tier: medium
@@ -683,6 +851,9 @@ catalog:
   assigned_by: heuristic
   capability: 30.8
   capability_source: measured
+  multilingual: 0.887
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: claude-fable-5.1
   provider: anthropic
   tier: large
@@ -695,6 +866,9 @@ catalog:
   assigned_by: heuristic
   capability: 50.0
   capability_source: measured
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: claude-fable-5.1:batch
   provider: anthropic
   tier: large
@@ -707,6 +881,9 @@ catalog:
   assigned_by: heuristic
   capability: 50.0
   capability_source: measured
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3.8-flash
   provider: qwen
   tier: small
@@ -719,6 +896,9 @@ catalog:
   assigned_by: heuristic
   capability: 28.6
   capability_source: measured
+  multilingual: 0.822
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: deepseek-v4-flash-vision-exp
   provider: deepseek
   tier: small
@@ -731,6 +911,9 @@ catalog:
   assigned_by: heuristic
   capability: 29.2
   capability_source: estimated
+  multilingual: 0.834
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3.8-27b
   provider: qwen
   tier: small
@@ -743,6 +926,9 @@ catalog:
   assigned_by: heuristic
   capability: 20.1
   capability_source: measured
+  multilingual: 0.781
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3.8-27b:batch
   provider: qwen
   tier: small
@@ -755,6 +941,9 @@ catalog:
   assigned_by: heuristic
   capability: 20.1
   capability_source: measured
+  multilingual: 0.876
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-3.7-flash
   provider: google
   tier: medium
@@ -767,6 +956,9 @@ catalog:
   assigned_by: heuristic
   capability: 33.9
   capability_source: estimated
+  multilingual: 0.872
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-3.7-flash:batch
   provider: google
   tier: medium
@@ -779,6 +971,9 @@ catalog:
   assigned_by: heuristic
   capability: 33.9
   capability_source: estimated
+  multilingual: 0.872
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3.8-2.4t-a95b
   provider: qwen
   tier: large
@@ -791,6 +986,9 @@ catalog:
   assigned_by: heuristic
   capability: 38.1
   capability_source: estimated
+  multilingual: 0.902
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: deepseek-v4-pro-0813
   provider: deepseek
   tier: small
@@ -803,6 +1001,9 @@ catalog:
   assigned_by: heuristic
   capability: 23.1
   capability_source: measured
+  multilingual: 0.821
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: deepseek-v4-flash-0731
   provider: deepseek
   tier: small
@@ -815,6 +1016,9 @@ catalog:
   assigned_by: heuristic
   capability: 19.9
   capability_source: estimated
+  multilingual: 0.787
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: deepseek-v4-flash-0731:batch
   provider: deepseek
   tier: small
@@ -827,6 +1031,9 @@ catalog:
   assigned_by: heuristic
   capability: 23.3
   capability_source: estimated
+  multilingual: 0.81
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3.7-flash
   provider: qwen
   tier: small
@@ -839,6 +1046,9 @@ catalog:
   assigned_by: heuristic
   capability: 17.8
   capability_source: estimated
+  multilingual: 0.775
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: claude-opus-5
   provider: anthropic
   tier: large
@@ -851,6 +1061,9 @@ catalog:
   assigned_by: heuristic
   capability: 44.2
   capability_source: measured
+  multilingual: 0.918
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: claude-opus-5:batch
   provider: anthropic
   tier: large
@@ -863,6 +1076,9 @@ catalog:
   assigned_by: heuristic
   capability: 44.2
   capability_source: measured
+  multilingual: 0.918
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-3.6-flash
   provider: google
   tier: medium
@@ -875,6 +1091,9 @@ catalog:
   assigned_by: heuristic
   capability: 31.3
   capability_source: estimated
+  multilingual: 0.872
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-3.6-flash:batch
   provider: google
   tier: medium
@@ -887,6 +1106,9 @@ catalog:
   assigned_by: heuristic
   capability: 31.3
   capability_source: estimated
+  multilingual: 0.872
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-3.5-flash-lite
   provider: google
   tier: medium
@@ -899,6 +1121,9 @@ catalog:
   assigned_by: heuristic
   capability: 11.7
   capability_source: measured
+  multilingual: 0.891
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-3.5-flash-lite:batch
   provider: google
   tier: small
@@ -911,6 +1136,9 @@ catalog:
   assigned_by: heuristic
   capability: 11.7
   capability_source: measured
+  multilingual: 0.891
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.6-luna-pro
   provider: openai
   tier: small
@@ -923,6 +1151,9 @@ catalog:
   assigned_by: heuristic
   capability: 24.1
   capability_source: estimated
+  multilingual: 0.832
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.6-luna-pro:batch
   provider: openai
   tier: small
@@ -935,6 +1166,9 @@ catalog:
   assigned_by: heuristic
   capability: 24.1
   capability_source: estimated
+  multilingual: 0.832
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.6-luna
   provider: openai
   tier: small
@@ -947,6 +1181,9 @@ catalog:
   assigned_by: heuristic
   capability: 23.8
   capability_source: measured
+  multilingual: 0.833
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.6-luna:batch
   provider: openai
   tier: small
@@ -959,6 +1196,9 @@ catalog:
   assigned_by: heuristic
   capability: 23.8
   capability_source: measured
+  multilingual: 0.833
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.6-terra-pro
   provider: openai
   tier: large
@@ -971,6 +1211,9 @@ catalog:
   assigned_by: heuristic
   capability: 34.4
   capability_source: estimated
+  multilingual: 0.902
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.6-terra-pro:batch
   provider: openai
   tier: medium
@@ -983,6 +1226,9 @@ catalog:
   assigned_by: heuristic
   capability: 34.4
   capability_source: estimated
+  multilingual: 0.902
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.6-terra
   provider: openai
   tier: large
@@ -995,6 +1241,9 @@ catalog:
   assigned_by: heuristic
   capability: 32.3
   capability_source: measured
+  multilingual: 0.908
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.6-terra:batch
   provider: openai
   tier: medium
@@ -1007,6 +1256,9 @@ catalog:
   assigned_by: heuristic
   capability: 32.3
   capability_source: measured
+  multilingual: 0.908
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.6-sol-pro
   provider: openai
   tier: large
@@ -1019,6 +1271,9 @@ catalog:
   assigned_by: heuristic
   capability: 37.5
   capability_source: estimated
+  multilingual: 0.923
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.6-sol-pro:batch
   provider: openai
   tier: large
@@ -1031,6 +1286,9 @@ catalog:
   assigned_by: heuristic
   capability: 37.5
   capability_source: estimated
+  multilingual: 0.923
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.6-sol
   provider: openai
   tier: large
@@ -1043,6 +1301,9 @@ catalog:
   assigned_by: heuristic
   capability: 37.5
   capability_source: estimated
+  multilingual: 0.923
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.6-sol:batch
   provider: openai
   tier: large
@@ -1055,6 +1316,9 @@ catalog:
   assigned_by: heuristic
   capability: 37.5
   capability_source: estimated
+  multilingual: 0.923
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: claude-sonnet-5
   provider: anthropic
   tier: large
@@ -1067,6 +1331,9 @@ catalog:
   assigned_by: heuristic
   capability: 33.4
   capability_source: estimated
+  multilingual: 0.902
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: claude-sonnet-5:batch
   provider: anthropic
   tier: medium
@@ -1079,6 +1346,9 @@ catalog:
   assigned_by: heuristic
   capability: 33.4
   capability_source: estimated
+  multilingual: 0.902
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-3.1-flash-lite-image
   provider: google
   tier: small
@@ -1091,6 +1361,9 @@ catalog:
   assigned_by: heuristic
   capability: 24.2
   capability_source: estimated
+  multilingual: 0.839
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: gemini-3.1-flash-image
   provider: google
   tier: medium
@@ -1103,6 +1376,9 @@ catalog:
   assigned_by: heuristic
   capability: 25.9
   capability_source: estimated
+  multilingual: 0.86
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-3-pro-image
   provider: google
   tier: large
@@ -1115,6 +1391,9 @@ catalog:
   assigned_by: heuristic
   capability: 32.1
   capability_source: estimated
+  multilingual: 0.902
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: claude-fable-5
   provider: anthropic
   tier: large
@@ -1127,6 +1406,9 @@ catalog:
   assigned_by: heuristic
   capability: 38.3
   capability_source: estimated
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: claude-fable-5:batch
   provider: anthropic
   tier: large
@@ -1139,6 +1421,9 @@ catalog:
   assigned_by: heuristic
   capability: 38.3
   capability_source: estimated
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3.7-plus
   provider: qwen
   tier: medium
@@ -1151,6 +1436,9 @@ catalog:
   assigned_by: heuristic
   capability: 22.3
   capability_source: estimated
+  multilingual: 0.847
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3.7-plus:batch
   provider: qwen
   tier: small
@@ -1163,6 +1451,9 @@ catalog:
   assigned_by: heuristic
   capability: 23.9
   capability_source: estimated
+  multilingual: 0.858
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: claude-opus-4.8
   provider: anthropic
   tier: large
@@ -1175,6 +1466,9 @@ catalog:
   assigned_by: heuristic
   capability: 33.8
   capability_source: estimated
+  multilingual: 0.93
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: claude-opus-4.8:batch
   provider: anthropic
   tier: large
@@ -1187,6 +1481,9 @@ catalog:
   assigned_by: heuristic
   capability: 33.8
   capability_source: estimated
+  multilingual: 0.93
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3.7-max
   provider: qwen
   tier: large
@@ -1199,6 +1496,9 @@ catalog:
   assigned_by: heuristic
   capability: 27.7
   capability_source: estimated
+  multilingual: 0.893
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-3.5-flash
   provider: google
   tier: large
@@ -1211,6 +1511,9 @@ catalog:
   assigned_by: heuristic
   capability: 27.5
   capability_source: estimated
+  multilingual: 0.894
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-3.5-flash:batch
   provider: google
   tier: medium
@@ -1223,6 +1526,9 @@ catalog:
   assigned_by: heuristic
   capability: 27.5
   capability_source: estimated
+  multilingual: 0.894
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-3.1-flash-lite
   provider: google
   tier: small
@@ -1235,6 +1541,9 @@ catalog:
   assigned_by: heuristic
   capability: 18.2
   capability_source: estimated
+  multilingual: 0.839
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-3.1-flash-lite:batch
   provider: google
   tier: small
@@ -1247,6 +1556,9 @@ catalog:
   assigned_by: heuristic
   capability: 18.2
   capability_source: estimated
+  multilingual: 0.839
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-chat-latest
   provider: openai
   tier: large
@@ -1259,6 +1571,9 @@ catalog:
   assigned_by: heuristic
   capability: 31.4
   capability_source: estimated
+  multilingual: 0.93
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: mistral-medium-3-5
   provider: mistralai
   tier: large
@@ -1271,6 +1586,9 @@ catalog:
   assigned_by: heuristic
   capability: 4.6
   capability_source: measured
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: mistral-medium-3-5:batch
   provider: mistralai
   tier: medium
@@ -1283,6 +1601,9 @@ catalog:
   assigned_by: heuristic
   capability: 4.6
   capability_source: measured
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3.5-plus-20260420
   provider: qwen
   tier: medium
@@ -1295,6 +1616,9 @@ catalog:
   assigned_by: heuristic
   capability: 17.9
   capability_source: estimated
+  multilingual: 0.845
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3.6-flash
   provider: qwen
   tier: small
@@ -1307,6 +1631,9 @@ catalog:
   assigned_by: heuristic
   capability: 15.8
   capability_source: estimated
+  multilingual: 0.831
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3.6-35b-a3b
   provider: qwen
   tier: small
@@ -1319,6 +1646,9 @@ catalog:
   assigned_by: heuristic
   capability: 10.0
   capability_source: estimated
+  multilingual: 0.791
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3.6-27b
   provider: qwen
   tier: medium
@@ -1331,6 +1661,9 @@ catalog:
   assigned_by: heuristic
   capability: 18.2
   capability_source: estimated
+  multilingual: 0.847
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.5-pro
   provider: openai
   tier: large
@@ -1343,6 +1676,9 @@ catalog:
   assigned_by: heuristic
   capability: 38.2
   capability_source: estimated
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.5-pro:batch
   provider: openai
   tier: large
@@ -1355,6 +1691,9 @@ catalog:
   assigned_by: heuristic
   capability: 38.2
   capability_source: estimated
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.5
   provider: openai
   tier: large
@@ -1367,6 +1706,9 @@ catalog:
   assigned_by: heuristic
   capability: 30.2
   capability_source: estimated
+  multilingual: 0.93
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.5:batch
   provider: openai
   tier: large
@@ -1379,6 +1721,9 @@ catalog:
   assigned_by: heuristic
   capability: 30.2
   capability_source: estimated
+  multilingual: 0.93
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: deepseek-v4-pro
   provider: deepseek
   tier: large
@@ -1391,6 +1736,9 @@ catalog:
   assigned_by: heuristic
   capability: 20.8
   capability_source: measured
+  multilingual: 0.899
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: deepseek-v4-flash
   provider: deepseek
   tier: small
@@ -1403,6 +1751,9 @@ catalog:
   assigned_by: heuristic
   capability: 12.2
   capability_source: estimated
+  multilingual: 0.809
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.4-image-2
   provider: openai
   tier: large
@@ -1415,6 +1766,9 @@ catalog:
   assigned_by: heuristic
   capability: 32.0
   capability_source: estimated
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: claude-opus-4.7
   provider: anthropic
   tier: large
@@ -1427,6 +1781,9 @@ catalog:
   assigned_by: heuristic
   capability: 29.3
   capability_source: estimated
+  multilingual: 0.93
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: claude-opus-4.7:batch
   provider: anthropic
   tier: large
@@ -1439,6 +1796,9 @@ catalog:
   assigned_by: heuristic
   capability: 29.3
   capability_source: estimated
+  multilingual: 0.93
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemma-4-26b-a4b-it
   provider: google
   tier: small
@@ -1451,6 +1811,9 @@ catalog:
   assigned_by: heuristic
   capability: 10.0
   capability_source: estimated
+  multilingual: 0.809
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemma-4-26b-a4b-it:free
   provider: google
   tier: small
@@ -1463,6 +1826,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.63
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: gemma-4-31b-it
   provider: google
   tier: small
@@ -1475,6 +1841,9 @@ catalog:
   assigned_by: heuristic
   capability: 4.4
   capability_source: measured
+  multilingual: 0.86
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemma-4-31b-it:free
   provider: google
   tier: small
@@ -1487,6 +1856,9 @@ catalog:
   assigned_by: heuristic
   capability: 4.4
   capability_source: measured
+  multilingual: 0.628
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: qwen3.6-plus
   provider: qwen
   tier: medium
@@ -1499,6 +1871,9 @@ catalog:
   assigned_by: heuristic
   capability: 15.6
   capability_source: estimated
+  multilingual: 0.847
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: lyria-3-pro-preview
   provider: google
   tier: small
@@ -1511,6 +1886,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.629
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: lyria-3-clip-preview
   provider: google
   tier: small
@@ -1523,6 +1901,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.629
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: gpt-5.4-nano
   provider: openai
   tier: small
@@ -1535,6 +1916,9 @@ catalog:
   assigned_by: heuristic
   capability: 11.6
   capability_source: estimated
+  multilingual: 0.833
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.4-nano:batch
   provider: openai
   tier: small
@@ -1547,6 +1931,9 @@ catalog:
   assigned_by: heuristic
   capability: 11.6
   capability_source: estimated
+  multilingual: 0.833
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.4-mini
   provider: openai
   tier: medium
@@ -1559,6 +1946,9 @@ catalog:
   assigned_by: heuristic
   capability: 17.5
   capability_source: estimated
+  multilingual: 0.894
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gpt-5.4-mini:batch
   provider: openai
   tier: medium
@@ -1571,6 +1961,9 @@ catalog:
   assigned_by: heuristic
   capability: 17.5
   capability_source: estimated
+  multilingual: 0.894
+  multilingual_source: measured
+  supports_structured_output: true
 - id: mistral-small-2603
   provider: mistralai
   tier: small
@@ -1583,6 +1976,9 @@ catalog:
   assigned_by: heuristic
   capability: 4.3
   capability_source: measured
+  multilingual: 0.842
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3.5-9b
   provider: qwen
   tier: small
@@ -1595,6 +1991,9 @@ catalog:
   assigned_by: heuristic
   capability: 10.2
   capability_source: estimated
+  multilingual: 0.828
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.4-pro
   provider: openai
   tier: large
@@ -1607,6 +2006,9 @@ catalog:
   assigned_by: heuristic
   capability: 32.7
   capability_source: estimated
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.4-pro:batch
   provider: openai
   tier: large
@@ -1619,6 +2021,9 @@ catalog:
   assigned_by: heuristic
   capability: 32.7
   capability_source: estimated
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.4
   provider: openai
   tier: large
@@ -1631,6 +2036,9 @@ catalog:
   assigned_by: heuristic
   capability: 21.6
   capability_source: estimated
+  multilingual: 0.91
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.4:batch
   provider: openai
   tier: medium
@@ -1643,6 +2051,9 @@ catalog:
   assigned_by: heuristic
   capability: 21.6
   capability_source: estimated
+  multilingual: 0.91
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-3.1-flash-lite-preview
   provider: google
   tier: small
@@ -1655,6 +2066,9 @@ catalog:
   assigned_by: heuristic
   capability: 6.2
   capability_source: measured
+  multilingual: 0.854
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-3.1-flash-image-preview
   provider: google
   tier: medium
@@ -1667,6 +2081,9 @@ catalog:
   assigned_by: heuristic
   capability: 13.7
   capability_source: estimated
+  multilingual: 0.861
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3.5-35b-a3b
   provider: qwen
   tier: small
@@ -1679,6 +2096,9 @@ catalog:
   assigned_by: heuristic
   capability: 7.9
   capability_source: estimated
+  multilingual: 0.864
+  multilingual_source: measured
+  supports_structured_output: true
 - id: qwen3.5-27b
   provider: qwen
   tier: medium
@@ -1691,6 +2111,9 @@ catalog:
   assigned_by: heuristic
   capability: 10.7
   capability_source: estimated
+  multilingual: 0.868
+  multilingual_source: measured
+  supports_structured_output: true
 - id: qwen3.5-122b-a10b
   provider: qwen
   tier: medium
@@ -1703,6 +2126,9 @@ catalog:
   assigned_by: heuristic
   capability: 10.7
   capability_source: estimated
+  multilingual: 0.891
+  multilingual_source: measured
+  supports_structured_output: true
 - id: qwen3.5-flash-02-23
   provider: qwen
   tier: small
@@ -1715,6 +2141,9 @@ catalog:
   assigned_by: heuristic
   capability: 4.5
   capability_source: estimated
+  multilingual: 0.799
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-3.1-pro-preview-customtools
   provider: google
   tier: large
@@ -1727,6 +2156,9 @@ catalog:
   assigned_by: heuristic
   capability: 19.8
   capability_source: estimated
+  multilingual: 0.903
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.3-codex
   provider: openai
   tier: large
@@ -1739,6 +2171,9 @@ catalog:
   assigned_by: heuristic
   capability: 19.0
   capability_source: estimated
+  multilingual: 0.899
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-3.1-pro-preview
   provider: google
   tier: large
@@ -1751,6 +2186,9 @@ catalog:
   assigned_by: heuristic
   capability: 19.1
   capability_source: estimated
+  multilingual: 0.932
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gemini-3.1-pro-preview:batch
   provider: google
   tier: medium
@@ -1763,6 +2201,9 @@ catalog:
   assigned_by: heuristic
   capability: 19.1
   capability_source: estimated
+  multilingual: 0.932
+  multilingual_source: measured
+  supports_structured_output: true
 - id: claude-sonnet-4.6
   provider: anthropic
   tier: large
@@ -1775,6 +2216,9 @@ catalog:
   assigned_by: heuristic
   capability: 20.7
   capability_source: estimated
+  multilingual: 0.905
+  multilingual_source: measured
+  supports_structured_output: true
 - id: claude-sonnet-4.6:batch
   provider: anthropic
   tier: large
@@ -1787,6 +2231,9 @@ catalog:
   assigned_by: heuristic
   capability: 20.7
   capability_source: estimated
+  multilingual: 0.905
+  multilingual_source: measured
+  supports_structured_output: true
 - id: qwen3.5-plus-02-15
   provider: qwen
   tier: medium
@@ -1799,6 +2246,9 @@ catalog:
   assigned_by: heuristic
   capability: 9.6
   capability_source: estimated
+  multilingual: 0.841
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3.5-397b-a17b
   provider: qwen
   tier: medium
@@ -1811,6 +2261,9 @@ catalog:
   assigned_by: heuristic
   capability: 12.1
   capability_source: estimated
+  multilingual: 0.9
+  multilingual_source: measured
+  supports_structured_output: true
 - id: claude-opus-4.6
   provider: anthropic
   tier: large
@@ -1823,6 +2276,9 @@ catalog:
   assigned_by: heuristic
   capability: 21.5
   capability_source: estimated
+  multilingual: 0.922
+  multilingual_source: measured
+  supports_structured_output: true
 - id: claude-opus-4.6:batch
   provider: anthropic
   tier: large
@@ -1835,6 +2291,9 @@ catalog:
   assigned_by: heuristic
   capability: 21.5
   capability_source: estimated
+  multilingual: 0.922
+  multilingual_source: measured
+  supports_structured_output: true
 - id: qwen3-coder-next
   provider: qwen
   tier: small
@@ -1847,6 +2306,9 @@ catalog:
   assigned_by: heuristic
   capability: 4.8
   capability_source: estimated
+  multilingual: 0.794
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gpt-audio
   provider: openai
   tier: large
@@ -1859,6 +2321,9 @@ catalog:
   assigned_by: heuristic
   capability: 16.7
   capability_source: estimated
+  multilingual: 0.91
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-audio-mini
   provider: openai
   tier: medium
@@ -1871,6 +2336,9 @@ catalog:
   assigned_by: heuristic
   capability: 10.3
   capability_source: estimated
+  multilingual: 0.867
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.2-codex
   provider: openai
   tier: large
@@ -1883,6 +2351,9 @@ catalog:
   assigned_by: heuristic
   capability: 14.6
   capability_source: estimated
+  multilingual: 0.899
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-3-flash-preview
   provider: google
   tier: medium
@@ -1895,6 +2366,9 @@ catalog:
   assigned_by: heuristic
   capability: 5.9
   capability_source: estimated
+  multilingual: 0.914
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gemini-3-flash-preview:batch
   provider: google
   tier: small
@@ -1907,6 +2381,9 @@ catalog:
   assigned_by: heuristic
   capability: 5.9
   capability_source: estimated
+  multilingual: 0.914
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gpt-5.2-chat
   provider: openai
   tier: large
@@ -1919,6 +2396,9 @@ catalog:
   assigned_by: heuristic
   capability: 10.7
   capability_source: estimated
+  multilingual: 0.899
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.2-pro
   provider: openai
   tier: large
@@ -1931,6 +2411,9 @@ catalog:
   assigned_by: heuristic
   capability: 21.8
   capability_source: estimated
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.2-pro:batch
   provider: openai
   tier: large
@@ -1943,6 +2426,9 @@ catalog:
   assigned_by: heuristic
   capability: 21.8
   capability_source: estimated
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.2
   provider: openai
   tier: large
@@ -1955,6 +2441,9 @@ catalog:
   assigned_by: heuristic
   capability: 10.7
   capability_source: estimated
+  multilingual: 0.898
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gpt-5.2:batch
   provider: openai
   tier: medium
@@ -1967,6 +2456,9 @@ catalog:
   assigned_by: heuristic
   capability: 10.7
   capability_source: estimated
+  multilingual: 0.898
+  multilingual_source: measured
+  supports_structured_output: true
 - id: devstral-2512
   provider: mistralai
   tier: medium
@@ -1979,6 +2471,9 @@ catalog:
   assigned_by: heuristic
   capability: 4.0
   capability_source: estimated
+  multilingual: 0.775
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gpt-5.1-codex-max
   provider: openai
   tier: medium
@@ -1991,6 +2486,9 @@ catalog:
   assigned_by: heuristic
   capability: 8.6
   capability_source: estimated
+  multilingual: 0.889
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: ministral-14b-2512
   provider: mistralai
   tier: small
@@ -2003,6 +2501,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.683
+  multilingual_source: measured
+  supports_structured_output: true
 - id: ministral-8b-2512
   provider: mistralai
   tier: small
@@ -2015,6 +2516,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.663
+  multilingual_source: measured
+  supports_structured_output: true
 - id: ministral-3b-2512
   provider: mistralai
   tier: small
@@ -2027,6 +2531,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.567
+  multilingual_source: measured
+  supports_structured_output: true
 - id: mistral-large-2512
   provider: mistralai
   tier: medium
@@ -2039,6 +2546,9 @@ catalog:
   assigned_by: heuristic
   capability: 4.2
   capability_source: estimated
+  multilingual: 0.803
+  multilingual_source: measured
+  supports_structured_output: true
 - id: deepseek-v3.2
   provider: deepseek
   tier: medium
@@ -2051,6 +2561,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.865
+  multilingual_source: measured
+  supports_structured_output: true
 - id: claude-opus-4.5
   provider: anthropic
   tier: large
@@ -2063,6 +2576,9 @@ catalog:
   assigned_by: heuristic
   capability: 13.7
   capability_source: estimated
+  multilingual: 0.913
+  multilingual_source: measured
+  supports_structured_output: true
 - id: claude-opus-4.5:batch
   provider: anthropic
   tier: large
@@ -2075,6 +2591,9 @@ catalog:
   assigned_by: heuristic
   capability: 13.7
   capability_source: estimated
+  multilingual: 0.913
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gemini-3-pro-image-preview
   provider: google
   tier: large
@@ -2087,6 +2606,9 @@ catalog:
   assigned_by: heuristic
   capability: 9.1
   capability_source: estimated
+  multilingual: 0.904
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5.1
   provider: openai
   tier: medium
@@ -2099,6 +2621,9 @@ catalog:
   assigned_by: heuristic
   capability: 6.3
   capability_source: estimated
+  multilingual: 0.906
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gpt-5.1:batch
   provider: openai
   tier: medium
@@ -2111,6 +2636,9 @@ catalog:
   assigned_by: heuristic
   capability: 6.3
   capability_source: estimated
+  multilingual: 0.906
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gpt-5.1-codex
   provider: openai
   tier: medium
@@ -2123,6 +2651,9 @@ catalog:
   assigned_by: heuristic
   capability: 6.3
   capability_source: estimated
+  multilingual: 0.897
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gpt-5.1-codex-mini
   provider: openai
   tier: small
@@ -2135,6 +2666,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.85
+  multilingual_source: measured
+  supports_structured_output: true
 - id: voxtral-small-24b-2507
   provider: mistralai
   tier: small
@@ -2147,6 +2681,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.782
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-oss-safeguard-20b
   provider: openai
   tier: small
@@ -2159,6 +2696,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.77
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5-image-mini
   provider: openai
   tier: large
@@ -2171,6 +2711,9 @@ catalog:
   assigned_by: heuristic
   capability: 6.3
   capability_source: estimated
+  multilingual: 0.91
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: claude-haiku-4.5
   provider: anthropic
   tier: medium
@@ -2183,6 +2726,9 @@ catalog:
   assigned_by: heuristic
   capability: 7.4
   capability_source: measured
+  multilingual: 0.834
+  multilingual_source: measured
+  supports_structured_output: true
 - id: claude-haiku-4.5:batch
   provider: anthropic
   tier: medium
@@ -2195,6 +2741,9 @@ catalog:
   assigned_by: heuristic
   capability: 7.4
   capability_source: measured
+  multilingual: 0.834
+  multilingual_source: measured
+  supports_structured_output: true
 - id: qwen3-vl-8b-instruct
   provider: qwen
   tier: small
@@ -2207,6 +2756,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.817
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5-image
   provider: openai
   tier: large
@@ -2219,6 +2771,9 @@ catalog:
   assigned_by: heuristic
   capability: 12.2
   capability_source: estimated
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-2.5-flash-image
   provider: google
   tier: medium
@@ -2231,6 +2786,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.823
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3-vl-30b-a3b-instruct
   provider: qwen
   tier: small
@@ -2243,6 +2801,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.792
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5-pro
   provider: openai
   tier: large
@@ -2255,6 +2816,9 @@ catalog:
   assigned_by: heuristic
   capability: 13.2
   capability_source: estimated
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-5-pro:batch
   provider: openai
   tier: large
@@ -2267,6 +2831,9 @@ catalog:
   assigned_by: heuristic
   capability: 13.2
   capability_source: estimated
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: claude-sonnet-4.5
   provider: anthropic
   tier: large
@@ -2279,6 +2846,9 @@ catalog:
   assigned_by: heuristic
   capability: 5.2
   capability_source: estimated
+  multilingual: 0.893
+  multilingual_source: measured
+  supports_structured_output: true
 - id: claude-sonnet-4.5:batch
   provider: anthropic
   tier: large
@@ -2291,6 +2861,9 @@ catalog:
   assigned_by: heuristic
   capability: 5.2
   capability_source: estimated
+  multilingual: 0.893
+  multilingual_source: measured
+  supports_structured_output: true
 - id: deepseek-v3.2-exp
   provider: deepseek
   tier: medium
@@ -2303,6 +2876,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.867
+  multilingual_source: measured
+  supports_structured_output: true
 - id: qwen3-vl-235b-a22b-instruct
   provider: qwen
   tier: small
@@ -2315,6 +2891,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.803
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: deepseek-v3.1-terminus
   provider: deepseek
   tier: medium
@@ -2327,6 +2906,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.827
+  multilingual_source: measured
+  supports_structured_output: true
 - id: qwen3-coder-flash
   provider: qwen
   tier: small
@@ -2339,6 +2921,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.798
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: qwen3-next-80b-a3b-instruct
   provider: qwen
   tier: small
@@ -2351,6 +2936,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.767
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: deepseek-chat-v3.1
   provider: deepseek
   tier: small
@@ -2363,6 +2951,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.8
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: mistral-medium-3.1
   provider: mistralai
   tier: medium
@@ -2375,6 +2966,8 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.351
+  multilingual_source: estimated
 - id: gpt-5
   provider: openai
   tier: medium
@@ -2387,6 +2980,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.907
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gpt-5:batch
   provider: openai
   tier: medium
@@ -2399,6 +2995,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.907
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gpt-5-mini
   provider: openai
   tier: small
@@ -2411,6 +3010,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.874
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gpt-5-mini:batch
   provider: openai
   tier: small
@@ -2423,6 +3025,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.874
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gpt-5-nano
   provider: openai
   tier: small
@@ -2435,6 +3040,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.812
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gpt-5-nano:batch
   provider: openai
   tier: small
@@ -2447,6 +3055,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.812
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gpt-oss-120b
   provider: openai
   tier: small
@@ -2459,6 +3070,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: measured
+  multilingual: 0.828
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gpt-oss-120b:batch
   provider: openai
   tier: small
@@ -2471,6 +3085,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: measured
+  multilingual: 0.828
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gpt-oss-20b
   provider: openai
   tier: small
@@ -2483,6 +3100,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.752
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gpt-oss-20b:batch
   provider: openai
   tier: small
@@ -2495,6 +3115,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.752
+  multilingual_source: measured
+  supports_structured_output: true
 - id: claude-opus-4.1
   provider: anthropic
   tier: large
@@ -2507,6 +3130,9 @@ catalog:
   assigned_by: heuristic
   capability: 6.4
   capability_source: estimated
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: claude-opus-4.1:batch
   provider: anthropic
   tier: large
@@ -2519,6 +3145,9 @@ catalog:
   assigned_by: heuristic
   capability: 6.4
   capability_source: estimated
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: codestral-2508
   provider: mistralai
   tier: medium
@@ -2531,6 +3160,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.801
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3-coder-30b-a3b-instruct
   provider: qwen
   tier: small
@@ -2543,6 +3175,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.738
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3-30b-a3b-instruct-2507
   provider: qwen
   tier: small
@@ -2555,6 +3190,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.72
+  multilingual_source: measured
+  supports_structured_output: true
 - id: qwen3-235b-a22b-thinking-2507
   provider: qwen
   tier: medium
@@ -2567,6 +3205,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.853
+  multilingual_source: measured
+  supports_structured_output: false
 - id: qwen3-coder
   provider: qwen
   tier: medium
@@ -2579,6 +3220,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.798
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-2.5-flash-lite
   provider: google
   tier: small
@@ -2591,6 +3235,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.838
+  multilingual_source: measured
+  supports_structured_output: true
 - id: qwen3-235b-a22b-2507
   provider: qwen
   tier: small
@@ -2603,6 +3250,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.765
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: mistral-small-3.2-24b-instruct
   provider: mistralai
   tier: small
@@ -2615,6 +3265,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.728
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-2.5-flash
   provider: google
   tier: medium
@@ -2627,6 +3280,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.888
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gemini-2.5-pro
   provider: google
   tier: medium
@@ -2639,6 +3295,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.903
+  multilingual_source: measured
+  supports_structured_output: true
 - id: o3-pro
   provider: openai
   tier: large
@@ -2651,6 +3310,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-2.5-pro-preview
   provider: google
   tier: medium
@@ -2663,6 +3325,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.845
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: deepseek-r1-0528
   provider: deepseek
   tier: medium
@@ -2675,6 +3340,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.86
+  multilingual_source: measured
+  supports_structured_output: true
 - id: mistral-medium-3
   provider: mistralai
   tier: medium
@@ -2687,6 +3355,8 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.351
+  multilingual_source: estimated
 - id: llama-guard-4-12b
   provider: meta-llama
   tier: small
@@ -2699,6 +3369,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.749
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: qwen3-30b-a3b
   provider: qwen
   tier: small
@@ -2711,6 +3384,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.731
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3-14b
   provider: qwen
   tier: small
@@ -2723,6 +3399,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.731
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen3-32b
   provider: qwen
   tier: small
@@ -2735,6 +3414,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.714
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: o3
   provider: openai
   tier: large
@@ -2747,6 +3429,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.85
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: o3:batch
   provider: openai
   tier: medium
@@ -2759,6 +3444,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.85
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: o4-mini:batch
   provider: openai
   tier: medium
@@ -2771,6 +3459,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.824
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-4.1
   provider: openai
   tier: large
@@ -2783,6 +3474,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.849
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-4.1:batch
   provider: openai
   tier: medium
@@ -2795,6 +3489,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.849
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-4.1-mini
   provider: openai
   tier: medium
@@ -2807,6 +3504,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.779
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-4.1-mini:batch
   provider: openai
   tier: small
@@ -2819,6 +3519,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.779
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-4.1-nano
   provider: openai
   tier: small
@@ -2831,6 +3534,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.719
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-4.1-nano:batch
   provider: openai
   tier: small
@@ -2843,6 +3549,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.719
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: llama-4-maverick
   provider: meta-llama
   tier: medium
@@ -2855,6 +3564,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.825
+  multilingual_source: measured
+  supports_structured_output: true
 - id: llama-4-scout
   provider: meta-llama
   tier: small
@@ -2867,6 +3579,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.741
+  multilingual_source: measured
+  supports_structured_output: true
 - id: deepseek-chat-v3-0324
   provider: deepseek
   tier: small
@@ -2879,6 +3594,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.752
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: mistral-small-3.1-24b-instruct
   provider: mistralai
   tier: medium
@@ -2891,6 +3609,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.765
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemma-3-4b-it
   provider: google
   tier: small
@@ -2903,6 +3624,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.544
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gemma-3-12b-it
   provider: google
   tier: small
@@ -2915,6 +3639,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.709
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gemma-3-27b-it
   provider: google
   tier: small
@@ -2927,6 +3654,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.764
+  multilingual_source: measured
+  supports_structured_output: true
 - id: mistral-saba
   provider: mistralai
   tier: small
@@ -2939,6 +3669,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.731
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen2.5-vl-72b-instruct
   provider: qwen
   tier: medium
@@ -2951,6 +3684,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.786
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen-plus
   provider: qwen
   tier: medium
@@ -2963,6 +3699,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.737
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: o3-mini:batch
   provider: openai
   tier: medium
@@ -2975,6 +3714,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.8
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: mistral-small-24b-instruct-2501
   provider: mistralai
   tier: small
@@ -2987,6 +3729,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.666
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: deepseek-chat
   provider: deepseek
   tier: medium
@@ -2999,6 +3744,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.725
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: llama-3.3-70b-instruct
   provider: meta-llama
   tier: medium
@@ -3011,6 +3759,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.764
+  multilingual_source: measured
+  supports_structured_output: true
 - id: gpt-4o-2024-11-20
   provider: openai
   tier: large
@@ -3023,6 +3774,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.813
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: mistral-large-2407
   provider: mistralai
   tier: large
@@ -3035,6 +3789,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.802
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen-2.5-coder-32b-instruct
   provider: qwen
   tier: medium
@@ -3047,6 +3804,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.752
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: llama-3.2-1b-instruct
   provider: meta-llama
   tier: small
@@ -3059,6 +3819,8 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.351
+  multilingual_source: estimated
 - id: llama-3.2-3b-instruct
   provider: meta-llama
   tier: small
@@ -3071,6 +3833,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.625
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: qwen-2.5-72b-instruct
   provider: qwen
   tier: medium
@@ -3083,6 +3848,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.708
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-4o-2024-08-06
   provider: openai
   tier: large
@@ -3095,6 +3863,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.779
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: llama-3.1-70b-instruct
   provider: meta-llama
   tier: medium
@@ -3107,6 +3878,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.72
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: llama-3.1-8b-instruct
   provider: meta-llama
   tier: small
@@ -3119,6 +3893,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.351
+  multilingual_source: measured
+  supports_structured_output: true
 - id: mistral-nemo
   provider: mistralai
   tier: small
@@ -3131,6 +3908,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.58
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-4o-mini
   provider: openai
   tier: small
@@ -3143,6 +3923,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.65
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-4o-mini-2024-07-18
   provider: openai
   tier: small
@@ -3155,6 +3938,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.65
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-4o-mini:batch
   provider: openai
   tier: small
@@ -3167,6 +3953,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.65
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemma-2-27b-it
   provider: google
   tier: medium
@@ -3179,6 +3968,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.712
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-4o
   provider: openai
   tier: large
@@ -3191,6 +3983,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.752
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-4o-2024-05-13
   provider: openai
   tier: large
@@ -3203,6 +3998,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.782
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-4o:batch
   provider: openai
   tier: medium
@@ -3215,6 +4013,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.752
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: mixtral-8x22b-instruct
   provider: mistralai
   tier: large
@@ -3227,6 +4028,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.734
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-4-turbo:batch
   provider: openai
   tier: large
@@ -3239,6 +4043,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.801
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: mistral-large
   provider: mistralai
   tier: large
@@ -3251,6 +4058,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.717
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-3.5-turbo-0613
   provider: openai
   tier: medium
@@ -3263,6 +4073,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.677
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-3.5-turbo-16k
   provider: openai
   tier: large
@@ -3275,6 +4088,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.677
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gpt-4
   provider: openai
   tier: large
@@ -3287,6 +4103,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.748
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: pixtral-large-2502
   provider: mistralai
   tier: large
@@ -3299,6 +4118,9 @@ catalog:
   assigned_by: heuristic
   capability: 49.0
   capability_source: estimated
+  multilingual: 0.901
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: gemini-4-neon
   provider: google
   tier: large
@@ -3311,6 +4133,9 @@ catalog:
   assigned_by: heuristic
   capability: 61.4
   capability_source: measured
+  multilingual: 0.881
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: gemini-4-neon:batch
   provider: google
   tier: large
@@ -3323,6 +4148,9 @@ catalog:
   assigned_by: heuristic
   capability: 61.4
   capability_source: measured
+  multilingual: 0.881
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: muse-ember
   provider: meta
   tier: small
@@ -3335,6 +4163,9 @@ catalog:
   assigned_by: heuristic
   capability: 36.0
   capability_source: measured
+  multilingual: 0.806
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: glm-5.3-flashx-legal
   provider: z-ai
   tier: medium
@@ -3347,6 +4178,9 @@ catalog:
   assigned_by: heuristic
   capability: 39.6
   capability_source: estimated
+  multilingual: 0.85
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: kimi-k3.1-pro
   provider: moonshotai
   tier: small
@@ -3359,6 +4193,9 @@ catalog:
   assigned_by: heuristic
   capability: 46.5
   capability_source: measured
+  multilingual: 0.807
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: kimi-k3.1-pro:batch
   provider: moonshotai
   tier: medium
@@ -3371,6 +4208,9 @@ catalog:
   assigned_by: heuristic
   capability: 46.5
   capability_source: measured
+  multilingual: 0.857
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: minimax-m3.1-flash
   provider: minimax
   tier: small
@@ -3383,6 +4223,9 @@ catalog:
   assigned_by: heuristic
   capability: 29.1
   capability_source: measured
+  multilingual: 0.837
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: muse-spark-open
   provider: meta
   tier: medium
@@ -3395,6 +4238,9 @@ catalog:
   assigned_by: heuristic
   capability: 24.9
   capability_source: measured
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: nemotron-3.5-super-vl
   provider: nvidia
   tier: small
@@ -3407,6 +4253,9 @@ catalog:
   assigned_by: heuristic
   capability: 13.6
   capability_source: measured
+  multilingual: 0.882
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: nemotron-3.5-super-vl:free
   provider: nvidia
   tier: small
@@ -3419,6 +4268,9 @@ catalog:
   assigned_by: heuristic
   capability: 13.6
   capability_source: measured
+  multilingual: 0.663
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: muse-wonder
   provider: meta
   tier: large
@@ -3431,6 +4283,9 @@ catalog:
   assigned_by: heuristic
   capability: 43.6
   capability_source: measured
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: glm-5.3-prime
   provider: z-ai
   tier: large
@@ -3443,6 +4298,9 @@ catalog:
   assigned_by: heuristic
   capability: 42.0
   capability_source: estimated
+  multilingual: 0.896
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: command-a-plus
   provider: cohere
   tier: medium
@@ -3455,6 +4313,9 @@ catalog:
   assigned_by: heuristic
   capability: 6.2
   capability_source: measured
+  multilingual: 0.927
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: grok-4.7
   provider: x-ai
   tier: large
@@ -3467,6 +4328,9 @@ catalog:
   assigned_by: heuristic
   capability: 35.5
   capability_source: measured
+  multilingual: 0.922
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: grok-4.7:batch
   provider: x-ai
   tier: large
@@ -3479,6 +4343,9 @@ catalog:
   assigned_by: heuristic
   capability: 35.5
   capability_source: measured
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: glm-5.3-flashx
   provider: z-ai
   tier: medium
@@ -3491,6 +4358,9 @@ catalog:
   assigned_by: heuristic
   capability: 34.6
   capability_source: estimated
+  multilingual: 0.85
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: muse-spark-1.3-contributor
   provider: meta
   tier: small
@@ -3503,6 +4373,9 @@ catalog:
   assigned_by: heuristic
   capability: 27.1
   capability_source: estimated
+  multilingual: 0.811
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: muse-spark-1.3
   provider: meta
   tier: medium
@@ -3515,6 +4388,9 @@ catalog:
   assigned_by: heuristic
   capability: 36.6
   capability_source: measured
+  multilingual: 0.893
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: glm-5.3-flash
   provider: z-ai
   tier: small
@@ -3527,6 +4403,9 @@ catalog:
   assigned_by: heuristic
   capability: 27.8
   capability_source: measured
+  multilingual: 0.814
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: glm-5.3-flash:batch
   provider: z-ai
   tier: small
@@ -3539,6 +4418,9 @@ catalog:
   assigned_by: heuristic
   capability: 27.8
   capability_source: measured
+  multilingual: 0.773
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: muse-spark-1.2-contributor
   provider: meta
   tier: small
@@ -3551,6 +4433,9 @@ catalog:
   assigned_by: heuristic
   capability: 25.8
   capability_source: estimated
+  multilingual: 0.811
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: glm-5.3
   provider: z-ai
   tier: small
@@ -3563,6 +4448,9 @@ catalog:
   assigned_by: heuristic
   capability: 31.7
   capability_source: measured
+  multilingual: 0.777
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: glm-5.3:batch
   provider: z-ai
   tier: medium
@@ -3575,6 +4463,9 @@ catalog:
   assigned_by: heuristic
   capability: 31.7
   capability_source: measured
+  multilingual: 0.867
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: grok-4.6
   provider: x-ai
   tier: large
@@ -3587,6 +4478,9 @@ catalog:
   assigned_by: heuristic
   capability: 31.0
   capability_source: measured
+  multilingual: 0.923
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: grok-4.6:batch
   provider: x-ai
   tier: large
@@ -3599,6 +4493,9 @@ catalog:
   assigned_by: heuristic
   capability: 31.0
   capability_source: measured
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: nemotron-3.5-lightning
   provider: nvidia
   tier: small
@@ -3611,6 +4508,9 @@ catalog:
   assigned_by: heuristic
   capability: 5.5
   capability_source: measured
+  multilingual: 0.838
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: nemotron-3.5-lightning:free
   provider: nvidia
   tier: small
@@ -3623,6 +4523,9 @@ catalog:
   assigned_by: heuristic
   capability: 5.5
   capability_source: measured
+  multilingual: 0.667
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: muse-glimmer-30b
   provider: meta
   tier: medium
@@ -3635,6 +4538,9 @@ catalog:
   assigned_by: heuristic
   capability: 6.3
   capability_source: measured
+  multilingual: 0.92
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: muse-glimmer-30b:batch
   provider: meta
   tier: small
@@ -3647,6 +4553,9 @@ catalog:
   assigned_by: heuristic
   capability: 6.3
   capability_source: measured
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: muse-spark-1.2
   provider: meta
   tier: medium
@@ -3659,6 +4568,9 @@ catalog:
   assigned_by: heuristic
   capability: 35.3
   capability_source: estimated
+  multilingual: 0.887
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: kimi-k3
   provider: moonshotai
   tier: small
@@ -3671,6 +4583,9 @@ catalog:
   assigned_by: heuristic
   capability: 17.4
   capability_source: measured
+  multilingual: 0.853
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: kimi-k3:batch
   provider: moonshotai
   tier: large
@@ -3683,6 +4598,9 @@ catalog:
   assigned_by: heuristic
   capability: 17.4
   capability_source: measured
+  multilingual: 0.932
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: muse-spark-1.1
   provider: meta
   tier: medium
@@ -3695,6 +4613,9 @@ catalog:
   assigned_by: heuristic
   capability: 33.1
   capability_source: estimated
+  multilingual: 0.888
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: grok-4.5
   provider: x-ai
   tier: large
@@ -3707,6 +4628,9 @@ catalog:
   assigned_by: heuristic
   capability: 34.3
   capability_source: estimated
+  multilingual: 0.902
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: glm-5.2
   provider: z-ai
   tier: medium
@@ -3719,6 +4643,9 @@ catalog:
   assigned_by: heuristic
   capability: 26.7
   capability_source: estimated
+  multilingual: 0.867
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: glm-5.2:batch
   provider: z-ai
   tier: medium
@@ -3731,6 +4658,9 @@ catalog:
   assigned_by: heuristic
   capability: 26.8
   capability_source: estimated
+  multilingual: 0.868
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: kimi-k2.7-code
   provider: moonshotai
   tier: medium
@@ -3743,6 +4673,9 @@ catalog:
   assigned_by: heuristic
   capability: 26.1
   capability_source: estimated
+  multilingual: 0.866
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: nemotron-3-ultra-550b-a55b
   provider: nvidia
   tier: medium
@@ -3755,6 +4688,9 @@ catalog:
   assigned_by: heuristic
   capability: 11.8
   capability_source: measured
+  multilingual: 0.897
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: nemotron-3-ultra-550b-a55b:free
   provider: nvidia
   tier: small
@@ -3767,6 +4703,9 @@ catalog:
   assigned_by: heuristic
   capability: 11.8
   capability_source: measured
+  multilingual: 0.626
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: minimax-m3
   provider: minimax
   tier: medium
@@ -3779,6 +4718,9 @@ catalog:
   assigned_by: heuristic
   capability: 18.9
   capability_source: measured
+  multilingual: 0.853
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: minimax-m3:batch
   provider: minimax
   tier: small
@@ -3791,6 +4733,9 @@ catalog:
   assigned_by: heuristic
   capability: 18.9
   capability_source: measured
+  multilingual: 0.87
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: grok-4.3
   provider: x-ai
   tier: medium
@@ -3803,6 +4748,9 @@ catalog:
   assigned_by: heuristic
   capability: 24.7
   capability_source: estimated
+  multilingual: 0.888
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: grok-4.3:batch
   provider: x-ai
   tier: medium
@@ -3815,6 +4763,9 @@ catalog:
   assigned_by: heuristic
   capability: 26.8
   capability_source: estimated
+  multilingual: 0.902
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: nemotron-3-nano-omni-30b-a3b-reasoning:free
   provider: nvidia
   tier: small
@@ -3827,6 +4778,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.638
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: kimi-k2.6
   provider: moonshotai
   tier: medium
@@ -3839,6 +4793,9 @@ catalog:
   assigned_by: heuristic
   capability: 20.6
   capability_source: estimated
+  multilingual: 0.869
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: glm-5.1
   provider: z-ai
   tier: large
@@ -3851,6 +4808,9 @@ catalog:
   assigned_by: heuristic
   capability: 22.6
   capability_source: estimated
+  multilingual: 0.892
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: glm-5v-turbo
   provider: z-ai
   tier: medium
@@ -3863,6 +4823,9 @@ catalog:
   assigned_by: heuristic
   capability: 21.3
   capability_source: estimated
+  multilingual: 0.887
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: grok-4.20-multi-agent
   provider: x-ai
   tier: medium
@@ -3875,6 +4838,9 @@ catalog:
   assigned_by: heuristic
   capability: 21.4
   capability_source: estimated
+  multilingual: 0.888
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: grok-4.20
   provider: x-ai
   tier: medium
@@ -3887,6 +4853,9 @@ catalog:
   assigned_by: heuristic
   capability: 21.4
   capability_source: estimated
+  multilingual: 0.895
+  multilingual_source: measured
+  supports_structured_output: true
 - id: minimax-m2.7
   provider: minimax
   tier: medium
@@ -3899,6 +4868,9 @@ catalog:
   assigned_by: heuristic
   capability: 16.7
   capability_source: estimated
+  multilingual: 0.866
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: glm-5-turbo
   provider: z-ai
   tier: medium
@@ -3911,6 +4883,9 @@ catalog:
   assigned_by: heuristic
   capability: 19.4
   capability_source: estimated
+  multilingual: 0.887
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: nemotron-3-super-120b-a12b
   provider: nvidia
   tier: small
@@ -3923,6 +4898,9 @@ catalog:
   assigned_by: heuristic
   capability: 6.7
   capability_source: estimated
+  multilingual: 0.803
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: minimax-m2.5
   provider: minimax
   tier: medium
@@ -3935,6 +4913,9 @@ catalog:
   assigned_by: heuristic
   capability: 9.4
   capability_source: estimated
+  multilingual: 0.842
+  multilingual_source: measured
+  supports_structured_output: true
 - id: glm-5
   provider: z-ai
   tier: medium
@@ -3947,6 +4928,9 @@ catalog:
   assigned_by: heuristic
   capability: 15.1
   capability_source: estimated
+  multilingual: 0.819
+  multilingual_source: measured
+  supports_structured_output: true
 - id: kimi-k2.5
   provider: moonshotai
   tier: medium
@@ -3959,6 +4943,9 @@ catalog:
   assigned_by: heuristic
   capability: 10.3
   capability_source: estimated
+  multilingual: 0.84
+  multilingual_source: measured
+  supports_structured_output: true
 - id: glm-4.7-flash
   provider: z-ai
   tier: small
@@ -3971,6 +4958,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.787
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: glm-4.7
   provider: z-ai
   tier: medium
@@ -3983,6 +4973,9 @@ catalog:
   assigned_by: heuristic
   capability: 7.2
   capability_source: estimated
+  multilingual: 0.799
+  multilingual_source: measured
+  supports_structured_output: true
 - id: nemotron-3-nano-30b-a3b
   provider: nvidia
   tier: small
@@ -3995,6 +4988,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.612
+  multilingual_source: measured
+  supports_structured_output: true
 - id: glm-4.6v
   provider: z-ai
   tier: medium
@@ -4007,6 +5003,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.806
+  multilingual_source: measured
+  supports_structured_output: false
 - id: nova-2-lite-v1
   provider: amazon
   tier: medium
@@ -4019,6 +5018,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.841
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: nova-premier-v1
   provider: amazon
   tier: large
@@ -4031,6 +5033,9 @@ catalog:
   assigned_by: heuristic
   capability: 8.0
   capability_source: estimated
+  multilingual: 0.796
+  multilingual_source: measured
+  supports_structured_output: false
 - id: sonar-pro-search
   provider: perplexity
   tier: large
@@ -4043,6 +5048,9 @@ catalog:
   assigned_by: heuristic
   capability: 8.7
   capability_source: estimated
+  multilingual: 0.916
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: glm-4.6
   provider: z-ai
   tier: medium
@@ -4055,6 +5063,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.856
+  multilingual_source: measured
+  supports_structured_output: true
 - id: glm-4.5v
   provider: z-ai
   tier: medium
@@ -4067,6 +5078,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.835
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: glm-4.5
   provider: z-ai
   tier: medium
@@ -4079,6 +5093,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.829
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: glm-4.5-air
   provider: z-ai
   tier: small
@@ -4091,6 +5108,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.763
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: command-a
   provider: cohere
   tier: large
@@ -4103,6 +5123,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.849
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: sonar-reasoning-pro
   provider: perplexity
   tier: large
@@ -4115,6 +5138,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.837
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: sonar-pro
   provider: perplexity
   tier: large
@@ -4127,6 +5153,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.855
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: sonar-deep-research
   provider: perplexity
   tier: large
@@ -4139,6 +5168,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.837
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: sonar
   provider: perplexity
   tier: medium
@@ -4151,6 +5183,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.795
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: phi-4
   provider: microsoft
   tier: small
@@ -4163,6 +5198,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.673
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: command-r7b-12-2024
   provider: cohere
   tier: small
@@ -4175,6 +5213,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.638
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: nova-lite-v1
   provider: amazon
   tier: small
@@ -4187,6 +5228,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.656
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: nova-micro-v1
   provider: amazon
   tier: small
@@ -4199,6 +5243,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.633
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: nova-pro-v1
   provider: amazon
   tier: medium
@@ -4211,6 +5258,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.768
+  multilingual_source: estimated
+  supports_structured_output: false
 - id: command-r-08-2024
   provider: cohere
   tier: small
@@ -4223,6 +5273,9 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.664
+  multilingual_source: estimated
+  supports_structured_output: true
 - id: command-r-plus-08-2024
   provider: cohere
   tier: large
@@ -4235,3 +5288,6 @@ catalog:
   assigned_by: heuristic
   capability: 3.8
   capability_source: estimated
+  multilingual: 0.786
+  multilingual_source: estimated
+  supports_structured_output: true
