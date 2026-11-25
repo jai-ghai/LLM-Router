@@ -4,20 +4,11 @@
     "ui": {
       "root": "ui/",
       "framework": "vite"
-    },
-    "api": {
-      "root": "./",
-      "framework": "fastapi",
-      "functions": {
-        "src/asgi.py": {
-          "excludeFiles": "{ui/**,tests/**,experiments/**,docs/**,scripts/**}"
-        }
-      }
     }
   },
   "rewrites": [
-    { "source": "/v1/(.*)", "destination": { "service": "api" } },
-    { "source": "/healthz", "destination": { "service": "api" } },
+    { "source": "/v1/:path*", "destination": "https://llm-router-vzux.onrender.com/v1/:path*" },
+    { "source": "/healthz", "destination": "https://llm-router-vzux.onrender.com/healthz" },
     { "source": "/(.*)", "destination": { "service": "ui" } }
   ]
 }
