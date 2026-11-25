@@ -43,6 +43,8 @@ export const UNREVIEWED_TIER = 'UNREVIEWED'
 
 export interface HistoryEntry {
   timestamp: string
+  /** Absent on entries recorded before auth existed. */
+  requested_by?: string
   metadata: Record<string, string>
   text: string
   has_image: boolean

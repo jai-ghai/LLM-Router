@@ -202,12 +202,15 @@ class Store:
         with self.history_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
-    def history(self, limit: int = 50) -> list[dict[str, object]]:
-        """Newest first, capped at `limit`."""
+    def history(self, limit: int = 50, requested_by: str | None = None) -> list[dict[str, object]]:
+        """Newest first, capped at `limit`. `requested_by` keeps only that user's entries and is
+        applied before the cap, so a busy colleague cannot push someone's rows out of the page."""
         if self.history_path.stat().st_size == 0:
             return []
         lines = self.history_path.read_text(encoding="utf-8").splitlines()
         entries = [json.loads(line) for line in lines if line.strip()]
+        if requested_by is not None:
+            entries = [e for e in entries if e.get("requested_by") == requested_by]
         entries.reverse()
         return entries[:limit]
 

@@ -309,6 +309,33 @@ def test_resolve_calls_are_recorded_in_history(client: TestClient) -> None:
     assert "timestamp" in entry
 
 
+def test_history_is_private_to_members_and_filterable_by_admins(tmp_path: Path) -> None:
+    store = Store(tmp_path / "data")
+    users = UsersStore(path=store.root / "users.jsonl")
+    for name, role in (("boss", "admin"), ("asha", "member"), ("ravi", "member")):
+        users.add(name, hash_password(f"{name}-pw"), role)  # type: ignore[arg-type]
+    app = create_app(TIERS, store, users, SessionConfig(secret="s"))
+
+    def login(name: str) -> TestClient:
+        c = TestClient(app)
+        assert c.post("/v1/auth/login", json={"username": name, "password": f"{name}-pw"}).status_code == 200
+        return c
+
+    clients = {name: login(name) for name in ("boss", "asha", "ravi")}
+    for name, c in clients.items():
+        c.post("/v1/resolve", data={"metadata": json.dumps({"task": name}), "text": f"from {name}"})
+
+    def owners(c: TestClient, query: str = "") -> list[str]:
+        return [e["requested_by"] for e in c.get(f"/v1/history{query}").json()["history"]]
+
+    assert owners(clients["asha"]) == ["asha"]
+    assert owners(clients["ravi"]) == ["ravi"]
+    assert owners(clients["asha"], "?requested_by=ravi") == ["asha"]
+    assert sorted(owners(clients["boss"])) == ["asha", "boss", "ravi"]
+    assert owners(clients["boss"], "?requested_by=ravi") == ["ravi"]
+    assert TestClient(app).get("/v1/history").status_code == 401
+
+
 def test_quality_rating_round_trip_and_validation(client: TestClient) -> None:
     assert client.get("/v1/quality").json() == {"field": None, "ratings": []}
     # P0: client-supplied `judged_by` is ignored; the server records the session user

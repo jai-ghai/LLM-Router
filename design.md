@@ -105,7 +105,7 @@ Auth levels: **public**; **read** = signed in, or open when `GRADIST_ALLOW_READ_
 | `POST /v1/train` | user | Refit the classifier (OCR applied when enabled) |
 | `GET /v1/status` | read | Trained state, label count, which heads are loaded, deployment facts |
 | `POST /v1/resolve` | user | Make a decision (see above) |
-| `GET /v1/history` | read | Recent decisions |
+| `GET /v1/history` | user | Recent decisions — members get only their own; admins get everyone's, or one user's with `?requested_by=` |
 
 Interactive schema: <http://localhost:8000/docs>.
 

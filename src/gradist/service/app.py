@@ -974,7 +974,12 @@ def create_app(
         return decision
 
     @app.get("/v1/history")
-    def get_history(limit: int = 50, _: User | None = Depends(_require_read)) -> dict[str, Any]:
-        return {"history": store.history(limit)}
+    def get_history(
+        limit: int = 50, requested_by: str | None = None, viewer: User = Depends(require_user)
+    ) -> dict[str, Any]:
+        # Requests are private to whoever made them; only admins may see (or filter) everyone's.
+        # This deliberately ignores GRADIST_ALLOW_READ_WITHOUT_AUTH: request text is user data.
+        owner = (requested_by or None) if viewer.role == "admin" else viewer.username
+        return {"history": store.history(limit, requested_by=owner)}
 
     return app

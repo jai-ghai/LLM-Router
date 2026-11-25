@@ -123,8 +123,12 @@ export const api = {
     request<{ pools: Record<string, string[]> }>(`/v1/task-pools/${encodeURIComponent(task)}`, {
       method: 'DELETE',
     }),
-  history: (limit = 50, signal?: AbortSignal) =>
-    request<{ history: HistoryEntry[] }>(`/v1/history?limit=${limit}`, { signal }),
+  /** Members always get only their own requests; `requestedBy` narrows an admin's view. */
+  history: (limit = 50, signal?: AbortSignal, requestedBy?: string) =>
+    request<{ history: HistoryEntry[] }>(
+      `/v1/history?limit=${limit}${requestedBy ? `&requested_by=${encodeURIComponent(requestedBy)}` : ''}`,
+      { signal },
+    ),
   quality: (signal?: AbortSignal) => request<QualityResponse>('/v1/quality', { signal }),
   // Returns the configured quality-bucket field name, or null.
   qualityField: (signal?: AbortSignal) =>

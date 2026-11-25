@@ -52,12 +52,15 @@ export function History({ refreshKey }: { refreshKey: number }) {
   const [tierFilter, setTierFilter] = useState('')
   const [pathFilter, setPathFilter] = useState('')
   const [copied, setCopied] = useState(false)
+  const isAdmin = user?.role === 'admin'
+  const [ownerFilter, setOwnerFilter] = useState('')
+  const [operators, setOperators] = useState<string[]>([])
 
   async function load() {
     try {
-      const rows = (await api.history(100)).history
+      const rows = (await api.history(100, undefined, ownerFilter || undefined)).history
       setEntries(rows)
-      setSelected((prev) => prev ?? rows[0] ?? null)
+      setSelected((prev) => rows.find((r) => prev && r.timestamp === prev.timestamp) ?? rows[0] ?? null)
     } catch (err) {
       setError(describeError(err))
       setEntries([])
@@ -67,7 +70,18 @@ export function History({ refreshKey }: { refreshKey: number }) {
   useEffect(() => {
     void load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey])
+  }, [refreshKey, ownerFilter])
+
+  useEffect(() => {
+    if (!isAdmin) return
+    void (async () => {
+      try {
+        setOperators((await api.listUsers()).users.map((u) => u.username).sort())
+      } catch {
+        // Without the user list the table still shows who made each request.
+      }
+    })()
+  }, [isAdmin])
 
   useEffect(() => {
     void (async () => {
@@ -128,7 +142,11 @@ export function History({ refreshKey }: { refreshKey: number }) {
     <>
       <PageHead
         title="Request logs"
-        lede="Inspect routing decisions, confidence, and resolution reasons."
+        lede={
+          isAdmin
+            ? 'Inspect routing decisions, confidence, and resolution reasons — for every operator.'
+            : 'Your routing decisions, confidence, and resolution reasons. Other operators cannot see these.'
+        }
         actions={
           <Button startIcon={<ArrowClockwise size={14} />} onClick={() => void load()}>
             Refresh
@@ -177,6 +195,21 @@ export function History({ refreshKey }: { refreshKey: number }) {
             <MenuItem value="Classifier">Classifier</MenuItem>
             <MenuItem value="Fallback">Fallback</MenuItem>
           </TextField>
+          {isAdmin && (
+            <TextField
+              select
+              size="small"
+              value={ownerFilter}
+              onChange={(e) => setOwnerFilter(e.target.value)}
+              sx={{ minWidth: 160 }}
+              label="Requested by"
+            >
+              <MenuItem value="">Everyone</MenuItem>
+              {operators.map((name) => (
+                <MenuItem key={name} value={name}>{name}</MenuItem>
+              ))}
+            </TextField>
+          )}
         </Stack>
 
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.4fr 1fr' }, gap: 2, alignItems: 'start' }}>
@@ -199,6 +232,7 @@ export function History({ refreshKey }: { refreshKey: number }) {
                 <TableHead>
                   <TableRow>
                     <TableCell>Request / time</TableCell>
+                    {isAdmin && <TableCell>Requested by</TableCell>}
                     <TableCell>Resolution</TableCell>
                     <TableCell>Tier</TableCell>
                     <TableCell align="right">Confidence</TableCell>
@@ -222,6 +256,11 @@ export function History({ refreshKey }: { refreshKey: number }) {
                             {entry.has_image && <ImageIcon size={12} color={PALETTE.textMuted} />}
                           </Typography>
                         </TableCell>
+                        {isAdmin && (
+                          <TableCell>
+                            <Typography sx={{ fontSize: 12.5, color: PALETTE.textSecondary }}>{entry.requested_by ?? '—'}</Typography>
+                          </TableCell>
+                        )}
                         <TableCell>
                           <Typography sx={{ fontSize: 12.5, color: PALETTE.textMuted }}>{resolution}</Typography>
                         </TableCell>
@@ -243,7 +282,11 @@ export function History({ refreshKey }: { refreshKey: number }) {
 
           <Panel
             title="Decision details"
-            note={selected ? new Date(selected.timestamp).toLocaleString() : undefined}
+            note={
+              selected
+                ? `${new Date(selected.timestamp).toLocaleString()}${isAdmin && selected.requested_by ? ` · by ${selected.requested_by}` : ''}`
+                : undefined
+            }
             actions={selected && (
               <StateTag
                 label={selected.rule_outcome !== 'no matching rule' ? 'Rule' : selected.fallback_outcome === 'not needed' ? 'Classifier' : 'Fallback'}

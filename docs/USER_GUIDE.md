@@ -120,9 +120,9 @@ mRouter holds no provider API keys. The full API is in [design.md](../design.md#
 
 | Where | Screen | Purpose |
 |---|---|---|
-| Sidebar | Overview | Volume, tier mix and how decisions were made |
+| Sidebar | Overview | Volume, tier mix and how decisions were made (your own requests; admins see all) |
 | Sidebar | Routing rules | Metadata → tier overrides; always win |
-| Sidebar | Request logs | Every decision for audit; rate model output |
+| Sidebar | Request logs | Your decisions for audit; rate model output. Admins see every operator's, with a "Requested by" filter |
 | Sidebar | Playground | Try a resolve with metadata, text, image or video |
 | User menu | Documentation | This guide |
 | User menu | Settings | Live deployment facts (no secrets) |
