@@ -296,6 +296,16 @@ def test_resolve_honours_selected_models(catalog_client: TestClient) -> None:
     assert decision["model_name"] == "pricey-small"
 
 
+def test_every_decision_reports_the_request_skill_needs(client: TestClient) -> None:
+    client.put("/v1/rules", json={"rules": [{"when": {"task": "news"}, "tier": "small"}]})
+    body = client.post(
+        "/v1/resolve", data={"metadata": json.dumps({"task": "news", "modality": "video"}), "text": "a story"}
+    ).json()
+    skill_needs = body["signals"]["skill_needs"]
+    assert skill_needs["needs"]["video"] == 1.0
+    assert "modality=video (1.0)" in skill_needs["reasons"]["video"]
+
+
 def test_resolve_calls_are_recorded_in_history(client: TestClient) -> None:
     assert client.get("/v1/history").json() == {"history": []}
     client.put("/v1/rules", json={"rules": [{"when": {"task": "news"}, "tier": "small"}]})

@@ -13,6 +13,7 @@ The "what": modules, data shapes, storage and API. The "how and why" is in
 | `quality_head.py` | `TierQualityHead`: per-tier score regression; cheapest tier within the `optimize_for` margin |
 | `qc_risk.py` | `QcRiskHead`: P(needs QC fix) for sub-story-shaped requests; escalation threshold at the riskiest ~20% |
 | `ocr.py` | `ScreenReader` (EasyOCR, lazy, sha1-keyed cache, one read per frame under concurrency), `ScreenLine`, `join_lines`, `merge_frame_lines` |
+| `skills.py` | `request_needs()` → `SkillNeeds`: 0–1 need per skill (video, audio, hindi, reasoning, long_input, writing, fast) with reasons, from the task profile in `config/task_skills.yaml`, modality, Devanagari share, QC risk and length; `load_task_skills` |
 | `rules.py` | `Rule` / `RuleSet`: metadata match → tier, most specific wins, optional `optimize_for` |
 | `tiers.py` | `TierTable` from `tiers*.yaml`: tier order, per-provider fallback model, `low_confidence_fallback` |
 | `catalog.py` | `ModelCatalog`: filter by tier / scope / provider / modality / quality, `pick_ranked` by mode; tier labelling helpers |
@@ -52,7 +53,7 @@ The "what": modules, data shapes, storage and API. The "how and why" is in
 | `rule_outcome`, `classifier_outcome`, `fallback_outcome` | What each ladder step did |
 | `tier_scores`, `tier_scores_kind` | Evidence for the tier (classifier probabilities or quality-head scores) |
 | `candidates`, `pool_size` | Top 8 of the tier after ranking, and the pool size |
-| `signals` | What was received: text size, metadata used/ignored, image bytes, modality, providers, `screen_text` {engine, lines, frames_read}, `classifier_inputs` {metadata buckets, embedders, `image_used`, `screen_text_used`, odds `without_image` / `without_text` / `without_screen_text` / `without_metadata`}, QC-risk score |
+| `signals` | What was received: text size, metadata used/ignored, image bytes, modality, providers, `screen_text` {engine, lines, frames_read}, `classifier_inputs` {metadata buckets, embedders, `image_used`, `screen_text_used`, odds `without_image` / `without_text` / `without_screen_text` / `without_metadata`}, QC-risk score, `skill_needs` {needs, reasons, task_profile} (shown only; not yet used to pick) |
 
 ## Configuration
 
@@ -68,6 +69,7 @@ The "what": modules, data shapes, storage and API. The "how and why" is in
 | `GRADIST_ALLOW_READ_WITHOUT_AUTH` | no | `1` opens GET endpoints for monitoring; writes stay gated |
 | `GRADIST_OCR` | no | `1` reads on-screen text from frames (needs the `ocr` extra) |
 | `GRADIST_OCR_LANGS` | no | EasyOCR languages, default `hi,en` |
+| `GRADIST_TASK_SKILLS` | no | Skill needs per task, default `config/task_skills.yaml` (skipped if missing) |
 
 ## Storage (`GRADIST_DATA`, gitignored)
 

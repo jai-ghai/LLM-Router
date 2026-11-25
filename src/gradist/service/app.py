@@ -95,6 +95,7 @@ from gradist.service.auth import (
 )
 from gradist.service.store import Store, guess_image_ext
 from gradist.service.users_store import User, UserError, UsersStore
+from gradist.skills import load_task_skills, request_needs
 from gradist.tiers import UNREVIEWED_TIER, TierTable
 
 
@@ -264,6 +265,8 @@ class AppState:
         self._image_lock = threading.Lock()
         self.ocr_enabled = os.environ.get("GRADIST_OCR") == "1"
         self._screen_reader: ScreenReader | None = None
+        skills_path = Path(os.environ.get("GRADIST_TASK_SKILLS") or "config/task_skills.yaml")
+        self.task_skills = load_task_skills(skills_path) if skills_path.exists() else {}
 
     def image_embedder(self) -> Dinov2Embedder:
         """Loaded once, on first use, so server startup does not pay for it when no example has
@@ -990,6 +993,19 @@ def create_app(
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         if image_bytes or frame_bytes:
             decision.signals["screen_text"] = screen
+        risk = (
+            state.qc_risk.risk(clean_metadata, text)
+            if state.qc_risk is not None and state.qc_risk.applies_to(clean_metadata, text)
+            else None
+        )
+        decision.signals["skill_needs"] = request_needs(
+            clean_metadata,
+            text,
+            screen_text=screen_text,
+            has_image=image_bytes is not None,
+            qc_risk=risk,
+            task_skills=state.task_skills,
+        ).as_signal()
         store.append_history(
             {
                 "timestamp": datetime.now(UTC).isoformat(),

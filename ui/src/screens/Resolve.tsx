@@ -31,7 +31,7 @@ import { ImagePicker, type MediaInfo } from '../components/ImagePicker'
 import { MetadataFieldsEditor } from '../components/MetadataFieldsEditor'
 import { Mono, PageHead, Panel, StateTag } from '../components/Primitives'
 import { PALETTE, TONE_SOFT, tierTone } from '../theme'
-import type { CatalogEntry, ClassifierInputs, Decision, OptimizeFor, TiersResponse } from '../types'
+import type { CatalogEntry, ClassifierInputs, Decision, OptimizeFor, Skill, SkillNeeds, TiersResponse } from '../types'
 
 /**
  * Playground — ladder (rules→classifier→fallback) or catalog task-pool pick.
@@ -628,6 +628,8 @@ export function Resolve({
 
               <TierEvidence decision={decision} />
 
+              {decision.signals?.skill_needs && <SkillNeedsPanel needs={decision.signals.skill_needs} />}
+
               {decision.candidates && decision.candidates.length > 0 && (
                 <Shortlist decision={decision} />
               )}
@@ -827,6 +829,46 @@ function TierEvidence({ decision }: { decision: Decision }) {
           Raised to a larger tier by QC-risk escalation: this sub-story looks like the ones QC usually has to fix.
         </Alert>
       )}
+    </Box>
+  )
+}
+
+const SKILL_LABELS: Record<Skill, string> = {
+  video: 'Video watching',
+  audio: 'Hearing speech',
+  hindi: 'Hindi / Indian languages',
+  reasoning: 'Reasoning and rules',
+  long_input: 'Long input',
+  writing: 'Writing',
+  fast: 'Quick and cheap',
+}
+
+/** How much the request needs each skill, and why. Not used to pick the model yet. */
+function SkillNeedsPanel({ needs }: { needs: SkillNeeds }) {
+  const skills = (Object.keys(SKILL_LABELS) as Skill[]).sort((a, b) => (needs.needs[b] ?? 0) - (needs.needs[a] ?? 0))
+  return (
+    <Box>
+      <SectionLabel>What this request needs</SectionLabel>
+      <Stack spacing={0.75}>
+        {skills.map((skill) => {
+          const value = needs.needs[skill] ?? 0
+          const why = needs.reasons[skill] ?? []
+          return (
+            <Stack key={skill} direction="row" spacing={1.25} sx={{ alignItems: 'center', opacity: value > 0 ? 1 : 0.5 }}>
+              <Typography sx={{ width: 170, fontSize: 12.5, color: PALETTE.textSecondary, flexShrink: 0 }}>{SKILL_LABELS[skill]}</Typography>
+              <Box sx={{ width: 160, height: 10, borderRadius: 5, bgcolor: PALETTE.hairline, flexShrink: 0 }}>
+                <Box sx={{ width: `${Math.round(value * 100)}%`, height: '100%', borderRadius: 5, bgcolor: PALETTE.accent }} />
+              </Box>
+              <Mono size={12}>{value.toFixed(1)}</Mono>
+              <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted, minWidth: 0 }}>{why.join(' · ')}</Typography>
+            </Stack>
+          )
+        })}
+      </Stack>
+      <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted, mt: 0.75 }}>
+        {needs.task_profile ? `Task profile “${needs.task_profile}” from config/task_skills.yaml, plus signals in the request. ` : 'From signals in the request (no task profile matched). '}
+        The model is not chosen by these yet.
+      </Typography>
     </Box>
   )
 }

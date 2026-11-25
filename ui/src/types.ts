@@ -170,7 +170,16 @@ export interface Decision {
     metadata_ignored?: string[]
     classifier_inputs?: ClassifierInputs
     screen_text?: ScreenText
+    skill_needs?: SkillNeeds
   }
+}
+
+export type Skill = 'video' | 'audio' | 'hindi' | 'reasoning' | 'long_input' | 'writing' | 'fast'
+
+export interface SkillNeeds {
+  needs: Record<Skill, number>
+  reasons: Partial<Record<Skill, string[]>>
+  task_profile: string | null
 }
 
 export interface ScreenText {

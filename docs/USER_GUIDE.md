@@ -59,6 +59,12 @@ be the whole catalog, a hand-picked list (`selected_models`) or a named task poo
   channel's name, network, type and genre (from `GET /v1/channels`) in the Playground, without
   overwriting anything you typed.
 
+Every decision also says **what the request needs**: `signals.skill_needs` scores seven skills
+from 0 to 1 (video watching, hearing speech, Hindi, reasoning, long input, writing, quick and
+cheap), each with its reason, e.g. `modality=video (1.0)`, `Devanagari in screen text (1.0)`,
+`task profile v3_single (0.9)`. Task profiles live in `config/task_skills.yaml`. The Playground
+shows them under **What this request needs**. They do not choose the model yet.
+
 The decision returns `tier_scores`, the top-8 `candidates`, `pool_size` and `signals`. When the
 classifier decides, `signals.classifier_inputs` lists exactly what it read and the tier odds
 **without** the image, text, screen text or metadata — the Playground shows this as "What moved
@@ -90,6 +96,7 @@ Trained models (`classifier`, `quality_head`, `qc_risk`) are reloaded from `data
 | `GRADIST_RULES_SEED` | no | Rules file copied in while the store has none |
 | `GRADIST_ALLOW_READ_WITHOUT_AUTH` | no | `1` opens GET endpoints for monitoring |
 | `GRADIST_OCR`, `GRADIST_OCR_LANGS` | no | `1` turns on screen-text reading; languages default `hi,en` |
+| `GRADIST_TASK_SKILLS` | no | Skill needs per task, default `config/task_skills.yaml` |
 
 ## Integrate from another app
 

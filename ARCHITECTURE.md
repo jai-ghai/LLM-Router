@@ -106,7 +106,11 @@ bytes, modality, providers, `screen_text` lines from OCR) and, when the classifi
 `signals.classifier_inputs` — each metadata value and whether training had seen it, the embedders
 and their sizes, and the tier odds recomputed **without the image / text / screen text /
 metadata**, so the console can show which input moved the decision. `tier_scores` and the top-8
-`candidates` show the evidence for the tier and the model.
+`candidates` show the evidence for the tier and the model. `signals.skill_needs` (from
+`skills.py`) scores how much the request needs each skill — video, audio, Hindi, reasoning, long
+input, writing, speed — with a reason per score, from the task profile in
+`config/task_skills.yaml`, the modality, Devanagari in the text or screen text, the QC-risk score
+and the input length. These needs are reported only; scoring models against them is the next step.
 
 ## 4. Training pipeline (offline)
 

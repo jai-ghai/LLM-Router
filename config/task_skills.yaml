@@ -1,0 +1,38 @@
+# What each task needs from a model, 0–1 per skill. Read by gradist.skills at API start
+# (GRADIST_TASK_SKILLS overrides the path). A skill left out means the task itself adds no
+# need; the request's own signals (modality, Devanagari, length, QC risk) still can.
+# Skills: video, audio, hindi, reasoning, long_input, writing, fast.
+# Starting values from what each tabson prompt asks the model to do — tune them as
+# outcomes come in.
+tasks:
+  # Watch a whole clip (tabson prompts: news_extraction, news_single_pass_v3, playout_*, sports_extraction)
+  video_processing:    {video: 1.0, audio: 0.8, hindi: 0.8, reasoning: 0.6, long_input: 0.8}
+  news_extraction:     {video: 1.0, audio: 0.9, hindi: 0.8, reasoning: 0.4, long_input: 0.8}
+  v3_single:           {video: 1.0, audio: 0.9, hindi: 0.8, reasoning: 0.9, long_input: 0.9}
+  playout_observation: {video: 1.0, audio: 0.7, reasoning: 0.4, long_input: 0.9}
+  sports_extraction:   {video: 1.0, audio: 0.7, reasoning: 0.4, long_input: 0.8}
+  sports_highlight:    {video: 1.0, audio: 0.7, reasoning: 0.5, long_input: 0.8}
+
+  # Reason over an observation log (news_analysis, sports_analysis)
+  news_analysis:       {reasoning: 0.9, hindi: 0.6, long_input: 0.7}
+  sports_analysis:     {reasoning: 0.8, long_input: 0.6}
+
+  # Write (headline_category)
+  headline_category:   {writing: 0.9, hindi: 0.8, reasoning: 0.5}
+
+  # Language clean-up (spell_batch, text_validation, hinglish_batch / transliteration)
+  spell_batch:         {hindi: 0.9, fast: 0.7}
+  text_validation:     {hindi: 0.7, fast: 0.8}
+  hinglish_batch:      {hindi: 1.0, fast: 0.7}
+  transliteration:     {hindi: 1.0, fast: 0.7}
+
+  # Check and correct (qc_review, qc_corrections, rag_grounding, merge_pass)
+  qc_review:           {reasoning: 1.0, hindi: 0.7, long_input: 0.5}
+  qc_corrections:      {reasoning: 0.9, hindi: 0.8, writing: 0.6}
+  rag_grounding:       {reasoning: 0.9, long_input: 0.6}
+  merge_pass:          {reasoning: 0.6, fast: 0.6}
+
+  # Quick yes/no (headline_similarity, segment_similarity)
+  headline_similarity: {fast: 1.0, hindi: 0.5}
+  segment_similarity:  {fast: 1.0}
+  light_helper:        {fast: 1.0}
