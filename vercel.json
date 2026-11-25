@@ -1,0 +1,23 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "ui": {
+      "root": "ui/",
+      "framework": "vite"
+    },
+    "api": {
+      "root": "./",
+      "framework": "fastapi",
+      "functions": {
+        "src/asgi.py": {
+          "excludeFiles": "{ui/**,tests/**,experiments/**,docs/**,scripts/**}"
+        }
+      }
+    }
+  },
+  "rewrites": [
+    { "source": "/v1/(.*)", "destination": { "service": "api" } },
+    { "source": "/healthz", "destination": { "service": "api" } },
+    { "source": "/(.*)", "destination": { "service": "ui" } }
+  ]
+}

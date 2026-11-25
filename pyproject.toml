@@ -47,6 +47,14 @@ service = [
 ]
 dev = ["pytest>=8", "ruff>=0.5", "mypy>=1.10", "types-PyYAML", "httpx>=0.27"]
 
+# Vercel installs with `uv sync --no-dev`, which skips extras; this default group adds the
+# API's runtime. The ML extras stay out: torch alone is over Vercel's 500 MB function limit.
+[dependency-groups]
+vercel = ["gradist[service]"]
+
+[tool.uv]
+default-groups = ["vercel"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

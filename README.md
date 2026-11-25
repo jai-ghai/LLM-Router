@@ -39,6 +39,23 @@ cd ui; npm install; cd ..
 Open <http://localhost:5174>, sign in, and use the **Playground**. The internal package and
 environment variables keep their original name, `gradist` / `GRADIST_*`.
 
+## Deploying on Vercel
+
+`vercel.json` deploys two services in one project: the console (`ui/`, Vite) at `/`, and the API
+(`src/asgi.py`) at `/v1` and `/healthz`, on the same domain. Set `GRADIST_SESSION_SECRET` in the
+project's environment variables; the tier table and catalog default to the committed `config/`.
+
+Current limits of the Vercel API:
+
+- Only the `service` extra is installed. The ML libraries (torch alone is ~520 MB) exceed
+  Vercel's 500 MB function limit, so there is no trained classifier or OCR.
+- `data/` is not in git, and Vercel only allows writes to `/tmp`, so the store starts empty
+  on every cold start. There are no users to sign in with, and rules, history and ratings
+  don't persist.
+
+For a working deployment the API needs persistent storage and either the ML libraries or a
+lighter classifier.
+
 ## Documentation
 
 | Document | What it covers |

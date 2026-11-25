@@ -16,7 +16,8 @@ import type {
   UsersListResponse,
 } from './types'
 
-const BASE: string = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
+// Production builds default to same-origin, where vercel.json routes /v1 to the API.
+const BASE: string = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? 'http://localhost:8000' : '')
 
 export class ApiError extends Error {
   readonly status: number
