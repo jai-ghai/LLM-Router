@@ -129,17 +129,30 @@ export function Docs() {
           the shortlist inside the tier, and exactly what the router received — for a video, the file
           facts and the single still that was sent instead of the clip.
         </P>
-        <Shot src="/docs/images/playground.png" caption="Playground — try a resolve with metadata, optional image, and optimize_for." />
+        <Shot src="/docs/images/playground.png" caption="Playground — a video decision: the chosen model, the tier evidence, and the frame that was sent instead of the clip." />
         <Shot src="/docs/images/request-logs.png" caption="Request logs — every resolve is stored for audit and rating." />
       </Panel>
 
-      <Panel title="Operators, catalog, quality">
+      <Panel title="What the router reads from a request">
+        <Stack component="ul" sx={{ pl: 2.5, m: 0, mb: 1, '& li': { fontSize: 13.5, color: PALETTE.textMuted, mb: 0.5 } }}>
+          <li>Metadata — each field the classifier was trained on; unseen values fall into an "unknown" bucket, untrained fields are listed as ignored.</li>
+          <li>Text — a sentence embedding of the request text.</li>
+          <li>Image or video frame — a DINOv2 visual fingerprint (layout, colours, people, graphics). A video is never uploaded: the browser sends one still frame and modality=video, which limits the pick to video-capable models.</li>
+          <li>On-screen text — with OCR enabled (GRADIST_OCR=1) the frame is read in Hindi and English; the lines appear in the decision and are part of what the classifier learned from.</li>
+          <li>Recorder file names (1010013_2026.07.28_07.40.00-….mp4) fill channel_code and the channel's name, network, type and genre automatically in the Playground; anything you typed is never overwritten.</li>
+        </Stack>
         <P>
-          Admins manage operators (who may sign in). Members can resolve, rate, and judge; only admins
-          assign catalog tiers and manage users.
+          The decision's request panel lists all of this, and "What moved the decision" shows the tier
+          odds with the image, text, screen text or metadata removed.
         </P>
-        <Shot src="/docs/images/operators.png" caption="Operators — who can sign in, assign catalog tiers, and who is attributed on ratings." />
-        <Shot src="/docs/images/catalog.png" caption="Catalog — new models stay under review until an admin assigns a real tier." />
+      </Panel>
+
+      <Panel title="Operators and quality">
+        <P>
+          Admins manage operators (who may sign in) from the user menu. Members can resolve and rate;
+          only admins assign catalog tiers and manage users.
+        </P>
+        <Shot src="/docs/images/operators.png" caption="Operators — who can sign in and who is attributed on ratings." />
         <P>
           Quality ratings (1–5) key off a configured metadata field (for example task). Accuracy and
           balanced modes use those averages; without ratings, selection falls back to cost.

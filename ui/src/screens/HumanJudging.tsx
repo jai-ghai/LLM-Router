@@ -37,7 +37,7 @@ export function HumanJudging({ tierNames }: { tierNames: string[] }) {
     <>
       <PageHead
         title="Human judging"
-        lede="Examples no rule reaches. Judging one here gives the classifier a label it would otherwise never see — strategy 2 from PLAN.md's labeling decision."
+        lede="Examples no rule reaches. Judging one here gives the classifier a label it would otherwise never see."
       />
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Stack spacing={2}>

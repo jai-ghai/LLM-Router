@@ -1,55 +1,70 @@
-# Gradist
+# mRouter
 
-A small, general-purpose library: given a request's metadata and text (and later, a thumbnail),
-predict which **tier** of model should handle it — small, medium, or large. The resolver then
-turns that tier into a concrete model name from a config file. It does not call the model itself.
+mRouter decides **which model should handle a request** — before any model is called. It reads
+the request (text, metadata, an optional image or video frame), decides how capable a model it
+needs (**small / medium / large** tier), then picks a concrete model from a catalog of 353 models
+across 17 providers, ranked for **cost**, **balanced** or **accuracy**. Your application calls the
+chosen model; mRouter never does.
 
-Operator guide (run, integrate, screenshots): [docs/USER_GUIDE.md](docs/USER_GUIDE.md) — also in the
-console under **Documentation**.
+```mermaid
+flowchart LR
+    A["Request<br/>text · metadata · image / video frame"] --> B["Decide the tier<br/>rules → classifier / quality head → fallback<br/>→ QC-risk escalation"]
+    B --> C["Pick the model<br/>catalog filtered by scope, provider, modality<br/>ranked by cost / balanced / accuracy"]
+    C --> D["Decision<br/>model, tier, evidence"]
+    D --> E["Your app calls the model"]
+```
 
-This replaces the earlier, larger `R&D/llmrouter` project's scope (which also called models,
-verified output, escalated, and ran a full service and UI). That project is left as-is and
-untouched. This one is deliberately smaller, matching the 2026-11-16 team decision:
+- **Content decides the tier.** Plain text goes to a quality head trained on scored model
+  outcomes; requests with metadata or media go to a classifier over metadata, text embedding,
+  image embedding and on-screen text (OCR). Operator rules override both.
+- **You choose the trade-off.** `cost` moves up a tier only when fairly sure, `accuracy` on a
+  real chance; inside a tier, `cost` takes the cheapest model, `accuracy` the highest benchmark
+  capability, `balanced` the cheapest above the tier's median.
+- **Every decision is explained.** Tier odds, the shortlist inside the tier, exactly what was
+  read from the request (including the frame and its OCR text), and which input moved the tier.
+- **Video stays local.** The browser extracts one frame; the clip is never uploaded.
 
-- A **learned classifier**, not a rules-only tool like LiteLLM. LiteLLM is still fine as the
-  thin API layer underneath, later, once a model is actually called.
-- **General-purpose first.** Tapson/BARC is one consumer, not the target. Most company content
-  is text; video is secondary.
-- **Metadata and text first.** Thumbnails are a planned input, stubbed for now.
-- **Resolve only.** `resolve(request) -> (tier, model_name, confidence, reason)`. No calling,
-  no verification, no escalation here — that is a separate, later layer (a LangChain-based
-  integration layer is stubbed only, per the team's decision not to build it yet).
+## Quick start (Windows)
 
-Status: **built and verified for this scope.** The labeling strategy (PLAN.md, "Labeling
-strategy: options") was decided (rule-derived labels + a human-judged golden set). `rules.py`,
-`features.py` (text embedding via `bge-m3`, plus a real image embedder, `Dinov2Embedder`),
-`classifier.py`, `resolve.py`, a FastAPI service, and a Material UI console are all written and
-have been exercised end to end, including real image uploads through the live UI. See
-ARCHITECTURE.md §4 and §8 for what is still a deliberate simplification (fixed tiers, a single
-candidate model per tier) rather than a gap — a model-catalog redesign is under discussion next.
+```powershell
+python -m venv .venv
+.\.venv\Scripts\pip install -e ".[service,embeddings,images,ocr,dev]"
+cd ui; npm install; cd ..
+# .env needs at least GRADIST_SESSION_SECRET and GRADIST_TIERS — see docs/USER_GUIDE.md
+.\.venv\Scripts\python -m gradist.service.bootstrap --username <admin>
+.\scripts\start.ps1          # API on :8000, console on :5174
+```
+
+Open <http://localhost:5174>, sign in, and use the **Playground**. The internal package and
+environment variables keep their original name, `gradist` / `GRADIST_*`.
+
+## Documentation
+
+| Document | What it covers |
+|---|---|
+| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Running, configuring, the console, calling the API, retraining |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | How a decision is made and why it is built this way (diagrams) |
+| [design.md](design.md) | Reference: modules, data shapes, storage layout, full API |
+
+The console's **Documentation** page (user menu) carries the same guide.
 
 ## Layout
 
 ```
 llm-tier-router/
-├── ARCHITECTURE.md        the design: scope, components, data flow, what is deliberately NOT built
-├── PLAN.md                the task-by-task build plan, including the labeling decision
-├── config/
-│   └── tiers.example.yaml tier -> model name per provider, company-agnostic (copy to tiers.yaml)
-├── src/gradist/        the library (skeleton; see PLAN.md Task 1 onward)
-├── experiments/           training and evaluation scripts (not yet written)
-└── tests/                 (not yet written)
+├── src/gradist/            library: features, classifier, quality head, QC risk, OCR, catalog, resolve
+│   └── service/            FastAPI app, auth, flat-file store
+├── ui/                     React + MUI console (mRouter)
+├── config/                 tiers*.yaml, catalog.yaml (353 models), catalog.example.yaml
+├── experiments/            training, catalog sync/enrichment, evaluation scripts
+├── scripts/start.ps1       starts API + console from .env
+├── tests/                  pytest suite
+└── data/                   (gitignored) examples, judgments, trained models, history, users
 ```
 
-## Using this from another project (including BARC)
+## Using it from another service
 
-Nothing in `src/gradist/` may import or assume anything about a specific consumer (no BARC
-channel codes, no video-specific types in the core package). A consumer like a BARC service:
-
-1. Installs this as a local/editable package (`pip install -e path/to/llm-tier-router`) once it
-   has code, or vendors just `src/gradist/` — both work, it has no service dependencies.
-2. Supplies its own `tiers.yaml` (its model names) and, if it wants metadata features, its own
-   list of known metadata values (e.g. its anchor names, its channel codes) — the library never
-   hardcodes anyone's values; unknown values fall into a shared "unknown" bucket (see
-   ARCHITECTURE.md, "Feature vector").
-3. Calls `resolve(request)` and gets back a model name to call however it already calls models.
+Call `POST /v1/resolve` and use `model_name` from the response with your own provider client —
+see [docs/USER_GUIDE.md](docs/USER_GUIDE.md#integrate-from-another-app). mRouter holds no provider
+API keys. The library (`src/gradist/`) can also be imported directly; nothing in it is specific
+to one company's channels or models.

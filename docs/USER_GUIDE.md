@@ -1,82 +1,91 @@
-# Gradist user guide
+# mRouter user guide
 
-Gradist picks a **model tier** and a concrete **model name** from request metadata. It does
-**not** call the model — your application does that after `/v1/resolve`.
+mRouter picks a **model tier** and a concrete **model name** for a request. It does **not** call
+the model — your application does that with the `model_name` returned by `/v1/resolve`. The code
+package and settings keep their original name (`gradist`, `GRADIST_*`).
 
-Screenshots used by the in-app Documentation page: `docs/images/` (also under `ui/public/docs/images/`).
+The in-app **Documentation** page (user menu) carries the same guide. Screenshots live in
+`docs/images/` and `ui/public/docs/images/`.
+
+![Overview](images/overview.png)
 
 ## Where it is useful
 
-- Workloads with stable metadata (`task`, `channel`, content type, …) that should map to tiers.
-- Cost-first routing by default, with accuracy-first when human ratings exist.
-- Reviewing newly imported catalog models before they can be selected.
-- Audit: every resolve is stored with rule / classifier / fallback outcomes and can be rated.
+- Workloads with stable metadata (`task`, channel, content type, …) that should map to tiers.
+- Cost-first routing by default, accuracy-first where it matters.
+- Video and image work: the frame, its on-screen text and the channel all inform the tier.
+- Audit: every decision is stored with its evidence and can be rated.
 
-If you only use one model, or you need a full streaming proxy with provider failover, Gradist is
-the decision step — not that proxy.
+If you only use one model, or need a streaming proxy with provider failover, mRouter is the
+decision step in front of that — not the proxy itself.
 
-## How resolve works
+## How a request is resolved
 
-1. **Rules** — metadata match → tier (+ optional per-rule `optimize_for`).
-2. **Classifier** — requests with an image or domain metadata: if trained and confidence ≥
-   `min_confidence`, the classifier gives P(needs at least each tier) and `optimize_for` takes the
-   highest tier whose chance clears its threshold (cost 70%, balanced 50%, accuracy 30%).
-   Metadata fields the classifier was not trained on are ignored (listed in `signals.metadata_ignored`).
-3. **Quality head** — plain-text requests (no domain metadata) when `data/quality_head.joblib`
-   exists: predicts each tier's score and takes the cheapest tier within the `optimize_for` margin
-   (accuracy 0.03, balanced 0.06, cost 0.10).
-4. **Fallback** — otherwise the configured low-confidence fallback.
-5. **QC-risk escalation** — when `data/qc_risk.joblib` exists and the request carries text and
-   `channel_name`: the riskiest ~20% of sub-stories (by predicted QC fix) are raised to `large`.
-   Never lowers a tier, never overrides a rule.
-6. **Catalog pick** — within the tier, pick by `optimize_for`: `cost` takes the cheapest;
-   `accuracy` the highest benchmark capability; `balanced` the cheapest model at or above the
-   tier's median capability. Human quality ratings, when present, replace capability.
-   Capability is the Artificial Analysis intelligence index from OpenRouter where measured, else
-   estimated from price and release date (shown with `~`). Refresh it with
-   `python experiments/enrich_capability.py`. Models marked `UNREVIEWED` are never selected.
+1. **Rules** — metadata match → tier (+ optional per-rule `optimize_for`). Rules always win.
+2. **Classifier** — requests with an image or domain metadata: gives P(needs at least each tier);
+   `optimize_for` takes the highest tier whose chance clears its threshold (cost 70%, balanced
+   50%, accuracy 30%). Metadata fields it was not trained on are listed in
+   `signals.metadata_ignored`.
+3. **Quality head** — plain-text requests: predicts each tier's score and takes the cheapest tier
+   within the `optimize_for` margin (accuracy 0.03, balanced 0.06, cost 0.10).
+4. **Fallback** — otherwise, or below `min_confidence`, the configured fallback tier.
+5. **QC-risk escalation** — requests with text and `channel_name`: the riskiest ~20% of
+   sub-stories are raised to `large`. Never lowers a tier, never overrides a rule.
+6. **Catalog pick** — within the tier, by `optimize_for`: `cost` → cheapest; `accuracy` → highest
+   benchmark capability; `balanced` → cheapest at or above the tier's median capability. Human
+   quality ratings replace capability where present. Capability is the Artificial Analysis
+   intelligence index from OpenRouter where measured, otherwise estimated from price and release
+   date (shown with `~`). Models marked `UNREVIEWED` are never selected.
 
-`provider` accepts one or several comma-separated providers (`provider=anthropic,google`). The
-decision returns `tier_scores` (the evidence for the tier), `candidates` (the top 8 of the tier),
-`pool_size`, and `signals` (what the router received: text size, metadata used and ignored, image
-bytes, modality, providers). When the classifier decides, `signals.classifier_inputs` lists what it
-read (each metadata value and whether it was seen in training, the text and image embedders and
-their sizes) and the tier odds with the image, text or metadata removed — so you can see which
-input the decision rests on. The image part is a DINOv2 visual embedding of the frame.
+`provider` accepts one or several comma-separated providers (`anthropic,google`). The scope can
+be the whole catalog, a hand-picked list (`selected_models`) or a named task pool (`task`).
 
-**On-screen text (OCR).** With `GRADIST_OCR=1` (and `pip install .[ocr]`) the API reads the frame
-with EasyOCR (Hindi + English; `GRADIST_OCR_LANGS` for other scripts) and returns the lines in
-`signals.screen_text`. Training with OCR on appends each frame's text to its example text, so the
-classifier learns from it (`reads_screen_text` in `classifier.meta.json`); OCR results are cached
-in `data/ocr_cache.json`. `python experiments/eval_ocr.py` compares held-out accuracy with and
-without OCR. **Recorder file names** (`1010013_2026.07.28_07.40.00-….mp4`) fill `channel_code`
-and the channel's name, network, type and genre (from `GET /v1/channels`) automatically in the
-Playground. A video is never uploaded: the browser sends one still frame plus
-`modality=video`, which limits the pick to models that accept video.
+### What the router reads
+
+- **Metadata** — each trained field; unseen values fall into an "unknown" bucket.
+- **Text** — a sentence embedding (MiniLM).
+- **Image / video frame** — a 384-number DINOv2 fingerprint of the frame's look. A video is never
+  uploaded: the browser sends one still plus `modality=video`, which limits the pick to models
+  that accept video.
+- **On-screen text** — with `GRADIST_OCR=1` (and the `ocr` extra installed) the frame is read with
+  EasyOCR in Hindi + English (`GRADIST_OCR_LANGS` for others); lines are returned in
+  `signals.screen_text`, cached in `data/ocr_cache.json`, and used in training
+  (`reads_screen_text` in `classifier.meta.json`). The first read of a frame takes ~8 s on CPU.
+- **Recorder file names** — `1010013_2026.07.28_07.40.00-….mp4` fills `channel_code` and the
+  channel's name, network, type and genre (from `GET /v1/channels`) in the Playground, without
+  overwriting anything you typed.
+
+The decision returns `tier_scores`, the top-8 `candidates`, `pool_size` and `signals`. When the
+classifier decides, `signals.classifier_inputs` lists exactly what it read and the tier odds
+**without** the image, text, screen text or metadata — the Playground shows this as "What moved
+the decision".
+
+![Playground with a video decision](images/playground.png)
 
 ## Run locally
 
-Put the variables below in `.env` (gitignored) and run `scripts\start.ps1`: it starts the API on
-8000 and the UI on 5174 in two windows. `ui/.env.local` must point `VITE_API_BASE` at port 8000.
-A trained classifier, quality head and QC-risk head are reloaded from `data/` on every start, so
+1. Install: `pip install -e ".[service,embeddings,images,ocr]"` in a virtualenv, and `npm install`
+   in `ui/`.
+2. Create `.env` (gitignored) — see the table below. `ui/.env.local` must point `VITE_API_BASE`
+   at `http://localhost:8000`.
+3. Create the first user: `python -m gradist.service.bootstrap --username <name>` (prompts for a
+   password; `--role member` for non-admins, `--reset <name>` to reset a password).
+4. Run `scripts\start.ps1`: API on port 8000, console on 5174, each in its own window.
+
+Trained models (`classifier`, `quality_head`, `qc_risk`) are reloaded from `data/` on every start;
 `POST /v1/train` is only needed after examples or judgments change.
 
-Or by hand:
-
-```powershell
-# API
-$env:GRADIST_SESSION_SECRET = "<random>"
-$env:GRADIST_TIERS = "config/tiers.example.yaml"
-$env:GRADIST_CORS_ORIGINS = "http://localhost:5174"
-# optional: GRADIST_CATALOG, GRADIST_QUALITY_FIELD=task
-python -m uvicorn gradist.service.main:create --factory --port 8000
-
-python -m gradist.service.bootstrap --username <name>
-
-# UI
-cd ui
-npm run dev
-```
+| Variable | Required | Purpose |
+|---|---|---|
+| `GRADIST_SESSION_SECRET` | yes | Signs session cookies — `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
+| `GRADIST_TIERS` | yes | Tier table, e.g. `config/tiers.general.yaml` |
+| `GRADIST_CATALOG` | no | `config/catalog.yaml` (353 models, 17 providers) |
+| `GRADIST_DATA` | no | Store directory, default `data` |
+| `GRADIST_QUALITY_FIELD` | no | Field that buckets quality ratings, e.g. `task` |
+| `GRADIST_CORS_ORIGINS` | no | Console origin, default `http://localhost:5174` |
+| `GRADIST_RULES_SEED` | no | Rules file copied in while the store has none |
+| `GRADIST_ALLOW_READ_WITHOUT_AUTH` | no | `1` opens GET endpoints for monitoring |
+| `GRADIST_OCR`, `GRADIST_OCR_LANGS` | no | `1` turns on screen-text reading; languages default `hi,en` |
 
 ## Integrate from another app
 
@@ -86,50 +95,58 @@ curl -c cookies.txt -X POST http://localhost:8000/v1/auth/login \
   -d '{"username":"svc","password":"..."}'
 
 curl -b cookies.txt -X POST http://localhost:8000/v1/resolve \
-  -F 'metadata={"task":"news"}' \
-  -F 'text=summarise' \
-  -F 'optimize_for=cost'
+  -F 'metadata={"channel_code":"1010013","modality":"video"}' \
+  -F 'text=summarise the bulletin' \
+  -F 'image=@frame.jpg' \
+  -F 'optimize_for=balanced'
 ```
-
-Use `model_name` from the JSON decision with your provider. Gradist does not hold provider API keys.
 
 ```python
 import httpx
 
-with httpx.Client(base_url="http://localhost:8000", timeout=30.0) as client:
+with httpx.Client(base_url="http://localhost:8000", timeout=60.0) as client:
     client.post("/v1/auth/login", json={"username": "svc", "password": "..."})
     decision = client.post(
         "/v1/resolve",
         data={"metadata": '{"task":"news"}', "text": "...", "optimize_for": "balanced"},
     ).json()
-    model = decision["model_name"]
+    model = decision["model_name"]   # call your provider with this
 ```
 
-Catalog sync:
-
-```bash
-python experiments/sync_catalog.py \
-  --out config/catalog.yaml \
-  --providers openai,anthropic,google \
-  --add-new
-```
+mRouter holds no provider API keys. The full API is in [design.md](../design.md#api) and at
+<http://localhost:8000/docs>.
 
 ## Console map
 
-| Screen | Purpose |
-|--------|---------|
-| Overview | Volume / tier mix from history |
-| Routing rules | Editable rules |
-| Model tiers | Tier table |
-| Model catalog | Models; admin assign/demote UNREVIEWED |
-| Request logs | Resolve audit + quality ratings |
-| Playground | Manual `/v1/resolve` |
-| Examples / Judging / Train / Evaluate | Classifier loop |
-| Operators | User management |
-| Settings | Live deployment facts |
-| Documentation | This guide in-app |
+| Where | Screen | Purpose |
+|---|---|---|
+| Sidebar | Overview | Volume, tier mix and how decisions were made |
+| Sidebar | Routing rules | Metadata → tier overrides; always win |
+| Sidebar | Request logs | Every decision for audit; rate model output |
+| Sidebar | Playground | Try a resolve with metadata, text, image or video |
+| User menu | Documentation | This guide |
+| User menu | Settings | Live deployment facts (no secrets) |
+| User menu | Operators | Admins: who may sign in |
 
-## Multi-workspace
+The training screens (Examples, Human judging, Train, Evaluate) are hidden from navigation; their
+endpoints remain for scripted retraining.
 
-Not built. One Gradist process uses one data directory, one catalog, and one rule set. For hard
-isolation between products, run separate deployments until a real tenant model exists.
+![Request logs](images/request-logs.png)
+
+## Retraining and catalog upkeep
+
+| Script (`experiments/`) | Does |
+|---|---|
+| `train_from_tabson_db.py`, `train_from_video_clips.py`, `train_from_hf_content.py` | Build labelled examples and fit the classifier |
+| `eval_ocr.py` | Held-out accuracy with vs. without OCR |
+| `train_quality_head.py` (after `probe_xroutebench.py`) | Fit the plain-text quality head |
+| `qc_outcome_dataset.py` → `train_qc_risk.py` | Fit the QC-risk escalation head |
+| `sync_catalog.py --add-new` | Import new OpenRouter models as `UNREVIEWED` |
+| `refresh_catalog.py`, `enrich_capability.py` | Refresh prices/modalities and capability scores |
+
+## Known limitations
+
+- All labelled video frames are `large`, so video currently always routes to `large`; more varied
+  frame labels are needed before the image can choose a smaller tier.
+- One process = one data directory, catalog and rule set; run separate deployments for separate
+  products.

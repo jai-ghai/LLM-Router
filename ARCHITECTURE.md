@@ -1,120 +1,157 @@
-# Architecture: llm-tier-router
+# mRouter architecture
 
-Date: 2026-11-16. Status: final for this scope (see README.md for how this scope was decided).
+Status: current as of 2026-11-25. For field-level contracts (modules, API, storage) see
+[design.md](design.md); for running and operating it see [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
 
 ## 1. Problem and scope
 
-**Problem.** Different requests need different amounts of model capability. Sending every
-request to the same model either overpays for easy requests or underpays (and loses quality) on
-hard ones. A classifier that looks at a request's metadata and text should be able to predict
-which tier of model it needs, before any model is called.
+Different requests need different amounts of model capability. Sending everything to one model
+either overpays for easy requests or loses quality on hard ones. mRouter predicts, **before any
+model is called**, how capable a model a request needs, then names the concrete model to use.
 
-**In scope.**
-- A feature vector built from request metadata (one-hot, company-agnostic), request text (an
-  embedding), and an optional thumbnail (a real image embedding — `Dinov2Embedder` — not a stub).
-- A classifier that maps that feature vector to one of **3 tiers**.
-- A `resolve()` function that turns a tier into a concrete model name from a config file, with
-  optional rule overrides (for example "channel X always gets the large tier", set by whoever
-  deploys this, in their own config).
-- A way to evaluate the classifier against a fixed-model baseline and an oracle, the same idea
-  validated in the earlier R&D project's research (papers: FrugalGPT, RouteLLM, RouterDC,
-  MMR-Bench — a learned choice beats a fixed model, the oracle sets the ceiling).
+**In scope:** reading the request (metadata, text, an image or a video frame, on-screen text),
+deciding a tier, picking a model from a multi-provider catalog, explaining the decision, an
+operator console, and the offline scripts that train the models it uses.
 
-**Explicitly out of scope for this phase** (the team's 2026-11-16 decision):
-- **Calling any model.** `resolve()` returns a model name and stops. The caller calls it however
-  it already does.
-- **LangChain integration.** Stubbed as an empty factory interface only (`gradist.llm_stub`),
-  so a later phase has a place to put it without changing the classifier's contract. Not wired
-  to anything, not tested against a real provider, no dependency added yet.
-- **Output verification, escalation, cost tracking, tracing.** All of that lived in the earlier
-  `R&D/llmrouter` project, which is left untouched. If this classifier proves out, that project's
-  adapters and pipeline are the natural next layer — but that choice is deferred.
+**Out of scope (by decision):** calling the chosen model, provider API keys, output verification,
+retries/failover, cost tracking and tracing. mRouter is the *decision step* in front of whatever
+client already calls models. `gradist.llm_stub` is an empty placeholder for a future calling layer
+and is not wired to anything.
 
-A FastAPI service and a Material UI console *were* built (see README.md) so one operator can
-manage rules/examples/training without touching YAML or code directly — this was added once the
-classifier and feature pipeline were proven, not part of the original "resolve-only" scope above,
-which still holds for the library itself (`src/gradist/`).
+## 2. System overview
 
-## 2. Why not LiteLLM alone, why not LangChain yet
-
-LiteLLM (and LangChain) give one API across providers — useful once something needs to *call* a
-model. Neither decides *which* model to call; that decision is exactly what a team would still
-have to build, by hand, per use case. This project is that decision, built once, generally. Once
-it is validated, a thin LangChain (or LiteLLM) layer underneath is a small, separate addition —
-hence it is stubbed, not built, so the classifier's contract does not end up shaped by a calling
-library before the classifier itself is proven.
-
-## 3. Components
-
-```
-Request (metadata dict, text, optional thumbnail)
-   │
-   ├─ 1. Feature builder  : metadata one-hot (+ unknown bucket) · text embedding · thumbnail slot
-   ├─ 2. Rule overrides    : optional, same "most specific wins" design as the earlier project's
-   │                         rules.py — ported in trimmed form, config-driven, no BARC-specific
-   │                         values in the library itself
-   ├─ 3. Tier classifier   : feature vector -> one of 3 tiers, with a confidence score
-   └─ 4. Tier -> model map : tiers.yaml, per provider, supplied by whoever deploys this
-        │
-        result: (tier, model_name, confidence, reason)
+```mermaid
+flowchart LR
+    subgraph Browser["Browser — mRouter console (React + MUI)"]
+        PG["Playground<br/>video → one frame (client-side)"]
+        OV["Overview · Routing rules · Request logs"]
+    end
+    subgraph API["FastAPI service (gradist.service)"]
+        AUTH["Session auth<br/>admin / member"]
+        RES["POST /v1/resolve"]
+        OCR["ScreenReader<br/>EasyOCR hi+en (opt-in)"]
+        LAD["resolve() ladder"]
+    end
+    subgraph Data["data/ (flat files)"]
+        M["classifier · quality_head · qc_risk (.joblib)"]
+        R["rules.yaml · task_pools.yaml"]
+        H["history.jsonl · quality.jsonl · users.jsonl"]
+        C["ocr_cache.json"]
+    end
+    CAT["config/catalog.yaml<br/>353 models · 17 providers"]
+    APP["Your application"] -->|"multipart: metadata, text, image"| RES
+    PG --> RES
+    OV --> API
+    RES --> OCR --> LAD
+    LAD --> M & R & CAT
+    RES --> H
+    OCR --> C
+    RES -->|"Decision JSON"| APP
+    APP -->|"calls model_name with its own client"| P["Model provider"]
 ```
 
-A rule, when it matches, skips the classifier entirely for that request (same precedence as the
-earlier project: rules are an operator's explicit override, and always win). Without a matching
-rule, the classifier decides.
+Everything a decision needs is loaded into memory at startup: trained models from `data/`, the
+catalog from `GRADIST_CATALOG`, the tier table from `GRADIST_TIERS`. A request makes no network
+call (OCR and embeddings run locally on CPU).
 
-## 4. Feature vector
+## 3. How a decision is made
 
-Three kinds of input, each independently optional so the same classifier works for a text-only
-company use case and for BARC's metadata-and-video use case:
-
-| Input | How it is encoded | Notes |
-|---|---|---|
-| Metadata (anchor, channel/video type, or anything else the caller names) | One-hot per field, plus one **"unknown" column per field** | The library ships no company's value list. A consumer passes its own list of known values per field (for example BARC's anchor names) when it builds a feature builder. A value not in that list goes to "unknown" — it must not crash or silently get ignored. |
-| Text | An embedding | Reuses the earlier project's embedder choice and reasoning (`bge-m3`, multilingual, MIT; `all-MiniLM-L6-v2` as a lighter English-only comparison) — that decision (ADR-0012 in the old project) still holds; it is about the text itself, not about anything video-specific. |
-| Thumbnail | An image embedding (`Dinov2Embedder`, `facebook/dinov2-small`, Apache-2.0 — license checked the same way as the text embedder) | Optional: a request with no thumbnail is encoded as a zero-vector plus a distinct "has-image" flag, so absence is never confused with a near-zero real embedding. `sentence-transformers/clip-ViT-B-32` was considered and rejected — no explicit license tag on its model card, same reasoning as rejecting Arch-Router in the old project's ADR-0006. |
-
-## 5. Tiers are generic, not Gemini- or BARC-specific
-
-The classifier predicts an abstract tier (`small` / `medium` / `large` are the working names,
-changeable). `tiers.yaml` maps each tier to a real model name **per provider family**, for
-example:
-
-```yaml
-tiers:
-  - name: small
-    models: {gemini: REPLACE_ME, anthropic: claude-haiku-5-5, bedrock: REPLACE_ME}
-  - name: medium
-    models: {gemini: REPLACE_ME, anthropic: claude-sonnet-5-5, bedrock: REPLACE_ME}
-  - name: large
-    models: {gemini: REPLACE_ME, anthropic: claude-opus-5-5, bedrock: REPLACE_ME}
+```mermaid
+flowchart TD
+    IN["Request: metadata · text · image?"] --> RULE{"Operator rule matches?"}
+    RULE -->|yes| TIER["Tier"]
+    RULE -->|no| KIND{"Domain metadata<br/>or image?"}
+    KIND -->|yes, classifier trained| CLF["Tier classifier<br/>P(needs ≥ tier) vs. dial<br/>cost 0.7 · balanced 0.5 · accuracy 0.3"]
+    KIND -->|"plain text, quality head present"| QH["Quality head<br/>predicted score per tier;<br/>cheapest within margin<br/>cost 0.10 · balanced 0.06 · accuracy 0.03"]
+    KIND -->|"no usable signal"| FB["low_confidence_fallback"]
+    CLF -->|"confidence < min_confidence"| FB
+    CLF --> QC
+    QH --> QC
+    FB --> QC
+    QC{"QC-risk head applies?<br/>text + channel_name"} -->|"top ~20% risk"| UP["Escalate to large"] --> TIER
+    QC -->|otherwise| TIER
+    TIER --> POOL["Candidate pool: tier's catalog models<br/>∩ scope (all / picked / task pool)<br/>∩ providers ∩ modality (image / video)<br/>minus UNREVIEWED, minus below quality floor"]
+    POOL --> RANK["Rank inside tier<br/>cost → cheapest<br/>accuracy → highest capability<br/>balanced → cheapest ≥ median capability"]
+    RANK --> OUT["Decision: model_name, tier, reason,<br/>tier_scores, candidates, pool_size, signals"]
 ```
 
-This is what makes the same trained classifier usable by a team on Gemini and a team on Claude:
-the classifier never sees a model name, only a tier. Retraining is needed only if the *task*
-changes, not if the model lineup changes.
+1. **Rules win.** A rule is an operator's explicit override (`when` metadata → tier, most specific
+   wins, optional per-rule `optimize_for`). The learned models never overrule it.
+2. **Two learned heads, by request kind.**
+   - *Tier classifier* (metadata or media present): features are one-hot metadata with an
+     "unknown" bucket per field, a MiniLM text embedding, a 384-d DINOv2 image embedding with a
+     has-image flag, and the frame's OCR text appended to the request text when OCR is on. It
+     outputs P(needs at least each tier); `optimize_for` sets how sure it must be before moving up.
+   - *Quality head* (plain text): trained on outcomes where every tier's models answered the query
+     and were scored (xRouteBench). It predicts each tier's score; `optimize_for` sets how much
+     quality may be given up for a cheaper tier. Replay on held-out queries versus always-large:
+     accuracy ≈ 99.5% quality at 78% cost, balanced ≈ 96% at 66%, cost ≈ 92% at 49%.
+3. **Fallback** when nothing can decide, or the classifier is below `min_confidence`.
+4. **QC-risk escalation** (newsroom sub-stories): a head trained on which past generations needed
+   a QC correction raises the riskiest ~20% to `large`. It only ever raises a tier.
+5. **Catalog pick.** Within the tier the candidate pool is filtered, then ranked by the same
+   `optimize_for`. Capability is OpenRouter's Artificial Analysis intelligence index (91 models
+   measured); the other 262 are estimated from log price and release date and shown with `~`.
+   Human quality ratings, keyed by `GRADIST_QUALITY_FIELD`, replace capability where present.
 
-## 6. What carries over from the earlier project, and what does not
+### Explainability
 
-| From `R&D/llmrouter` | Carried over? | Why |
-|---|---|---|
-| `rules.py` (attribute rules, most-specific-wins, YAML store) | Yes, trimmed | Validated design, no video assumptions in it already |
-| Embedding model choice and its license check (ADR-0012) | Yes | About text, not video |
-| `types.py` request shape, `policy.py`, `verify.py`, `pipeline.py`, adapters, `service/`, `ui/` | No | All of it assumes "call and verify a model", which is explicitly out of scope now |
-| `docs/adr/0002` ("router decision separate from provider adapters") | Superseded for this phase | There are no adapters in this phase to be separate from; the principle (classifier never calls a model) still holds and is restated in §1 |
+The decision returns what was read and why: `signals` (text length, metadata used/ignored, image
+bytes, modality, providers, `screen_text` lines from OCR) and, when the classifier decided,
+`signals.classifier_inputs` — each metadata value and whether training had seen it, the embedders
+and their sizes, and the tier odds recomputed **without the image / text / screen text /
+metadata**, so the console can show which input moved the decision. `tier_scores` and the top-8
+`candidates` show the evidence for the tier and the model.
 
-## 7. Labeling decision (resolved)
+## 4. Training pipeline (offline)
 
-The classifier needs labeled training data: for a given request, which tier was actually
-necessary. Decided per PLAN.md, "Labeling strategy: options": combine strategy 1 (rule-derived
-seed labels) with strategy 2 (a small human-judged golden set covering what no rule reaches).
-Strategies 3/4 (oracle-by-running, LLM-as-judge) remain a later cross-check; strategy 6
-(production feedback loop) remains a long-term goal once real traffic exists.
+```mermaid
+flowchart LR
+    subgraph Sources
+        T["Tabson MySQL<br/>(read-only)"]
+        V["Video clips<br/>→ frames"]
+        HF["Hugging Face<br/>ag_news"]
+        X["xRouteBench<br/>scored outcomes"]
+        Q["QC suggestions<br/>(tabson)"]
+    end
+    T & V & HF --> EX["data/examples.jsonl<br/>+ judgments.jsonl<br/>(1,320 labelled)"]
+    EX --> OCRT["OCR each frame<br/>(cached)"] --> TR["POST /v1/train<br/>or experiments/train_*.py"]
+    TR --> CJ["classifier.joblib<br/>+ classifier.meta.json"]
+    X --> QHT["train_quality_head.py"] --> QHJ["quality_head.joblib"]
+    Q --> QCD["qc_outcome_dataset.py → train_qc_risk.py"] --> QCJ["qc_risk.joblib"]
+    OR["OpenRouter models list"] --> SY["sync_catalog / refresh_catalog /<br/>enrich_capability"] --> CY["config/catalog.yaml"]
+```
 
-## 8. Evaluation, before trusting the classifier
+Labels come from two places: rule-derived seed labels and human judgments (the Judging screen,
+now hidden from the sidebar but still served by the API). The service reloads every artefact
+from `data/` on start; retraining is needed only when examples or judgments change. Retraining
+with OCR reads only new frames — the first OCR pass over 120 frames took ~16 minutes on CPU;
+cached retrains take ~2 minutes.
 
-Same discipline as the earlier project's Phase 0: compare the classifier against (a) always the
-medium tier, (b) an oracle (the cheapest tier that was actually sufficient, from the labels), and
-report per-field accuracy (does it do worse on an "unknown" bucket value?) and the tier
-distribution it produces. If it does not clearly beat "always medium" on held-out data, it is not
-ready to decide anything.
+## 5. Key decisions
+
+| Decision | Why |
+|---|---|
+| Decide only, never call the model | Keeps the router provider-agnostic and keyless; the calling client (LiteLLM, LangChain, an SDK) is a separate, swappable layer. |
+| Abstract tiers, not model names, in the learned heads | Retraining is needed when the *task* changes, not when the model lineup changes; the catalog maps tiers to today's models. |
+| Rules always win | An operator must be able to pin a channel or task without retraining. |
+| Separate heads for plain text vs. domain requests | Generic text quality is learnable from public scored outcomes; channel/video routing needs in-house labels. |
+| `optimize_for` as one dial for tier *and* model | One user-facing choice; the same intent applies to "move up a tier?" and "which model in it?". |
+| Video never uploaded | The browser extracts a single frame; only that frame and `modality=video` reach the API. |
+| EasyOCR, opt-in (`GRADIST_OCR=1`) | Apache-2.0, Devanagari + Latin, fully local; ~8 s/frame on CPU, so it is off unless asked for and results are cached. |
+| DINOv2 for images, MiniLM for text | Permissive licences, small enough for CPU; CLIP checkpoints without a clear licence were rejected. |
+| Flat files, single process | One deployment = one data directory, catalog and rule set; enough for the current load, trivial to back up. |
+| Session cookies, admin/member roles | Every write needs a signed-in user; managing users and assigning catalog tiers needs an admin. |
+
+## 6. Known limitations
+
+- **Video always routes to large today.** All 120 labelled video frames are labelled `large`, so
+  the image dominates and text cannot move it. More varied frame labels are the fix; the
+  `without_image` evidence in each decision shows this directly.
+- **OCR did not improve held-out accuracy** (`experiments/eval_ocr.py`: 0.974 with and without),
+  for the same reason. It stays on because it is cached and adds evidence operators can read.
+- **QC-risk escalation** applies only to requests shaped like tabson sub-stories (`channel_name`
+  plus text).
+- **Capability is estimated for 262 of 353 models**; human ratings are the remedy for models
+  that matter.
+- **No multi-tenant isolation**: run separate deployments for separate products.

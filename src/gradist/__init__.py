@@ -1,8 +1,8 @@
-"""Gradist: metadata + text + image -> tier -> model name. Does not call any model.
+"""gradist — the library behind mRouter: metadata + text + image -> tier -> model name.
+Does not call any model.
 
-See ../../ARCHITECTURE.md for the design and ../../PLAN.md for what is and is not built yet.
-Tasks 1-8 are implemented, including real image features (Dinov2Embedder, Apache 2.0, see
-features.py) and a FastAPI service (gradist.service) for the UI.
+See ../../ARCHITECTURE.md for how a decision is made and ../../design.md for the module, data
+and API reference. `gradist.service` is the FastAPI service the mRouter console talks to.
 
 Typical use:
     from gradist import load_tiers, RuleSet, resolve, validate_setup
