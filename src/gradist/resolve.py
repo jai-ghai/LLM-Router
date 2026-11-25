@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 
 from gradist.catalog import ModelCatalog, OptimizeFor
 from gradist.classifier import TierClassifier
+from gradist.feedback import SkillEvidence
 from gradist.fit import describe_fit
 from gradist.qc_risk import QcRiskHead
 from gradist.quality_head import TierQualityHead
@@ -80,6 +81,8 @@ class Decision:
     """Catalog models left after the selection/provider/modality filters, all tiers."""
     signals: dict[str, object] = field(default_factory=dict)
     """What the router read from the request (text size, metadata used/ignored, media)."""
+    request_id: str | None = None
+    """Set by the service; rate the pick later with POST /v1/quality {request_id}."""
 
 
 def validate_setup(rules: RuleSet, tiers: TierTable) -> None:
@@ -132,6 +135,7 @@ def resolve(
     qc_risk: QcRiskHead | None = None,
     screen_text: str = "",
     skill_needs: SkillNeeds | None = None,
+    learned_skills: Mapping[str, Mapping[str, SkillEvidence]] | None = None,
 ) -> Decision:
     """Precedence: a matching rule wins outright, then the classifier, then the fallback tier.
 
@@ -140,6 +144,7 @@ def resolve(
 
     `skill_needs` (skills.request_needs) makes the catalog rank the decided tier's models by how
     well they fit those needs instead of a fixed sort; each candidate then carries its fit.
+    `learned_skills` (feedback.learn_skills) adjusts those skills by past ratings.
 
     The classifier step has two models: requests with an image or domain metadata use the domain
     `classifier`; plain-text requests use `quality_head` when one is loaded (it predicts each
@@ -306,6 +311,7 @@ def resolve(
             min_quality=min_quality,
             optimize_for=effective_optimize_for,
             needs=skill_needs,
+            learned=learned_skills,
         )
         entry, note = ranking.ranked[0], ranking.note
         winner_fit = ranking.fits.get(entry.id)

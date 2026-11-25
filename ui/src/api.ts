@@ -137,10 +137,17 @@ export const api = {
     request<{ field: string | null }>('/v1/quality/field', { signal }),
   // judged_by is intentionally omitted — the server records the session user (P0 anti-
   // impersonation). Passing it would be ignored anyway.
-  rateQuality: (input: { modelId: string; metadata: Record<string, string>; rating: number; notes?: string }) =>
+  // With requestId the server takes the model, metadata and skill needs from that request.
+  rateQuality: (input: { modelId: string; metadata: Record<string, string>; rating: number; notes?: string; requestId?: string | null }) =>
     request<{ status: string }>(
       '/v1/quality',
-      json({ model_id: input.modelId, metadata: input.metadata, rating: input.rating, notes: input.notes ?? '' }),
+      json({
+        model_id: input.modelId,
+        metadata: input.metadata,
+        rating: input.rating,
+        notes: input.notes ?? '',
+        request_id: input.requestId ?? '',
+      }),
     ),
   ocr: (frames: File[]) => {
     const form = new FormData()

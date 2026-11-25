@@ -126,7 +126,10 @@ export function Docs() {
      optimize_for sets q / λ: cost 0.1 / 1.0 · balanced 0.6 / 0.6 · accuracy 1.0 / 0.2
    Models whose context window is smaller than the input are dropped.
    Human ratings, when present, replace capability (~ = estimated, counted at 85%).
-   UNREVIEWED models are never selected.`}</Code>
+   UNREVIEWED models are never selected.
+7. Feedback — rate a pick (Playground "Rate this pick" or Request logs "Rate"):
+   the rating moves the model's skills that request needed, weighted by need;
+   the catalog value counts as 3 ratings; moved skills show * in the shortlist.`}</Code>
         <P>
           Providers can be combined (provider=anthropic,google). Every decision shows the tier evidence,
           the shortlist inside the tier, and exactly what the router received — for a video, the file

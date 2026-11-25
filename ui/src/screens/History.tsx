@@ -106,7 +106,7 @@ export function History({ refreshKey }: { refreshKey: number }) {
     setSaving(true)
     setRateError('')
     try {
-      await api.rateQuality({ modelId: selected.model_name, metadata: selected.metadata, rating, notes })
+      await api.rateQuality({ modelId: selected.model_name, metadata: selected.metadata, rating, notes, requestId: selected.request_id })
       setRateOpen(false)
     } catch (err) {
       setRateError(describeError(err))
@@ -400,6 +400,8 @@ export function History({ refreshKey }: { refreshKey: number }) {
                 <Typography sx={{ fontSize: 12.5, color: PALETTE.textMuted }}>
                   Was this model's real output actually correct/good for this request? This feeds the quality floor in
                   Model catalog — a model nobody has rated is never penalized.
+                  {selected.request_id &&
+                    ' It also adjusts the model’s skills that this request needed, so the next similar request is ranked with it.'}
                 </Typography>
                 {rateError && <Alert severity="error">{rateError}</Alert>}
                 <Stack>

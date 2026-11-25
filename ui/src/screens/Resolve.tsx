@@ -12,6 +12,7 @@ import {
   DialogTitle,
   InputAdornment,
   MenuItem,
+  Rating,
   Slider,
   Stack,
   Table,
@@ -626,6 +627,8 @@ export function Resolve({
                 </Stack>
               </Box>
 
+              <RatePick key={decision.request_id ?? ''} decision={decision} />
+
               <TierEvidence decision={decision} />
 
               {decision.signals?.skill_needs && <SkillNeedsPanel needs={decision.signals.skill_needs} />}
@@ -873,20 +876,67 @@ function SkillNeedsPanel({ needs }: { needs: SkillNeeds }) {
   )
 }
 
-/** "video +1.00 · hindi +0.81~ · price −0.25": what each term added; ~ marks an estimated skill. */
+/**
+ * "video +1.00 · hindi +0.81~ · price −0.25": what each term added. ~ marks an estimated skill,
+ * * a skill that ratings have moved (with "0.90→0.68, 1 rating" after it).
+ */
 function describeFitParts(
   parts: Partial<Record<Skill | 'capability' | 'price', number>> | undefined,
   sources: Partial<Record<Skill, string>> | undefined,
+  learned?: Partial<Record<Skill, { prior: number; value: number; ratings: number }>>,
 ): string {
   if (!parts) return ''
   return Object.entries(parts)
     .sort(([a, x], [b, y]) => (a === 'price' ? 1 : b === 'price' ? -1 : (y ?? 0) - (x ?? 0)))
     .map(([k, v]) => {
-      const estimated = sources?.[k as Skill] === 'estimated' || (k === 'capability' && sources?.reasoning === 'estimated')
+      const skill = (k === 'capability' ? 'reasoning' : k) as Skill
       const sign = (v ?? 0) >= 0 ? '+' : '−'
-      return `${k} ${sign}${Math.abs(v ?? 0).toFixed(2)}${estimated ? '~' : ''}`
+      const moved = learned?.[skill]
+      const mark = moved
+        ? `* (${moved.prior.toFixed(2)}→${moved.value.toFixed(2)}, ${moved.ratings} rating${moved.ratings === 1 ? '' : 's'})`
+        : sources?.[skill] === 'estimated'
+          ? '~'
+          : ''
+      return `${k} ${sign}${Math.abs(v ?? 0).toFixed(2)}${mark}`
     })
     .join(' · ')
+}
+
+/** Rate the pick right here; the server ties it to this request's needs and learns from it. */
+function RatePick({ decision }: { decision: Decision }) {
+  const [rating, setRating] = useState<number | null>(null)
+  const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [error, setError] = useState('')
+  if (!decision.request_id) return null
+
+  async function save(value: number | null) {
+    setRating(value)
+    if (!value || !decision.request_id) return
+    setState('saving')
+    try {
+      await api.rateQuality({ modelId: decision.model_name, metadata: {}, rating: value, requestId: decision.request_id })
+      setState('saved')
+    } catch (err) {
+      setError(describeError(err))
+      setState('error')
+    }
+  }
+
+  return (
+    <Box>
+      <SectionLabel>Rate this pick</SectionLabel>
+      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+        <Rating value={rating} onChange={(_, v) => void save(v)} disabled={state === 'saving'} size="small" />
+        <Typography sx={{ fontSize: 11.5, color: state === 'error' ? PALETTE.critical : PALETTE.textMuted }}>
+          {state === 'saved'
+            ? `Saved. ${decision.model_name}'s skills that this request needed now include your rating — pick again to see the effect.`
+            : state === 'error'
+              ? error
+              : `How good was ${decision.model_name}'s real output for this request? 1 = wrong, 5 = right.`}
+        </Typography>
+      </Stack>
+    </Box>
+  )
 }
 
 /** The ranked models the winner was picked from. */
@@ -935,7 +985,7 @@ function Shortlist({ decision }: { decision: Decision }) {
                 )}
                 {byFit && (
                   <TableCell>
-                    <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted }}>{describeFitParts(c.fit_parts, c.skill_sources)}</Typography>
+                    <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted }}>{describeFitParts(c.fit_parts, c.skill_sources, c.learned)}</Typography>
                   </TableCell>
                 )}
                 <TableCell align="right">

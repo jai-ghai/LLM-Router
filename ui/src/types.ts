@@ -42,6 +42,9 @@ export interface CatalogEntry {
 export const UNREVIEWED_TIER = 'UNREVIEWED'
 
 export interface HistoryEntry {
+  /** Absent on entries recorded before the feedback loop existed; those rate by model only. */
+  request_id?: string
+  skill_needs?: Partial<Record<Skill, number>>
   timestamp: string
   /** Absent on entries recorded before auth existed. */
   requested_by?: string
@@ -138,6 +141,8 @@ export interface Status {
 }
 
 export interface Decision {
+  /** Rate the pick with POST /v1/quality {request_id}; the rating teaches the model's skills. */
+  request_id?: string | null
   tier: string
   model_name: string
   confidence: number | null
@@ -158,6 +163,7 @@ export interface Decision {
     fit?: number
     fit_parts?: Partial<Record<Skill | 'capability' | 'price', number>>
     skill_sources?: Partial<Record<Skill, string>>
+    learned?: Partial<Record<Skill, { prior: number; value: number; ratings: number }>>
   }[]
   pool_size?: number | null
   signals?: {

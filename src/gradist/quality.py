@@ -31,6 +31,10 @@ class QualityRating:
     quietly skew an average."""
     judged_by: str
     notes: str = ""
+    request_id: str = ""
+    """The history entry this rates, when rated from History or the Playground."""
+    needs: Mapping[str, float] | None = None
+    """That request's skill needs, copied server-side from history; feeds feedback.learn_skills."""
 
     def __post_init__(self) -> None:
         if not 1 <= self.rating <= 5:

@@ -36,6 +36,7 @@ from typing import Literal
 
 import yaml
 
+from gradist.feedback import SkillEvidence
 from gradist.fit import CatalogScale, Fit, rank_by_fit
 from gradist.rules import RuleError
 from gradist.skills import SkillNeeds
@@ -243,6 +244,7 @@ class ModelCatalog:
         min_quality: float | None = None,
         optimize_for: OptimizeFor = "cost",
         needs: SkillNeeds | None = None,
+        learned: Mapping[str, Mapping[str, SkillEvidence]] | None = None,
     ) -> Ranking:
         """Entries from `tier`, ranked by `optimize_for`, from the selection/provider/modality
         filter, with an optional quality floor layered on top.
@@ -250,6 +252,7 @@ class ModelCatalog:
         With `needs` (the request's skill needs), models whose context window is smaller than
         the input are dropped and the bucket is ranked by fit (fit.py) instead of the fixed
         `_rank_by_mode` sort; `optimize_for` then sets the capability and price weights.
+        `learned` (feedback.learn_skills) moves each model's skills toward its ratings.
 
         `needs_image` / `needs_video` / `needs_audio` each drop candidates
         that don't declare the matching `supports_*` flag. Same filter shape for all three —
@@ -332,7 +335,9 @@ class ModelCatalog:
             if needs is None:
                 ordered, how = _rank_by_mode(bucket, optimize_for, quality, quality_value)
                 return ordered, how, {}
-            ordered, fits, how_fit = rank_by_fit(bucket, needs.needs, self.scale, optimize_for, quality, quality_value)
+            ordered, fits, how_fit = rank_by_fit(
+                bucket, needs.needs, self.scale, optimize_for, quality, quality_value, learned
+            )
             return ordered, how_fit, fits
 
         wanted_rank = tier_rank.get(tier)

@@ -326,6 +326,44 @@ def test_a_hindi_request_picks_the_catalog_model_that_fits_best(tmp_path: Path) 
     assert ", fit " in body["reason"]
 
 
+def test_bad_ratings_on_hindi_requests_move_the_next_pick(tmp_path: Path) -> None:
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("cheap-english", "gemini", "small", cost=0.0001, multilingual=0.6, multilingual_source="measured"),
+            CatalogEntry("hindi-strong", "gemini", "small", cost=0.0003, multilingual=0.9, multilingual_source="measured"),
+        )
+    )
+    client = _authed_client(tmp_path, catalog=catalog)
+    client.put("/v1/rules", json={"rules": [{"when": {"task": "news"}, "tier": "small"}]})
+    form = {"metadata": json.dumps({"task": "news"}), "text": "मुख्यमंत्री ने आज नई योजना की घोषणा की"}
+
+    first = client.post("/v1/resolve", data=form).json()
+    assert first["model_name"] == "hindi-strong"
+    rated = client.post("/v1/quality", json={"request_id": first["request_id"], "rating": 1, "model_id": "spoofed"})
+    assert rated.status_code == 200, rated.text
+
+    stored = client.get("/v1/quality").json()["ratings"]
+    assert stored[0]["model_id"] == "hindi-strong"
+    after = client.post("/v1/resolve", data=form).json()
+    assert after["model_name"] == "cheap-english"
+    loser = next(c for c in after["candidates"] if c["id"] == "hindi-strong")
+    assert loser["learned"]["hindi"] == {"prior": 0.9, "value": 0.675, "ratings": 1}
+
+
+def test_rating_by_request_id_checks_the_request_exists_and_belongs_to_you(tmp_path: Path) -> None:
+    admin = _authed_client(tmp_path)
+    admin.put("/v1/rules", json={"rules": [{"when": {"task": "news"}, "tier": "small"}]})
+    request_id = admin.post("/v1/resolve", data={"metadata": json.dumps({"task": "news"}), "text": "x"}).json()["request_id"]
+
+    assert admin.post("/v1/quality", json={"request_id": "nope", "rating": 3}).status_code == 404
+    assert admin.post("/v1/quality", json={"rating": 3}).status_code == 422
+
+    admin.post("/v1/users", json={"username": "member", "password": "member-pw", "role": "member"})
+    member = TestClient(admin.app)
+    assert member.post("/v1/auth/login", json={"username": "member", "password": "member-pw"}).status_code == 200
+    assert member.post("/v1/quality", json={"request_id": request_id, "rating": 3}).status_code == 403
+
+
 def test_resolve_calls_are_recorded_in_history(client: TestClient) -> None:
     assert client.get("/v1/history").json() == {"history": []}
     client.put("/v1/rules", json={"rules": [{"when": {"task": "news"}, "tier": "small"}]})

@@ -70,6 +70,14 @@ cheap), each with its reason, e.g. `modality=video (1.0)`, `Devanagari in screen
 shows them under **What this request needs**, and the shortlist shows each model's fit and what
 added to it, e.g. `video +1.00 · audio +0.80 · hindi +0.79~ · price −0.25`.
 
+**Feedback loop.** Rate a pick (1 = wrong, 5 = right) under **Rate this pick** in the Playground
+or with **Rate** in Request logs. The rating is stored with that request's skill needs and moves
+the model's skills the request needed, weighted by need, toward what you saw. The catalog value
+counts as 3 ratings, so one 1/5 on a Hindi request moves a 0.90 Hindi score to 0.68 and three
+move it to 0.45. The shortlist marks a moved skill with `*` and shows the change, e.g.
+`hindi +0.68* (0.90→0.68, 1 rating)`. Speed (price) is never learned, and ratings never give a
+model video or audio support it lacks. Members can rate only their own requests.
+
 The decision returns `tier_scores`, the top-8 `candidates`, `pool_size` and `signals`. When the
 classifier decides, `signals.classifier_inputs` lists exactly what it read and the tier odds
 **without** the image, text, screen text or metadata — the Playground shows this as "What moved

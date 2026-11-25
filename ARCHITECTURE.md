@@ -94,10 +94,22 @@ flowchart TD
 3. **Fallback** when nothing can decide, or the classifier is below `min_confidence`.
 4. **QC-risk escalation** (newsroom sub-stories): a head trained on which past generations needed
    a QC correction raises the riskiest ~20% to `large`. It only ever raises a tier.
-5. **Catalog pick.** Within the tier the candidate pool is filtered, then ranked by the same
-   `optimize_for`. Capability is OpenRouter's Artificial Analysis intelligence index (91 models
-   measured); the other 262 are estimated from log price and release date and shown with `~`.
-   Human quality ratings, keyed by `GRADIST_QUALITY_FIELD`, replace capability where present.
+5. **Catalog pick.** Within the tier the candidate pool is filtered (scope, provider, media,
+   quality floor, context window ≥ input), then ranked by fit to the request's skill needs
+   (`fit.py`): Σ need × model skill + q × capability − λ × price, where `optimize_for` sets q and
+   λ. Model skills are scaled 0–1: declared video/audio support, the multilingual index for
+   Hindi, capability for reasoning and writing, context window (log, 8K–1M) for long input, and
+   cheapness for speed; price is a fixed log scale, so a gap weighs the same in a two-model pool
+   as in the whole catalog. Capability is OpenRouter's Artificial Analysis intelligence index (91
+   models measured); the other 262 are estimated from log price and release date, shown with
+   `~`, and counted at 85%. Human quality ratings, keyed by `GRADIST_QUALITY_FIELD`, replace
+   capability where present.
+6. **Feedback loop.** Every decision has a `request_id`, and history keeps that request's skill
+   needs. A rating given with the `request_id` (Playground or Request logs) is stored with those
+   needs; `feedback.py` turns all such ratings into per-model skill evidence, weighted by need,
+   and blends it with the catalog value, which counts as 3 ratings. The next pick ranks with the
+   learned skills (marked `*` in the shortlist, with prior → learned and the rating count).
+   Price-based speed is never learned, and ratings cannot grant video or audio support.
 
 ### Explainability
 

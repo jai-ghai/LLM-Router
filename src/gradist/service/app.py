@@ -34,6 +34,7 @@ import dataclasses
 import json
 import os
 import threading
+import uuid
 from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
@@ -71,6 +72,7 @@ from gradist.features import (
     SentenceTransformerEmbedder,
     load_image_bytes,
 )
+from gradist.feedback import learn_skills
 from gradist.labels import (
     LabelError,
     TierLabel,
@@ -123,11 +125,13 @@ class JudgmentIn(BaseModel):
 
 
 class QualityIn(BaseModel):
-    model_id: str
-    metadata: dict[str, str]
+    model_id: str = ""
+    metadata: dict[str, str] = {}
     rating: int
     judged_by: str = ""  # same treatment as JudgmentIn.judged_by
     notes: str = ""
+    request_id: str = ""
+    """When set, model_id and metadata come from that history entry, not the client."""
 
 
 class LoginIn(BaseModel):
@@ -653,10 +657,28 @@ def create_app(
     def add_quality(rating: QualityIn, user: User = Depends(require_user)) -> dict[str, str]:
         """`judged_by` is always the session user's username — the client-supplied field is
         ignored (anti-impersonation; see
-        `test_post_quality_ignores_client_supplied_judged_by_and_uses_session`)."""
+        `test_post_quality_ignores_client_supplied_judged_by_and_uses_session`).
+
+        With `request_id`, the rating is for that request's pick: the model, metadata and skill
+        needs are copied from history (so the rating also teaches feedback.learn_skills), and a
+        member may only rate their own requests."""
+        model_id, metadata = rating.model_id, rating.metadata
+        needs: dict[str, float] | None = None
+        if rating.request_id:
+            entry = store.find_history(rating.request_id)
+            if entry is None:
+                raise HTTPException(status_code=404, detail=f"no request with id '{rating.request_id}'")
+            if user.role != "admin" and entry.get("requested_by") != user.username:
+                raise HTTPException(status_code=403, detail="you can only rate your own requests")
+            model_id = str(entry.get("model_name") or "")
+            metadata = {str(k): str(v) for k, v in dict(entry.get("metadata") or {}).items()}  # type: ignore[call-overload]
+            raw_needs = entry.get("skill_needs")
+            needs = {str(k): float(v) for k, v in raw_needs.items()} if isinstance(raw_needs, dict) else None
+        if not model_id:
+            raise HTTPException(status_code=422, detail="model_id (or request_id) is required")
         try:
             store.add_quality_rating(
-                rating.model_id, rating.metadata, rating.rating, user.username, rating.notes
+                model_id, metadata, rating.rating, user.username, rating.notes, request_id=rating.request_id, needs=needs
             )
         except QualityError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -968,7 +990,9 @@ def create_app(
         clean_metadata = {str(k): str(v) for k, v in parsed.items()}
         if task_name:
             clean_metadata.setdefault("task", task_name)
-        quality_scores = quality_lookup(store.list_quality_ratings(), state.quality_field) if state.quality_field else None
+        ratings = store.list_quality_ratings()
+        quality_scores = quality_lookup(ratings, state.quality_field) if state.quality_field else None
+        learned_skills = learn_skills(ratings)
         risk = (
             state.qc_risk.risk(clean_metadata, text)
             if state.qc_risk is not None and state.qc_risk.applies_to(clean_metadata, text)
@@ -1002,15 +1026,19 @@ def create_app(
                 qc_risk=state.qc_risk,
                 screen_text=screen_text,
                 skill_needs=skill_needs,
+                learned_skills=learned_skills,
             )
         except (RuleError, ClassifierError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+        decision = dataclasses.replace(decision, request_id=uuid.uuid4().hex)
         if image_bytes or frame_bytes:
             decision.signals["screen_text"] = screen
         store.append_history(
             {
+                "request_id": decision.request_id,
                 "timestamp": datetime.now(UTC).isoformat(),
                 "requested_by": user.username,
+                "skill_needs": {s: round(v, 2) for s, v in skill_needs.needs.items() if v > 0},
                 "metadata": clean_metadata,
                 "text": text,
                 "has_image": image_bytes is not None,

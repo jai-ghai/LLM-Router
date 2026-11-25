@@ -214,19 +214,43 @@ class Store:
         entries.reverse()
         return entries[:limit]
 
+    def find_history(self, request_id: str) -> dict[str, object] | None:
+        if not request_id or self.history_path.stat().st_size == 0:
+            return None
+        for line in self.history_path.read_text(encoding="utf-8").splitlines():
+            if line.strip() and f'"{request_id}"' in line:
+                entry = json.loads(line)
+                if entry.get("request_id") == request_id:
+                    return dict(entry)
+        return None
+
     # ---- quality ratings -------------------------------------------------------------------
 
-    def add_quality_rating(self, model_id: str, metadata: dict[str, str], rating: int, judged_by: str, notes: str) -> None:
+    def add_quality_rating(
+        self,
+        model_id: str,
+        metadata: dict[str, str],
+        rating: int,
+        judged_by: str,
+        notes: str,
+        *,
+        request_id: str = "",
+        needs: dict[str, float] | None = None,
+    ) -> None:
         """Raises QualityError if the rating is malformed (1-5, a named reviewer) — validated
         here, not just trusted from the request, same discipline as every other write path."""
-        validated = QualityRating(model_id, metadata, rating, judged_by, notes)  # raises QualityError
-        record = {
+        validated = QualityRating(model_id, metadata, rating, judged_by, notes, request_id, needs)  # raises QualityError
+        record: dict[str, object] = {
             "model_id": validated.model_id,
             "metadata": dict(validated.metadata),
             "rating": validated.rating,
             "judged_by": validated.judged_by,
             "notes": validated.notes,
         }
+        if request_id:
+            record["request_id"] = request_id
+        if needs:
+            record["needs"] = dict(needs)
         with self.quality_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")
 
@@ -241,7 +265,15 @@ class Store:
             raw = json.loads(line)
             try:
                 ratings.append(
-                    QualityRating(raw["model_id"], raw["metadata"], raw["rating"], raw["judged_by"], raw.get("notes", ""))
+                    QualityRating(
+                        raw["model_id"],
+                        raw["metadata"],
+                        raw["rating"],
+                        raw["judged_by"],
+                        raw.get("notes", ""),
+                        raw.get("request_id", ""),
+                        raw.get("needs"),
+                    )
                 )
             except QualityError:
                 continue  # a malformed stored row should never crash every later read

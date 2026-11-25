@@ -16,6 +16,7 @@ Price is on a fixed log scale, PRICE_FLOOR (0) to PRICE_CEILING (1) per 1K input
 rising past it, so a price gap weighs the same in a two-model task pool as in the whole catalog.
 
 Estimated values (fit on price and release date, not published) count at ESTIMATE_TRUST.
+Ratings of the model's real outputs then pull each skill toward what users saw (feedback.py).
 `q` and `λ` come from optimize_for: cost leans on price, accuracy on capability.
 """
 
@@ -26,6 +27,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from gradist.feedback import NOT_LEARNED, SkillEvidence, blend
 from gradist.skills import SKILLS
 
 if TYPE_CHECKING:
@@ -65,14 +67,34 @@ class CatalogScale:
 class SkillValue:
     value: float
     source: str
-    """"declared", "measured", "estimated", "rating", "price", "context" or "unknown"."""
+    """"declared", "measured", "estimated", "rating", "price", "context", "feedback" or "unknown"."""
+    prior: float | None = None
+    """For "feedback": the catalog value before ratings moved it."""
+    ratings: int = 0
 
     @property
     def trusted(self) -> float:
         return self.value * ESTIMATE_TRUST if self.source == "estimated" else self.value
 
 
-def model_skills(entry: CatalogEntry, scale: CatalogScale, rating: float | None = None) -> dict[str, SkillValue]:
+def model_skills(
+    entry: CatalogEntry,
+    scale: CatalogScale,
+    rating: float | None = None,
+    learned: Mapping[str, SkillEvidence] | None = None,
+) -> dict[str, SkillValue]:
+    skills = _catalog_skills(entry, scale, rating)
+    for skill, evidence in (learned or {}).items():
+        base = skills.get(skill)
+        if base is None or skill in NOT_LEARNED or base.source == "rating":
+            continue
+        if skill in ("video", "audio") and base.value == 0:
+            continue
+        skills[skill] = SkillValue(blend(base.trusted, evidence), "feedback", prior=base.trusted, ratings=evidence.ratings)
+    return skills
+
+
+def _catalog_skills(entry: CatalogEntry, scale: CatalogScale, rating: float | None) -> dict[str, SkillValue]:
     if rating is not None:
         quality = SkillValue((rating - 1.0) / 4.0, "rating")
     elif entry.capability is not None:
@@ -113,6 +135,11 @@ class Fit:
             "fit": round(self.score, 3),
             "fit_parts": {k: round(v, 3) for k, v in self.parts.items() if abs(v) >= 0.0005},
             "skill_sources": {k: v.source for k, v in self.skills.items()},
+            "learned": {
+                k: {"prior": round(v.prior or 0.0, 3), "value": round(v.value, 3), "ratings": v.ratings}
+                for k, v in self.skills.items()
+                if v.source == "feedback"
+            },
         }
 
 
@@ -122,9 +149,10 @@ def fit(
     scale: CatalogScale,
     mode: str,
     rating: float | None = None,
+    learned: Mapping[str, SkillEvidence] | None = None,
 ) -> Fit:
     q, lam = MODE_WEIGHTS[mode]
-    skills = model_skills(entry, scale, rating)
+    skills = model_skills(entry, scale, rating, learned)
     parts = {s: needs[s] * skills[s].trusted for s in SKILLS if needs.get(s, 0.0) > 0}
     parts["capability"] = q * skills["reasoning"].trusted
     parts["price"] = -lam * scale.price(entry.cost)
@@ -138,10 +166,18 @@ def rank_by_fit(
     mode: str,
     quality: Mapping[tuple[str, str], float] | None = None,
     quality_value: str | None = None,
+    learned: Mapping[str, Mapping[str, SkillEvidence]] | None = None,
 ) -> tuple[list[CatalogEntry], dict[str, Fit], str]:
     """Candidates best fit first (cost, then id, break ties), their fits, and a note on how."""
     fits = {
-        e.id: fit(e, needs, scale, mode, quality.get((e.id, quality_value)) if quality and quality_value else None)
+        e.id: fit(
+            e,
+            needs,
+            scale,
+            mode,
+            quality.get((e.id, quality_value)) if quality and quality_value else None,
+            (learned or {}).get(e.id),
+        )
         for e in candidates
     }
     ranked = sorted(candidates, key=lambda e: (-fits[e.id].score, e.cost, e.id))

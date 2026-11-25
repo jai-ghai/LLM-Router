@@ -17,6 +17,7 @@ The "what": modules, data shapes, storage and API. The "how and why" is in
 | `rules.py` | `Rule` / `RuleSet`: metadata match → tier, most specific wins, optional `optimize_for` |
 | `tiers.py` | `TierTable` from `tiers*.yaml`: tier order, per-provider fallback model, `low_confidence_fallback` |
 | `catalog.py` | `ModelCatalog`: filter by tier / scope / provider / modality / quality / context window, `pick_ranked` by fit (with skill needs) or by mode (without); tier labelling helpers |
+| `feedback.py` | `learn_skills(ratings)` → model → skill → `SkillEvidence` (need-weighted mean score, weight, count); `blend` with the catalog value as a prior worth `PRIOR_WEIGHT` = 3 ratings; `fast` is never learned |
 | `fit.py` | `fit()` = Σ need × model skill + q × capability − λ × price; `model_skills` (catalog → 0–1 per skill, estimated × 0.85), `MODE_WEIGHTS` per `optimize_for`, `rank_by_fit`, `describe_fit` |
 | `capability.py` | Parse OpenRouter's public model list (price, context, image/video/audio support) — offline scripts only |
 | `quality.py` | Human quality ratings keyed by `GRADIST_QUALITY_FIELD` |
@@ -51,9 +52,10 @@ The "what": modules, data shapes, storage and API. The "how and why" is in
 | Field | Meaning |
 |---|---|
 | `model_name`, `tier`, `reason`, `confidence`, `optimize_for` | The answer |
+| `request_id` | Id of the history entry; rate the pick with `POST /v1/quality {request_id, rating}` |
 | `rule_outcome`, `classifier_outcome`, `fallback_outcome` | What each ladder step did |
 | `tier_scores`, `tier_scores_kind` | Evidence for the tier (classifier probabilities or quality-head scores) |
-| `candidates`, `pool_size` | Top 8 of the tier after ranking (each with `fit`, `fit_parts` per term and `skill_sources`), and the pool size |
+| `candidates`, `pool_size` | Top 8 of the tier after ranking (each with `fit`, `fit_parts` per term, `skill_sources` and `learned` {skill: prior, value, ratings}), and the pool size |
 | `signals` | What was received: text size, metadata used/ignored, image bytes, modality, providers, `screen_text` {engine, lines, frames_read}, `classifier_inputs` {metadata buckets, embedders, `image_used`, `screen_text_used`, odds `without_image` / `without_text` / `without_screen_text` / `without_metadata`}, QC-risk score, `skill_needs` {needs, reasons, task_profile, input_tokens} — what the candidates are ranked against |
 
 ## Configuration
@@ -82,8 +84,8 @@ The "what": modules, data shapes, storage and API. The "how and why" is in
 | `quality_head.joblib`, `qc_risk.joblib` | The two other learned heads (loaded at start if present) |
 | `ocr_cache.json` | OCR lines by image sha1 |
 | `rules.yaml`, `task_pools.yaml` | Operator rules and named model pools |
-| `quality.jsonl` | Human quality ratings |
-| `history.jsonl` | Every resolve: request summary + decision |
+| `quality.jsonl` | Human quality ratings; rows rated by `request_id` also carry that request's `needs` |
+| `history.jsonl` | Every resolve: `request_id`, request summary, `skill_needs`, decision |
 | `users.jsonl` | Users with bcrypt hashes, role, enabled flag (UTF-8 without BOM) |
 
 ## API
@@ -103,7 +105,7 @@ Auth levels: **public**; **read** = signed in, or open when `GRADIST_ALLOW_READ_
 | `POST /v1/catalog/label-tiers`, `PUT /v1/catalog/{model_id}` | admin | Assign tiers / review new models |
 | `GET /v1/channels` | read | channel_code → name, network, type, genre (from examples) |
 | `GET /v1/task-pools` · `PUT /v1/task-pools`, `PUT/DELETE /v1/task-pools/{task}` | read · user | Named model pools |
-| `GET /v1/quality/field`, `GET /v1/quality` · `POST /v1/quality` | read · user | Quality ratings |
+| `GET /v1/quality/field`, `GET /v1/quality` · `POST /v1/quality` | read · user | Quality ratings. `POST {request_id, rating}` rates that request's pick: model, metadata and needs come from history (404 unknown id, 403 someone else's request for members) and feed the learned skills |
 | `GET /v1/examples`, `GET /v1/examples/uncovered` · `POST /v1/examples` | read · user | Training examples |
 | `POST /v1/judgments` | user | Label an example |
 | `POST /v1/train` | user | Refit the classifier (OCR applied when enabled) |
