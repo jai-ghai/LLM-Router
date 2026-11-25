@@ -50,7 +50,11 @@ be the whole catalog, a hand-picked list (`selected_models`) or a named task poo
 - **On-screen text** — with `GRADIST_OCR=1` (and the `ocr` extra installed) the frame is read with
   EasyOCR in Hindi + English (`GRADIST_OCR_LANGS` for others); lines are returned in
   `signals.screen_text`, cached in `data/ocr_cache.json`, and used in training
-  (`reads_screen_text` in `classifier.meta.json`). The first read of a frame takes ~8 s on CPU.
+  (`reads_screen_text` in `classifier.meta.json`). The first read of a frame takes ~5–8 s on CPU.
+  For a video the Playground reads up to four frames (10%, 35%, 60% and 85% into the clip) and
+  merges their lines. Frames whose picture and bottom ticker band both match an earlier one are
+  skipped, and the read starts the moment the clip is picked (`POST /v1/ocr`), so by the time
+  you press **Pick best model** the frames are cached and the pick takes well under a second.
 - **Recorder file names** — `1010013_2026.07.28_07.40.00-….mp4` fills `channel_code` and the
   channel's name, network, type and genre (from `GET /v1/channels`) in the Playground, without
   overwriting anything you typed.

@@ -138,7 +138,7 @@ export function Docs() {
           <li>Metadata — each field the classifier was trained on; unseen values fall into an "unknown" bucket, untrained fields are listed as ignored.</li>
           <li>Text — a sentence embedding of the request text.</li>
           <li>Image or video frame — a DINOv2 visual fingerprint (layout, colours, people, graphics). A video is never uploaded: the browser sends one still frame and modality=video, which limits the pick to video-capable models.</li>
-          <li>On-screen text — with OCR enabled (GRADIST_OCR=1) the frame is read in Hindi and English; the lines appear in the decision and are part of what the classifier learned from.</li>
+          <li>On-screen text — with OCR enabled (GRADIST_OCR=1) the frame is read in Hindi and English; the lines appear in the decision and are part of what the classifier learned from. For a video the Playground reads up to four frames (10%, 35%, 60%, 85%), skips frames whose picture and ticker band match an earlier one, and starts reading the moment the clip is picked, so the pick itself does not wait on OCR.</li>
           <li>Recorder file names (1010013_2026.07.28_07.40.00-….mp4) fill channel_code and the channel's name, network, type and genre automatically in the Playground; anything you typed is never overwritten.</li>
         </Stack>
         <P>

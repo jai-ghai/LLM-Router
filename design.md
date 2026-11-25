@@ -12,7 +12,7 @@ The "what": modules, data shapes, storage and API. The "how and why" is in
 | `classifier.py` | `TierClassifier`: fit / `predict_proba` / `explain()` (inputs read + ablated odds); `with_screen_text`; save/load with `classifier.meta.json` |
 | `quality_head.py` | `TierQualityHead`: per-tier score regression; cheapest tier within the `optimize_for` margin |
 | `qc_risk.py` | `QcRiskHead`: P(needs QC fix) for sub-story-shaped requests; escalation threshold at the riskiest ~20% |
-| `ocr.py` | `ScreenReader` (EasyOCR, lazy, sha1-keyed cache), `ScreenLine`, `join_lines` |
+| `ocr.py` | `ScreenReader` (EasyOCR, lazy, sha1-keyed cache, one read per frame under concurrency), `ScreenLine`, `join_lines`, `merge_frame_lines` |
 | `rules.py` | `Rule` / `RuleSet`: metadata match → tier, most specific wins, optional `optimize_for` |
 | `tiers.py` | `TierTable` from `tiers*.yaml`: tier order, per-provider fallback model, `low_confidence_fallback` |
 | `catalog.py` | `ModelCatalog`: filter by tier / scope / provider / modality / quality, `pick_ranked` by mode; tier labelling helpers |
@@ -36,6 +36,7 @@ The "what": modules, data shapes, storage and API. The "how and why" is in
 | `metadata` | JSON object (required) | Any fields, e.g. `channel_code`, `channel_name`, `genre`, `pipeline`, `purpose`, `modality` |
 | `text` | string | Request content |
 | `image` | file | An image or one video frame; with `modality=video` only video-capable models qualify |
+| `ocr_frames` | file, repeatable (≤ 8) | Frames to read for on-screen text instead of `image`; lines are merged across frames |
 | `optimize_for` | `cost` \| `balanced` \| `accuracy` | Default `cost` |
 | `provider` | string | One or comma-separated providers |
 | `selected_models` | JSON array of model ids | Explicit candidate scope |
@@ -51,7 +52,7 @@ The "what": modules, data shapes, storage and API. The "how and why" is in
 | `rule_outcome`, `classifier_outcome`, `fallback_outcome` | What each ladder step did |
 | `tier_scores`, `tier_scores_kind` | Evidence for the tier (classifier probabilities or quality-head scores) |
 | `candidates`, `pool_size` | Top 8 of the tier after ranking, and the pool size |
-| `signals` | What was received: text size, metadata used/ignored, image bytes, modality, providers, `screen_text` {engine, lines}, `classifier_inputs` {metadata buckets, embedders, `image_used`, `screen_text_used`, odds `without_image` / `without_text` / `without_screen_text` / `without_metadata`}, QC-risk score |
+| `signals` | What was received: text size, metadata used/ignored, image bytes, modality, providers, `screen_text` {engine, lines, frames_read}, `classifier_inputs` {metadata buckets, embedders, `image_used`, `screen_text_used`, odds `without_image` / `without_text` / `without_screen_text` / `without_metadata`}, QC-risk score |
 
 ## Configuration
 
@@ -104,6 +105,7 @@ Auth levels: **public**; **read** = signed in, or open when `GRADIST_ALLOW_READ_
 | `POST /v1/judgments` | user | Label an example |
 | `POST /v1/train` | user | Refit the classifier (OCR applied when enabled) |
 | `GET /v1/status` | read | Trained state, label count, which heads are loaded, deployment facts |
+| `POST /v1/ocr` | user | Read on-screen text from up to 8 `frames` and cache it (the Playground calls this as soon as a clip is picked) |
 | `POST /v1/resolve` | user | Make a decision (see above) |
 | `GET /v1/history` | user | Recent decisions — members get only their own; admins get everyone's, or one user's with `?requested_by=` |
 

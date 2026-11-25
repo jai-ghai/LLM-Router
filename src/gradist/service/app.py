@@ -78,7 +78,7 @@ from gradist.labels import (
     merge_labels,
     uncovered_examples,
 )
-from gradist.ocr import ScreenReader, join_lines
+from gradist.ocr import ScreenReader, join_lines, merge_frame_lines
 from gradist.qc_risk import QcRiskHead
 from gradist.quality import QualityError, quality_lookup
 from gradist.quality_head import TierQualityHead
@@ -206,6 +206,24 @@ def _with_ocr(label: TierLabel, reader: ScreenReader) -> TierLabel:
         return label
     lines = reader.read(load_image_bytes(label.image_path))
     return dataclasses.replace(label, text=with_screen_text(label.text, join_lines(lines)))
+
+
+MAX_OCR_FRAMES = 8
+
+
+def _read_frames(reader: ScreenReader, frames: list[bytes]) -> dict[str, Any]:
+    """OCR several frames of one clip and merge their lines. Each frame is cached by content, so
+    frames already read by POST /v1/ocr cost nothing here."""
+    try:
+        per_frame = [reader.read(frame) for frame in frames]
+    except Exception as exc:  # noqa: BLE001 — OCR is advisory; a bad frame must not fail the caller
+        return {"engine": reader.engine, "lines": [], "frames_read": len(frames), "error": str(exc)}
+    return {
+        "engine": reader.engine,
+        "lines": [{"text": ln.text, "confidence": ln.confidence} for ln in merge_frame_lines(per_frame)],
+        "frames_read": len(frames),
+        "lines_per_frame": [len(lines) for lines in per_frame],
+    }
 
 
 def _infer_fields(examples: list[Any]) -> dict[str, list[str]]:
@@ -833,6 +851,19 @@ def create_app(
 
     # ---- resolve + history -------------------------------------------------------------
 
+    @app.post("/v1/ocr")
+    def read_screen_text(
+        frames: Annotated[list[UploadFile], File()], _: User = Depends(require_user)
+    ) -> dict[str, Any]:
+        """Read frames ahead of a resolve (the Playground calls this as soon as a clip is picked),
+        so sending the same frames to /v1/resolve later hits the cache instead of waiting."""
+        if len(frames) > MAX_OCR_FRAMES:
+            raise HTTPException(status_code=422, detail=f"at most {MAX_OCR_FRAMES} frames per request")
+        reader = state.screen_reader()
+        if reader is None:
+            return {"engine": None, "lines": [], "frames_read": 0}
+        return _read_frames(reader, [f.file.read() for f in frames])
+
     @app.post("/v1/resolve")
     def do_resolve(
         metadata: Annotated[str, Form()],
@@ -844,6 +875,7 @@ def create_app(
         min_quality: Annotated[float | None, Form()] = None,
         optimize_for: Annotated[str, Form()] = "cost",
         image: Annotated[UploadFile | None, File()] = None,
+        ocr_frames: Annotated[list[UploadFile] | None, File()] = None,
         user: User = Depends(require_user),
     ) -> Decision:
         import json as _json
@@ -897,9 +929,14 @@ def create_app(
             )
         rules = store.load_rules()
         image_bytes = image.file.read() if image is not None else None
+        frame_bytes = [f.file.read() for f in ocr_frames or []]
+        if len(frame_bytes) > MAX_OCR_FRAMES:
+            raise HTTPException(status_code=422, detail=f"at most {MAX_OCR_FRAMES} ocr_frames per request")
         screen: dict[str, Any] = {"engine": None, "lines": []}
-        reader = state.screen_reader() if image_bytes else None
-        if reader is not None and image_bytes:
+        reader = state.screen_reader() if (image_bytes or frame_bytes) else None
+        if reader is not None and frame_bytes:
+            screen = _read_frames(reader, frame_bytes)
+        elif reader is not None and image_bytes:
             try:
                 screen = {
                     "engine": reader.engine,
@@ -947,7 +984,7 @@ def create_app(
             )
         except (RuleError, ClassifierError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
-        if image_bytes:
+        if image_bytes or frame_bytes:
             decision.signals["screen_text"] = screen
         store.append_history(
             {

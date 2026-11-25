@@ -25,7 +25,7 @@ import {
   ToggleButtonGroup,
   Typography,
 } from '@mui/material'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { api, describeError } from '../api'
 import { ImagePicker, type MediaInfo } from '../components/ImagePicker'
 import { MetadataFieldsEditor } from '../components/MetadataFieldsEditor'
@@ -70,6 +70,8 @@ export function Resolve({
   const [scope, setScope] = useState<'all' | 'pool' | 'custom'>('all')
   const [customIds, setCustomIds] = useState<Set<string>>(() => new Set())
   const [customPickerOpen, setCustomPickerOpen] = useState(false)
+  const [ocrPrefetch, setOcrPrefetch] = useState<OcrPrefetch | null>(null)
+  const prefetchRef = useRef<Promise<void> | null>(null)
 
   const COMMON_TASKS = [
     'video_processing',
@@ -163,10 +165,40 @@ export function Resolve({
     setCustomIds(new Set())
     setDecision(null)
     setError('')
+    startOcrPrefetch(null)
+  }
+
+  /** Read on-screen text as soon as media is picked, so the pick itself does not wait on OCR. */
+  function startOcrPrefetch(frames: File[] | null) {
+    if (!frames?.length) {
+      prefetchRef.current = null
+      setOcrPrefetch(null)
+      return
+    }
+    const started = performance.now()
+    setOcrPrefetch({ state: 'reading', frames: frames.length })
+    const promise: Promise<void> = api
+      .ocr(frames)
+      .then((res) => {
+        if (prefetchRef.current !== promise) return
+        const seconds = (performance.now() - started) / 1000
+        setOcrPrefetch(
+          !res.engine
+            ? { state: 'off', frames: frames.length }
+            : res.error
+              ? { state: 'failed', frames: frames.length, error: res.error }
+              : { state: 'ready', frames: frames.length, lines: res.lines.length, seconds },
+        )
+      })
+      .catch((err: unknown) => {
+        if (prefetchRef.current === promise) setOcrPrefetch({ state: 'failed', frames: frames.length, error: describeError(err) })
+      })
+    prefetchRef.current = promise
   }
 
   function onMediaChange(file: File | null, meta?: MediaInfo | null) {
     setImage(file)
+    startOcrPrefetch(file && meta ? (meta.ocrFrames?.map((f) => f.file) ?? [file]) : null)
     if (!file || !meta) {
       setMedia(null)
       setFromFilename(null)
@@ -256,9 +288,11 @@ export function Resolve({
         selectedModels: useCustom ? Array.from(customIds) : null,
         minQuality: qualityField ? minQuality : undefined,
         optimizeFor,
+        ocrFrames: media?.ocrFrames?.map((f) => f.file),
       }
       const runKey = inputsKey
       setSent({ ...request, media })
+      if (prefetchRef.current) await prefetchRef.current
       setDecision(await api.resolve(request))
       setRanKey(runKey)
       onResolved()
@@ -476,6 +510,11 @@ export function Resolve({
                   {autoFilled.length ? ` — added ${autoFilled.join(', ')} to the metadata` : ''}
                 </Typography>
               )}
+              {ocrPrefetch && ocrPrefetch.state !== 'off' && (
+                <Typography sx={{ fontSize: 12, color: ocrPrefetch.state === 'failed' ? PALETTE.critical : PALETTE.textMuted, mt: 0.5 }}>
+                  {describePrefetch(ocrPrefetch)}
+                </Typography>
+              )}
             </Box>
 
             <Stack
@@ -688,6 +727,20 @@ interface SentRequest {
   optimizeFor: OptimizeFor
   image: File | null
   media: MediaInfo | null
+  ocrFrames?: File[]
+}
+
+type OcrPrefetch =
+  | { state: 'reading' | 'off'; frames: number }
+  | { state: 'ready'; frames: number; lines: number; seconds: number }
+  | { state: 'failed'; frames: number; error: string }
+
+function describePrefetch(p: OcrPrefetch): string {
+  const frames = `${p.frames} frame${p.frames === 1 ? '' : 's'}`
+  if (p.state === 'reading') return `Reading on-screen text from ${frames} in the background — keep filling in the form.`
+  if (p.state === 'ready') return `On-screen text ready: ${p.lines} line(s) from ${frames} in ${p.seconds.toFixed(1)} s. The pick will not wait on OCR.`
+  if (p.state === 'failed') return `Could not read on-screen text (${p.error}); the pick will continue without it.`
+  return ''
 }
 
 const NEED_SHARE: Record<OptimizeFor, number> = { cost: 0.7, balanced: 0.5, accuracy: 0.3 }
@@ -847,14 +900,24 @@ function RequestSent({ sent, decision }: { sent: SentRequest; decision: Decision
     rows.push(['Uploaded file', `${m.sourceName} · ${m.sourceType} · ${formatBytes(m.sourceBytes)}`])
     if (m.kind === 'video') {
       rows.push(['Video', `${(m.durationSec ?? 0).toFixed(1)} s · ${m.width}×${m.height}`])
-      rows.push(['Frame captured', `one still at ${(m.frameAtSec ?? 0).toFixed(2)} s (35% into the clip), extracted in your browser`])
+      rows.push(['Frame captured', `one still at ${(m.frameAtSec ?? 0).toFixed(2)} s (35% into the clip), extracted in your browser — the classifier sees this one`])
+      if (m.ocrFrames?.length) {
+        const at = (secs: number[]) => secs.map((t) => `${t.toFixed(1)} s`).join(', ')
+        const skipped = m.skippedAtSec ?? []
+        rows.push([
+          'Frames read for text',
+          `${m.ocrFrames.length} still(s) at ${at(m.ocrFrames.map((f) => f.atSec))}` +
+            (skipped.length ? ` · skipped ${skipped.length} near-duplicate(s) at ${at(skipped)}` : '') +
+            ' — read while you filled in the form',
+        ])
+      }
     } else if (m.width) {
       rows.push(['Image', `${m.width}×${m.height}`])
     }
     rows.push(['Sent to the router', `${m.sentName} · ${m.sentType} · ${formatBytes(m.sentBytes)} — the video itself is never uploaded`])
     const screen = s.screen_text
     rows.push([
-      'Text read from the frame',
+      m.ocrFrames && m.ocrFrames.length > 1 ? 'Text read from the frames' : 'Text read from the frame',
       !screen?.engine ? (
         'OCR is off (set GRADIST_OCR=1 on the API to read on-screen text)'
       ) : screen.error ? (
@@ -872,7 +935,9 @@ function RequestSent({ sent, decision }: { sent: SentRequest; decision: Decision
             </Box>
           ))}
           <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted }}>
-            {screen.engine} · lines under 30% confidence are dropped
+            {screen.engine}
+            {screen.frames_read && screen.frames_read > 1 ? ` · merged from ${screen.frames_read} frames, each line once at its best confidence` : ''}
+            {' · lines under 30% confidence are dropped'}
           </Typography>
         </Stack>
       ),

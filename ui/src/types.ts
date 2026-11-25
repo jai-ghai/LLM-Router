@@ -169,8 +169,16 @@ export interface Decision {
     metadata_used?: string[]
     metadata_ignored?: string[]
     classifier_inputs?: ClassifierInputs
-    screen_text?: { engine: string | null; lines: { text: string; confidence: number }[]; error?: string }
+    screen_text?: ScreenText
   }
+}
+
+export interface ScreenText {
+  engine: string | null
+  lines: { text: string; confidence: number }[]
+  frames_read?: number
+  lines_per_frame?: number[]
+  error?: string
 }
 
 /** What the domain classifier read from a request, and its tier odds with one input blanked. */

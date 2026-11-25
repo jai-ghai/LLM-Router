@@ -23,11 +23,12 @@ and is not wired to anything.
 ```mermaid
 flowchart LR
     subgraph Browser["Browser — mRouter console (React + MUI)"]
-        PG["Playground<br/>video → one frame (client-side)"]
+        PG["Playground<br/>video → 4 frames, duplicates dropped (client-side)"]
         OV["Overview · Routing rules · Request logs"]
     end
     subgraph API["FastAPI service (gradist.service)"]
         AUTH["Session auth<br/>admin / member"]
+        PRE["POST /v1/ocr<br/>prefetch on pick"]
         RES["POST /v1/resolve"]
         OCR["ScreenReader<br/>EasyOCR hi+en (opt-in)"]
         LAD["resolve() ladder"]
@@ -40,6 +41,7 @@ flowchart LR
     end
     CAT["config/catalog.yaml<br/>353 models · 17 providers"]
     APP["Your application"] -->|"multipart: metadata, text, image"| RES
+    PG -->|"frames, as soon as a clip is picked"| PRE --> OCR
     PG --> RES
     OV --> API
     RES --> OCR --> LAD
@@ -80,7 +82,10 @@ flowchart TD
 2. **Two learned heads, by request kind.**
    - *Tier classifier* (metadata or media present): features are one-hot metadata with an
      "unknown" bucket per field, a MiniLM text embedding, a 384-d DINOv2 image embedding with a
-     has-image flag, and the frame's OCR text appended to the request text when OCR is on. It
+     has-image flag, and the OCR text appended to the request text when OCR is on. For a video
+     the Playground reads up to four frames, drops near-duplicates in the browser (a difference
+     hash of the whole picture and of the ticker band), and starts the read via `POST /v1/ocr` as
+     soon as the clip is picked; the resolve then finds every frame in the OCR cache. It
      outputs P(needs at least each tier); `optimize_for` sets how sure it must be before moving up.
    - *Quality head* (plain text): trained on outcomes where every tier's models answered the query
      and were scored (xRouteBench). It predicts each tier's score; `optimize_for` sets how much

@@ -8,6 +8,7 @@ import type {
   QualityResponse,
   RuleEntry,
   RulesResponse,
+  ScreenText,
   Status,
   TiersResponse,
   TrainResult,
@@ -140,6 +141,11 @@ export const api = {
       '/v1/quality',
       json({ model_id: input.modelId, metadata: input.metadata, rating: input.rating, notes: input.notes ?? '' }),
     ),
+  ocr: (frames: File[]) => {
+    const form = new FormData()
+    for (const frame of frames) form.append('frames', frame)
+    return request<ScreenText>('/v1/ocr', { method: 'POST', body: form })
+  },
   resolve: (
     input: ExampleInput & {
       providers?: string[]
@@ -148,9 +154,11 @@ export const api = {
       task?: string
       minQuality?: number
       optimizeFor?: OptimizeFor
+      ocrFrames?: File[]
     },
   ) => {
     const form = toFormData(input)
+    for (const frame of input.ocrFrames ?? []) form.append('ocr_frames', frame)
     if (input.providers?.length) form.set('provider', input.providers.join(','))
     if (input.minConfidence !== undefined) form.set('min_confidence', String(input.minConfidence))
     if (input.selectedModels) form.set('selected_models', JSON.stringify(input.selectedModels))

@@ -30,6 +30,21 @@ def join_lines(lines: list[ScreenLine]) -> str:
     return " | ".join(line.text for line in lines)
 
 
+def merge_frame_lines(per_frame: list[list[ScreenLine]]) -> list[ScreenLine]:
+    """One list for several frames of the same clip: a repeated logo or ticker line is kept once
+    (at its best confidence), in the order it first appeared."""
+    best: dict[str, ScreenLine] = {}
+    for lines in per_frame:
+        for line in lines:
+            key = " ".join(line.text.casefold().split())
+            kept = best.get(key)
+            if kept is None:
+                best[key] = line
+            elif line.confidence > kept.confidence:
+                best[key] = ScreenLine(kept.text, line.confidence)
+    return list(best.values())
+
+
 class ScreenReader:
     """Lazy EasyOCR reader with a per-image cache (in memory, optionally mirrored to a JSON file
     so retraining does not re-read frames it has already seen)."""
@@ -58,7 +73,11 @@ class ScreenReader:
     def read(self, image_bytes: bytes) -> list[ScreenLine]:
         key = hashlib.sha1(image_bytes).hexdigest()
         if key not in self._cache:
-            self._cache[key] = [asdict(line) for line in self._run(image_bytes)]
+            with self._lock:
+                # Re-check: a prefetch and a resolve can ask for the same frame at once; the
+                # second waits here and then takes the cached result instead of reading again.
+                if key not in self._cache:
+                    self._cache[key] = [asdict(line) for line in self._run(image_bytes)]
         return [ScreenLine(**row) for row in self._cache[key]]
 
     def save_cache(self) -> None:
@@ -66,14 +85,14 @@ class ScreenReader:
             self._cache_path.write_text(json.dumps(self._cache, ensure_ascii=False), encoding="utf-8")
 
     def _run(self, image_bytes: bytes) -> list[ScreenLine]:
+        """Caller holds `self._lock` (EasyOCR's reader is not safe to share across threads)."""
         import numpy as np
         from PIL import Image
 
         pixels = np.asarray(Image.open(io.BytesIO(image_bytes)).convert("RGB"))
-        with self._lock:
-            if self._reader is None:
-                self._reader = self._easyocr.Reader(list(self.langs), gpu=False, verbose=False)
-            results = self._reader.readtext(pixels, detail=1, paragraph=False)
+        if self._reader is None:
+            self._reader = self._easyocr.Reader(list(self.langs), gpu=False, verbose=False)
+        results = self._reader.readtext(pixels, detail=1, paragraph=False)
         return [
             ScreenLine(str(text).strip(), round(float(conf), 3))
             for _box, text, conf in results

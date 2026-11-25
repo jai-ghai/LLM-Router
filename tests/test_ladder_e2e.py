@@ -28,7 +28,7 @@ from fastapi.testclient import TestClient
 from gradist.classifier import TierClassifier
 from gradist.features import HashingEmbedder, MetadataEncoder
 from gradist.labels import TierLabel
-from gradist.ocr import ScreenLine
+from gradist.ocr import ScreenLine, ScreenReader, merge_frame_lines
 from gradist.resolve import resolve
 from gradist.rules import Rule, RuleSet
 from gradist.service.app import AppState, create_app
@@ -507,6 +507,81 @@ def test_service_reads_screen_text_when_ocr_is_on(tmp_path: Path, monkeypatch: p
 
     channels = client.get("/v1/channels").json()["channels"]
     assert channels["101"] == {"channel_name": "Alpha", "channel_type": "news"}
+
+
+def test_merge_frame_lines_keeps_each_line_once_at_its_best_confidence() -> None:
+    merged = merge_frame_lines(
+        [
+            [ScreenLine("BREAKING NEWS", 0.6), ScreenLine("Aaj Tak", 0.9)],
+            [ScreenLine("breaking  news", 0.8), ScreenLine("SCORE 2-1", 0.7)],
+        ]
+    )
+    assert merged == [ScreenLine("BREAKING NEWS", 0.8), ScreenLine("Aaj Tak", 0.9), ScreenLine("SCORE 2-1", 0.7)]
+
+
+def test_screen_reader_reads_a_frame_once_when_asked_concurrently() -> None:
+    import threading
+    import time
+
+    reader = ScreenReader.__new__(ScreenReader)
+    reader._lock = threading.Lock()
+    reader._cache = {}
+    reader._cache_path = None
+    calls: list[bytes] = []
+
+    def slow_run(image_bytes: bytes) -> list[ScreenLine]:
+        calls.append(image_bytes)
+        time.sleep(0.2)
+        return [ScreenLine("TICKER", 0.9)]
+
+    reader._run = slow_run  # type: ignore[method-assign]
+    results: list[list[ScreenLine]] = []
+    threads = [threading.Thread(target=lambda: results.append(reader.read(b"frame"))) for _ in range(2)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert len(calls) == 1
+    assert results == [[ScreenLine("TICKER", 0.9)]] * 2
+
+
+class CountingScreenReader(FakeScreenReader):
+    def __init__(self) -> None:
+        self.cache: dict[bytes, list[ScreenLine]] = {}
+        self.runs = 0
+
+    def read(self, image_bytes: bytes) -> list[ScreenLine]:
+        if image_bytes not in self.cache:
+            self.runs += 1
+            self.cache[image_bytes] = super().read(image_bytes)
+        return self.cache[image_bytes]
+
+
+def _png_parts(field: str, images: tuple[bytes, ...]) -> list[tuple[str, tuple[str, io.BytesIO, str]]]:
+    return [(field, (f"f{i}.png", io.BytesIO(b), "image/png")) for i, b in enumerate(images)]
+
+
+def test_prefetched_frames_are_not_read_again_at_resolve(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _ladder_client(tmp_path, monkeypatch)
+    reader = CountingScreenReader()
+    monkeypatch.setattr(AppState, "screen_reader", lambda self: reader)
+
+    pre = client.post("/v1/ocr", files=_png_parts("frames", (RED_THUMB, BLUE_THUMB, RED_THUMB))).json()
+    assert pre["frames_read"] == 3
+    assert [ln["text"] for ln in pre["lines"]] == ["BREAKING NEWS", "SCORE 2-1"]
+    assert reader.runs == 2
+
+    body = client.post(
+        "/v1/resolve",
+        data={"metadata": json.dumps({"channel_type": "news", "modality": "video"}), "text": "clip"},
+        files=_png_parts("image", (RED_THUMB,)) + _png_parts("ocr_frames", (RED_THUMB, BLUE_THUMB)),
+    ).json()
+    screen = body["signals"]["screen_text"]
+    assert screen["frames_read"] == 2
+    assert [ln["text"] for ln in screen["lines"]] == ["BREAKING NEWS", "SCORE 2-1"]
+    assert reader.runs == 2
+
+    assert client.post("/v1/ocr", files=_png_parts("frames", (RED_THUMB,) * 9)).status_code == 422
 
 
 def test_service_fallback_with_unused_thumbnail_before_train(

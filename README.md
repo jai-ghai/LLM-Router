@@ -22,7 +22,8 @@ flowchart LR
   capability, `balanced` the cheapest above the tier's median.
 - **Every decision is explained.** Tier odds, the shortlist inside the tier, exactly what was
   read from the request (including the frame and its OCR text), and which input moved the tier.
-- **Video stays local.** The browser extracts one frame; the clip is never uploaded.
+- **Video stays local.** The browser extracts frames; the clip is never uploaded. On-screen text
+  is read from up to four frames (duplicates skipped) in the background while you fill in the form.
 
 ## Quick start (Windows)
 

@@ -21,6 +21,9 @@ export interface MediaInfo {
   height?: number
   durationSec?: number
   frameAtSec?: number
+  /** Stills read for on-screen text (videos only), near-duplicates already dropped. */
+  ocrFrames?: OcrFrame[]
+  skippedAtSec?: number[]
   sentName: string
   sentType: string
   sentBytes: number
@@ -89,7 +92,7 @@ export function ImagePicker({
     if (file.type.startsWith('video/') || /\.(mp4|mov|webm|mkv|m4v|avi)$/i.test(file.name)) {
       setBusy(true)
       try {
-        const { still, width, height, durationSec, frameAtSec } = await extractVideoThumbnail(file)
+        const { still, width, height, durationSec, frameAtSec, ocrFrames, skippedAtSec } = await extractVideoFrames(file)
         onChange(still, {
           kind: 'video',
           ...source,
@@ -97,6 +100,8 @@ export function ImagePicker({
           height,
           durationSec,
           frameAtSec,
+          ocrFrames,
+          skippedAtSec,
           sentName: still.name,
           sentType: still.type,
           sentBytes: still.size,
@@ -205,6 +210,13 @@ export function ImagePicker({
       if (media.kind === 'video') {
         facts.push(`Video · ${formatDuration(media.durationSec ?? 0)} · ${media.width}×${media.height}`)
         facts.push(`Frame at ${formatDuration(media.frameAtSec ?? 0)} (35% into the clip)`)
+        if (media.ocrFrames?.length) {
+          const skipped = media.skippedAtSec?.length ?? 0
+          facts.push(
+            `Text read from ${media.ocrFrames.length} frame${media.ocrFrames.length === 1 ? '' : 's'}` +
+              (skipped ? ` · ${skipped} duplicate${skipped === 1 ? '' : 's'} skipped` : ''),
+          )
+        }
       } else if (media.width) {
         facts.push(`Image · ${media.width}×${media.height}`)
       }
@@ -385,73 +397,140 @@ async function imageSize(file: File): Promise<{ width?: number; height?: number 
   }
 }
 
-/** Seek ~35% into the clip and encode one JPEG still. */
-export function extractVideoThumbnail(
-  file: File,
-  atRatio = 0.35,
-): Promise<{ still: File; width: number; height: number; durationSec: number; frameAtSec: number }> {
+/** A still read for on-screen text. */
+export interface OcrFrame {
+  file: File
+  atSec: number
+}
+
+const MAIN_FRAME_RATIO = 0.35
+const OCR_FRAME_RATIOS = [0.1, 0.35, 0.6, 0.85]
+
+/**
+ * The classifier's still (35% in) plus up to four stills for OCR, minus near-duplicates.
+ * Two frames count as duplicates only if the whole picture AND the bottom ticker band match,
+ * so a new headline under the same anchor shot is still read.
+ */
+export async function extractVideoFrames(file: File): Promise<{
+  still: File
+  width: number
+  height: number
+  durationSec: number
+  frameAtSec: number
+  ocrFrames: OcrFrame[]
+  skippedAtSec: number[]
+}> {
+  const url = URL.createObjectURL(file)
+  const video = document.createElement('video')
+  video.preload = 'auto'
+  video.muted = true
+  video.playsInline = true
+  video.setAttribute('playsinline', 'true')
+  try {
+    await new Promise<void>((resolve, reject) => {
+      video.onloadedmetadata = () => resolve()
+      video.onerror = () => reject(new Error('Browser could not decode that video.'))
+      video.src = url
+      void video.load()
+    })
+    const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 1
+    const w = video.videoWidth || 640
+    const h = video.videoHeight || 360
+    const base = file.name.replace(/\.[^.]+$/, '') || 'clip'
+
+    const captured: { frame: OcrFrame; print: FramePrint }[] = []
+    for (const ratio of OCR_FRAME_RATIOS) {
+      await seekTo(video, Math.min(Math.max(duration * ratio, 0.05), Math.max(duration - 0.05, 0.05)))
+      const blob = await drawFrame(video, w, h)
+      const atSec = video.currentTime
+      captured.push({
+        frame: { file: new File([blob], `${base}_${Math.round(atSec)}s.jpg`, { type: 'image/jpeg' }), atSec },
+        print: fingerprint(video),
+      })
+    }
+
+    const mainIndex = OCR_FRAME_RATIOS.indexOf(MAIN_FRAME_RATIO)
+    const kept = [captured[mainIndex]]
+    const skippedAtSec: number[] = []
+    captured.forEach((c, i) => {
+      if (i === mainIndex) return
+      if (kept.some((k) => isDuplicate(k.print, c.print))) skippedAtSec.push(c.frame.atSec)
+      else kept.push(c)
+    })
+    const main = captured[mainIndex].frame
+    return {
+      still: new File([main.file], `${base}_thumb.jpg`, { type: 'image/jpeg' }),
+      width: w,
+      height: h,
+      durationSec: Number.isFinite(video.duration) ? video.duration : 0,
+      frameAtSec: main.atSec,
+      ocrFrames: kept.map((k) => k.frame).sort((a, b) => a.atSec - b.atSec),
+      skippedAtSec,
+    }
+  } finally {
+    URL.revokeObjectURL(url)
+    video.removeAttribute('src')
+  }
+}
+
+function seekTo(video: HTMLVideoElement, t: number): Promise<void> {
   return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file)
-    const video = document.createElement('video')
-    video.preload = 'metadata'
-    video.muted = true
-    video.playsInline = true
-    video.setAttribute('playsinline', 'true')
-
-    const fail = (msg: string) => {
-      URL.revokeObjectURL(url)
-      reject(new Error(msg))
-    }
-
-    video.onloadedmetadata = () => {
-      const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 1
-      const t = Math.min(Math.max(duration * atRatio, 0.05), Math.max(duration - 0.05, 0.05))
-      try {
-        video.currentTime = t
-      } catch {
-        video.currentTime = 0
-      }
-    }
-
-    video.onseeked = () => {
-      try {
-        const w = video.videoWidth || 640
-        const h = video.videoHeight || 360
-        const canvas = document.createElement('canvas')
-        canvas.width = w
-        canvas.height = h
-        const ctx = canvas.getContext('2d')
-        if (!ctx) {
-          fail('Canvas unavailable in this browser.')
-          return
-        }
-        ctx.drawImage(video, 0, 0, w, h)
-        canvas.toBlob(
-          (blob) => {
-            URL.revokeObjectURL(url)
-            if (!blob) {
-              reject(new Error('Could not encode thumbnail.'))
-              return
-            }
-            const base = file.name.replace(/\.[^.]+$/, '') || 'clip'
-            resolve({
-              still: new File([blob], `${base}_thumb.jpg`, { type: 'image/jpeg' }),
-              width: w,
-              height: h,
-              durationSec: Number.isFinite(video.duration) ? video.duration : 0,
-              frameAtSec: video.currentTime,
-            })
-          },
-          'image/jpeg',
-          0.92,
-        )
-      } catch (err) {
-        fail(err instanceof Error ? err.message : 'Frame extract failed.')
-      }
-    }
-
-    video.onerror = () => fail('Browser could not decode that video.')
-    video.src = url
-    void video.load()
+    video.onseeked = () => resolve()
+    video.onerror = () => reject(new Error('Browser could not seek in that video.'))
+    video.currentTime = t
   })
+}
+
+function drawFrame(video: HTMLVideoElement, w: number, h: number): Promise<Blob> {
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return Promise.reject(new Error('Canvas unavailable in this browser.'))
+  ctx.drawImage(video, 0, 0, w, h)
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Could not encode a frame.'))), 'image/jpeg', 0.92),
+  )
+}
+
+interface FramePrint {
+  whole: Uint8Array
+  band: Uint8Array
+}
+
+/** Difference hashes: 16×9 of the whole frame, 64×8 of the bottom 30% (where tickers sit). */
+function fingerprint(video: HTMLVideoElement): FramePrint {
+  const vw = video.videoWidth || 640
+  const vh = video.videoHeight || 360
+  return {
+    whole: dHash(video, 0, 0, vw, vh, 16, 9),
+    band: dHash(video, 0, vh * 0.7, vw, vh * 0.3, 64, 8),
+  }
+}
+
+function dHash(video: HTMLVideoElement, sx: number, sy: number, sw: number, sh: number, cols: number, rows: number): Uint8Array {
+  const canvas = document.createElement('canvas')
+  canvas.width = cols + 1
+  canvas.height = rows
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  const bits = new Uint8Array(cols * rows)
+  if (!ctx) return bits
+  ctx.drawImage(video, sx, sy, sw, sh, 0, 0, cols + 1, rows)
+  const px = ctx.getImageData(0, 0, cols + 1, rows).data
+  const gray = (x: number, y: number) => {
+    const i = (y * (cols + 1) + x) * 4
+    return px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114
+  }
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) bits[y * cols + x] = gray(x, y) < gray(x + 1, y) ? 1 : 0
+  return bits
+}
+
+function hamming(a: Uint8Array, b: Uint8Array): number {
+  let d = 0
+  for (let i = 0; i < a.length; i++) d += a[i] === b[i] ? 0 : 1
+  return d
+}
+
+function isDuplicate(a: FramePrint, b: FramePrint): boolean {
+  return hamming(a.whole, b.whole) <= a.whole.length * 0.1 && hamming(a.band, b.band) <= a.band.length * 0.04
 }
