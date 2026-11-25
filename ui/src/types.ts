@@ -155,6 +155,9 @@ export interface Decision {
     cost: number
     capability?: number | null
     capability_source?: string
+    fit?: number
+    fit_parts?: Partial<Record<Skill | 'capability' | 'price', number>>
+    skill_sources?: Partial<Record<Skill, string>>
   }[]
   pool_size?: number | null
   signals?: {

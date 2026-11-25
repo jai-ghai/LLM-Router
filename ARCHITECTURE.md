@@ -73,7 +73,7 @@ flowchart TD
     QC{"QC-risk head applies?<br/>text + channel_name"} -->|"top ~20% risk"| UP["Escalate to large"] --> TIER
     QC -->|otherwise| TIER
     TIER --> POOL["Candidate pool: tier's catalog models<br/>∩ scope (all / picked / task pool)<br/>∩ providers ∩ modality (image / video)<br/>minus UNREVIEWED, minus below quality floor"]
-    POOL --> RANK["Rank inside tier<br/>cost → cheapest<br/>accuracy → highest capability<br/>balanced → cheapest ≥ median capability"]
+    POOL --> RANK["Rank inside tier by fit<br/>Σ need × skill + q·capability − λ·price<br/>q, λ from optimize_for"]
     RANK --> OUT["Decision: model_name, tier, reason,<br/>tier_scores, candidates, pool_size, signals"]
 ```
 
@@ -110,7 +110,8 @@ metadata**, so the console can show which input moved the decision. `tier_scores
 `skills.py`) scores how much the request needs each skill — video, audio, Hindi, reasoning, long
 input, writing, speed — with a reason per score, from the task profile in
 `config/task_skills.yaml`, the modality, Devanagari in the text or screen text, the QC-risk score
-and the input length. These needs are reported only; scoring models against them is the next step.
+and the input length. Each shortlisted candidate carries its `fit` and the term-by-term
+`fit_parts`, and the reason names the winner's largest terms.
 
 ## 4. Training pipeline (offline)
 

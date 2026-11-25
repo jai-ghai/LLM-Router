@@ -306,6 +306,26 @@ def test_every_decision_reports_the_request_skill_needs(client: TestClient) -> N
     assert "modality=video (1.0)" in skill_needs["reasons"]["video"]
 
 
+def test_a_hindi_request_picks_the_catalog_model_that_fits_best(tmp_path: Path) -> None:
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("cheap-english", "gemini", "small", cost=0.0001, multilingual=0.4, multilingual_source="measured"),
+            CatalogEntry("hindi-strong", "gemini", "small", cost=0.0003, multilingual=0.9, multilingual_source="measured"),
+        )
+    )
+    client = _authed_client(tmp_path, catalog=catalog)
+    client.put("/v1/rules", json={"rules": [{"when": {"task": "news"}, "tier": "small"}]})
+    body = client.post(
+        "/v1/resolve",
+        data={"metadata": json.dumps({"task": "news"}), "text": "मुख्यमंत्री ने आज नई योजना की घोषणा की"},
+    ).json()
+    assert body["model_name"] == "hindi-strong"
+    assert [c["id"] for c in body["candidates"]] == ["hindi-strong", "cheap-english"]
+    assert body["candidates"][0]["fit_parts"]["hindi"] == 0.9
+    assert body["candidates"][0]["fit"] > body["candidates"][1]["fit"]
+    assert ", fit " in body["reason"]
+
+
 def test_resolve_calls_are_recorded_in_history(client: TestClient) -> None:
     assert client.get("/v1/history").json() == {"history": []}
     client.put("/v1/rules", json={"rules": [{"when": {"task": "news"}, "tier": "small"}]})

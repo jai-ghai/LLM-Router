@@ -35,12 +35,15 @@ class SkillNeeds:
     needs: dict[str, float]
     reasons: dict[str, list[str]] = field(default_factory=dict)
     task_profile: str | None = None
+    input_tokens: int = 0
+    """Rough size of text + on-screen text (characters ÷ 4); models with a smaller window are dropped."""
 
     def as_signal(self) -> dict[str, object]:
         return {
             "needs": {s: round(self.needs.get(s, 0.0), 2) for s in SKILLS},
             "reasons": {s: r for s, r in self.reasons.items() if r},
             "task_profile": self.task_profile,
+            "input_tokens": self.input_tokens,
         }
 
 
@@ -133,4 +136,9 @@ def request_needs(
     if modality != "video" and not has_image and 0 < words < SHORT_REQUEST_WORDS:
         need("fast", 0.5, f"short text-only request ({words} words)")
 
-    return SkillNeeds(needs=needs, reasons=reasons, task_profile=task if profile is not None else None)
+    return SkillNeeds(
+        needs=needs,
+        reasons=reasons,
+        task_profile=task if profile is not None else None,
+        input_tokens=round(tokens),
+    )

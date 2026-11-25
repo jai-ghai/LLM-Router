@@ -843,7 +843,7 @@ const SKILL_LABELS: Record<Skill, string> = {
   fast: 'Quick and cheap',
 }
 
-/** How much the request needs each skill, and why. Not used to pick the model yet. */
+/** How much the request needs each skill, and why. The shortlist is ranked by fit to these. */
 function SkillNeedsPanel({ needs }: { needs: SkillNeeds }) {
   const skills = (Object.keys(SKILL_LABELS) as Skill[]).sort((a, b) => (needs.needs[b] ?? 0) - (needs.needs[a] ?? 0))
   return (
@@ -867,20 +867,43 @@ function SkillNeedsPanel({ needs }: { needs: SkillNeeds }) {
       </Stack>
       <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted, mt: 0.75 }}>
         {needs.task_profile ? `Task profile “${needs.task_profile}” from config/task_skills.yaml, plus signals in the request. ` : 'From signals in the request (no task profile matched). '}
-        The model is not chosen by these yet.
+        Models in the tier are ranked by how well they cover these needs, minus price.
       </Typography>
     </Box>
   )
 }
 
+/** "video +1.00 · hindi +0.81~ · price −0.25": what each term added; ~ marks an estimated skill. */
+function describeFitParts(
+  parts: Partial<Record<Skill | 'capability' | 'price', number>> | undefined,
+  sources: Partial<Record<Skill, string>> | undefined,
+): string {
+  if (!parts) return ''
+  return Object.entries(parts)
+    .sort(([a, x], [b, y]) => (a === 'price' ? 1 : b === 'price' ? -1 : (y ?? 0) - (x ?? 0)))
+    .map(([k, v]) => {
+      const estimated = sources?.[k as Skill] === 'estimated' || (k === 'capability' && sources?.reasoning === 'estimated')
+      const sign = (v ?? 0) >= 0 ? '+' : '−'
+      return `${k} ${sign}${Math.abs(v ?? 0).toFixed(2)}${estimated ? '~' : ''}`
+    })
+    .join(' · ')
+}
+
 /** The ranked models the winner was picked from. */
 function Shortlist({ decision }: { decision: Decision }) {
   const rows = decision.candidates ?? []
-  const modeText: Record<OptimizeFor, string> = {
-    cost: 'cheapest first',
-    balanced: 'cheapest model at or above the median capability first',
-    accuracy: 'highest capability first',
-  }
+  const byFit = rows.some((c) => c.fit != null)
+  const modeText: Record<OptimizeFor, string> = byFit
+    ? {
+        cost: 'best fit to the request, price weighted heavily',
+        balanced: 'best fit to the request, capability and price weighted equally',
+        accuracy: 'best fit to the request, capability weighted heavily',
+      }
+    : {
+        cost: 'cheapest first',
+        balanced: 'cheapest model at or above the median capability first',
+        accuracy: 'highest capability first',
+      }
   return (
     <Box>
       <SectionLabel>Shortlist in tier “{decision.tier}” · {modeText[decision.optimize_for]}</SectionLabel>
@@ -891,6 +914,8 @@ function Shortlist({ decision }: { decision: Decision }) {
               <TableCell sx={{ width: 32 }}>#</TableCell>
               <TableCell>Model</TableCell>
               <TableCell>Provider</TableCell>
+              {byFit && <TableCell align="right">Fit</TableCell>}
+              {byFit && <TableCell>Why</TableCell>}
               <TableCell align="right">Capability</TableCell>
               <TableCell align="right">Cost / 1K in</TableCell>
             </TableRow>
@@ -903,6 +928,16 @@ function Shortlist({ decision }: { decision: Decision }) {
                   <Mono size={12}>{c.id}</Mono>
                 </TableCell>
                 <TableCell>{c.provider}</TableCell>
+                {byFit && (
+                  <TableCell align="right">
+                    <Mono size={12}>{c.fit != null ? c.fit.toFixed(2) : '—'}</Mono>
+                  </TableCell>
+                )}
+                {byFit && (
+                  <TableCell>
+                    <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted }}>{describeFitParts(c.fit_parts, c.skill_sources)}</Typography>
+                  </TableCell>
+                )}
                 <TableCell align="right">
                   <CapabilityCell value={c.capability} source={c.capability_source} />
                 </TableCell>

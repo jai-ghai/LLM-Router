@@ -969,6 +969,19 @@ def create_app(
         if task_name:
             clean_metadata.setdefault("task", task_name)
         quality_scores = quality_lookup(store.list_quality_ratings(), state.quality_field) if state.quality_field else None
+        risk = (
+            state.qc_risk.risk(clean_metadata, text)
+            if state.qc_risk is not None and state.qc_risk.applies_to(clean_metadata, text)
+            else None
+        )
+        skill_needs = request_needs(
+            clean_metadata,
+            text,
+            screen_text=screen_text,
+            has_image=image_bytes is not None,
+            qc_risk=risk,
+            task_skills=state.task_skills,
+        )
         try:
             decision = resolve(
                 clean_metadata,
@@ -988,24 +1001,12 @@ def create_app(
                 quality_head=state.quality_head,
                 qc_risk=state.qc_risk,
                 screen_text=screen_text,
+                skill_needs=skill_needs,
             )
         except (RuleError, ClassifierError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         if image_bytes or frame_bytes:
             decision.signals["screen_text"] = screen
-        risk = (
-            state.qc_risk.risk(clean_metadata, text)
-            if state.qc_risk is not None and state.qc_risk.applies_to(clean_metadata, text)
-            else None
-        )
-        decision.signals["skill_needs"] = request_needs(
-            clean_metadata,
-            text,
-            screen_text=screen_text,
-            has_image=image_bytes is not None,
-            qc_risk=risk,
-            task_skills=state.task_skills,
-        ).as_signal()
         store.append_history(
             {
                 "timestamp": datetime.now(UTC).isoformat(),

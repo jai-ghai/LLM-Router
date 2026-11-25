@@ -31,11 +31,15 @@ decision step in front of that — not the proxy itself.
 4. **Fallback** — otherwise, or below `min_confidence`, the configured fallback tier.
 5. **QC-risk escalation** — requests with text and `channel_name`: the riskiest ~20% of
    sub-stories are raised to `large`. Never lowers a tier, never overrides a rule.
-6. **Catalog pick** — within the tier, by `optimize_for`: `cost` → cheapest; `accuracy` → highest
-   benchmark capability; `balanced` → cheapest at or above the tier's median capability. Human
-   quality ratings replace capability where present. Capability is the Artificial Analysis
-   intelligence index from OpenRouter where measured, otherwise estimated from price and release
-   date (shown with `~`). Models marked `UNREVIEWED` are never selected.
+6. **Catalog pick** — models in the tier that pass the scope, provider, media and quality filters,
+   and whose context window holds the input, are ranked by **fit to what the request needs**:
+   Σ need × skill + q × capability − λ × price (see below). `optimize_for` sets the weights:
+   `cost` q 0.1 / λ 1.0, `balanced` 0.6 / 0.6, `accuracy` 1.0 / 0.2. A model's skills are
+   video/audio support, the Hindi (multilingual) score, capability for reasoning and writing
+   (a human quality rating replaces it where present), context window for long input, and
+   cheapness for speed. Capability is the Artificial Analysis intelligence index from OpenRouter
+   where measured, otherwise estimated from price and release date (shown with `~`); estimated
+   skills count at 85%. Models marked `UNREVIEWED` are never selected.
 
 `provider` accepts one or several comma-separated providers (`anthropic,google`). The scope can
 be the whole catalog, a hand-picked list (`selected_models`) or a named task pool (`task`).
@@ -63,7 +67,8 @@ Every decision also says **what the request needs**: `signals.skill_needs` score
 from 0 to 1 (video watching, hearing speech, Hindi, reasoning, long input, writing, quick and
 cheap), each with its reason, e.g. `modality=video (1.0)`, `Devanagari in screen text (1.0)`,
 `task profile v3_single (0.9)`. Task profiles live in `config/task_skills.yaml`. The Playground
-shows them under **What this request needs**. They do not choose the model yet.
+shows them under **What this request needs**, and the shortlist shows each model's fit and what
+added to it, e.g. `video +1.00 · audio +0.80 · hindi +0.79~ · price −0.25`.
 
 The decision returns `tier_scores`, the top-8 `candidates`, `pool_size` and `signals`. When the
 classifier decides, `signals.classifier_inputs` lists exactly what it read and the tier odds

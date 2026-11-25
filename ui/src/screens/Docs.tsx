@@ -119,10 +119,13 @@ export function Docs() {
 4. Fallback — low-confidence / untrained → configured fallback model
 5. QC-risk escalation — riskiest ~20% of sub-stories (text + channel_name) → large;
    never lowers a tier, never overrides a rule
-6. Catalog pick — within the tier, pick a concrete model by optimize_for:
-     cost → cheapest · accuracy → highest benchmark capability ·
-     balanced → cheapest at or above the tier's median capability
-   Human ratings, when present, replace capability (~ = estimated from price + date).
+6. Catalog pick — within the tier, rank models by fit to what the request needs:
+     fit = Σ need × skill + q × capability − λ × price
+     skills: video/audio support · Hindi score · capability (reasoning, writing) ·
+     context window (long input) · cheapness (fast)
+     optimize_for sets q / λ: cost 0.1 / 1.0 · balanced 0.6 / 0.6 · accuracy 1.0 / 0.2
+   Models whose context window is smaller than the input are dropped.
+   Human ratings, when present, replace capability (~ = estimated, counted at 85%).
    UNREVIEWED models are never selected.`}</Code>
         <P>
           Providers can be combined (provider=anthropic,google). Every decision shows the tier evidence,

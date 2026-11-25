@@ -29,13 +29,16 @@ from __future__ import annotations
 import math
 import statistics
 from collections.abc import Collection, Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
+from functools import cached_property
 from pathlib import Path
 from typing import Literal
 
 import yaml
 
+from gradist.fit import CatalogScale, Fit, rank_by_fit
 from gradist.rules import RuleError
+from gradist.skills import SkillNeeds
 from gradist.tiers import UNREVIEWED_TIER
 
 OptimizeFor = Literal["cost", "accuracy", "balanced"]
@@ -177,6 +180,8 @@ class Ranking:
     note: str | None
     pool_size: int
     """Models left after the selection/provider/modality filters, across all tiers."""
+    fits: dict[str, Fit] = field(default_factory=dict)
+    """Fit per ranked model id when the request's skill needs were given; empty otherwise."""
 
 
 @dataclass(frozen=True)
@@ -187,6 +192,10 @@ class ModelCatalog:
         ids = [e.id for e in self.entries]
         if len(ids) != len(set(ids)):
             raise RuleError("catalog.yaml has duplicate model ids")
+
+    @cached_property
+    def scale(self) -> CatalogScale:
+        return CatalogScale.of(self.entries)
 
     def pick(
         self,
@@ -233,9 +242,14 @@ class ModelCatalog:
         quality_value: str | None = None,
         min_quality: float | None = None,
         optimize_for: OptimizeFor = "cost",
+        needs: SkillNeeds | None = None,
     ) -> Ranking:
         """Entries from `tier`, ranked by `optimize_for`, from the selection/provider/modality
         filter, with an optional quality floor layered on top.
+
+        With `needs` (the request's skill needs), models whose context window is smaller than
+        the input are dropped and the bucket is ranked by fit (fit.py) instead of the fixed
+        `_rank_by_mode` sort; `optimize_for` then sets the capability and price weights.
 
         `needs_image` / `needs_video` / `needs_audio` each drop candidates
         that don't declare the matching `supports_*` flag. Same filter shape for all three —
@@ -297,13 +311,37 @@ class ModelCatalog:
                     "current selection — ignored the bar rather than failing the request"
                 )
 
+        context_note: str | None = None
+        if needs is not None and needs.input_tokens:
+            roomy = [e for e in candidates if e.context_length is None or e.context_length >= needs.input_tokens]
+            if roomy:
+                dropped = len(candidates) - len(roomy)
+                if dropped:
+                    context_note = (
+                        f"dropped {dropped} model(s) whose context window is smaller than the "
+                        f"~{needs.input_tokens:,} input tokens"
+                    )
+                candidates = roomy
+            else:
+                context_note = (
+                    f"no model's context window fits the ~{needs.input_tokens:,} input tokens — "
+                    "kept them all rather than failing the request"
+                )
+
+        def rank(bucket: list[CatalogEntry]) -> tuple[list[CatalogEntry], str | None, dict[str, Fit]]:
+            if needs is None:
+                ordered, how = _rank_by_mode(bucket, optimize_for, quality, quality_value)
+                return ordered, how, {}
+            ordered, fits, how_fit = rank_by_fit(bucket, needs.needs, self.scale, optimize_for, quality, quality_value)
+            return ordered, how_fit, fits
+
         wanted_rank = tier_rank.get(tier)
         if wanted_rank is None:
             raise RuleError(f"'{tier}' is not a declared tier")
         exact = [e for e in candidates if e.tier == tier]
         if exact:
-            ranked, mode_note = _rank_by_mode(exact, optimize_for, quality, quality_value)
-            return Ranking(ranked, _compose_note(quality_note, mode_note), pool_size)
+            ranked, mode_note, fits = rank(exact)
+            return Ranking(ranked, _compose_note(quality_note, context_note, mode_note), pool_size, fits)
         above = [e for e in candidates if tier_rank.get(e.tier, -1) > wanted_rank]
         if above:
             # Pick the lowest-rank tier that's still above the decided one (G2: never
@@ -311,12 +349,12 @@ class ModelCatalog:
             # doesn't jump to a much larger tier just because something there is rated higher.
             lowest_above = min(tier_rank.get(e.tier, 0) for e in above)
             at_lowest = [e for e in above if tier_rank.get(e.tier, -1) == lowest_above]
-            ranked, mode_note = _rank_by_mode(at_lowest, optimize_for, quality, quality_value)
+            ranked, mode_note, fits = rank(at_lowest)
             tier_note = (
                 f"no '{tier}' model in the current selection; used '{ranked[0].tier}' model "
                 f"'{ranked[0].id}' instead — never downgraded below the decided tier"
             )
-            return Ranking(ranked, _compose_note(tier_note, quality_note, mode_note), pool_size)
+            return Ranking(ranked, _compose_note(tier_note, quality_note, context_note, mode_note), pool_size, fits)
         raise RuleError(
             f"no catalog model at tier '{tier}' or above is available in the current "
             "selection/provider/modality filters"

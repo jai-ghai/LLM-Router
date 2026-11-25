@@ -17,9 +17,11 @@ from dataclasses import dataclass, field
 
 from gradist.catalog import ModelCatalog, OptimizeFor
 from gradist.classifier import TierClassifier
+from gradist.fit import describe_fit
 from gradist.qc_risk import QcRiskHead
 from gradist.quality_head import TierQualityHead
 from gradist.rules import RuleSet, canonical_value
+from gradist.skills import SkillNeeds
 from gradist.tiers import TierTable
 
 # Metadata keys that alone do not count as "content" for the empty-request guard.
@@ -129,11 +131,15 @@ def resolve(
     quality_head: TierQualityHead | None = None,
     qc_risk: QcRiskHead | None = None,
     screen_text: str = "",
+    skill_needs: SkillNeeds | None = None,
 ) -> Decision:
     """Precedence: a matching rule wins outright, then the classifier, then the fallback tier.
 
     `screen_text` is OCR text read from the image; the classifier reads it only if it was
     trained with screen text.
+
+    `skill_needs` (skills.request_needs) makes the catalog rank the decided tier's models by how
+    well they fit those needs instead of a fixed sort; each candidate then carries its fit.
 
     The classifier step has two models: requests with an image or domain metadata use the domain
     `classifier`; plain-text requests use `quality_head` when one is loaded (it predicts each
@@ -178,6 +184,8 @@ def resolve(
         "providers": providers,
         "selection_size": len(selected_models) if selected_models is not None else None,
     }
+    if skill_needs is not None:
+        signals["skill_needs"] = skill_needs.as_signal()
     tier_scores: dict[str, float] | None = None
     tier_scores_kind: str | None = None
 
@@ -297,13 +305,16 @@ def resolve(
             quality_value=quality_value or None,
             min_quality=min_quality,
             optimize_for=effective_optimize_for,
+            needs=skill_needs,
         )
         entry, note = ranking.ranked[0], ranking.note
+        winner_fit = ranking.fits.get(entry.id)
         pick_reason = (
             f"{reason} → catalog tier='{tier}'"
             + (f", task='{task}'" if task else "")
             + f", optimize_for='{effective_optimize_for}'"
             + f" → '{entry.id}' ({entry.provider})"
+            + (f", {describe_fit(winner_fit)}" if winner_fit else "")
         )
         if note:
             pick_reason = f"{pick_reason}; {note}"
@@ -326,6 +337,7 @@ def resolve(
                     "cost": e.cost,
                     "capability": e.capability,
                     "capability_source": e.capability_source,
+                    **(ranking.fits[e.id].as_dict() if e.id in ranking.fits else {}),
                 }
                 for e in ranking.ranked[:SHORTLIST_SIZE]
             ),
