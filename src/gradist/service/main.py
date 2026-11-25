@@ -47,21 +47,40 @@ Variables:
   GRADIST_ALLOW_READ_WITHOUT_AUTH  when set to "1", GET endpoints are reachable without a
                                       session (for monitoring/ops). Mutating endpoints are
                                       ALWAYS auth-gated regardless of this flag.
+  GRADIST_ADMIN_USERNAME,          optional. When the store has no users, an admin with
+  GRADIST_ADMIN_PASSWORD              these credentials is created at startup (for hosts
+                                      without a shell). Ignored once any user exists; only
+                                      the bcrypt hash is stored.
 """
 
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 
 from fastapi import FastAPI
 
 from gradist.catalog import load_catalog
 from gradist.rules import rules_from_file
 from gradist.service.app import create_app
-from gradist.service.auth import SessionConfig
+from gradist.service.auth import AuthError, SessionConfig, hash_password
 from gradist.service.store import Store
 from gradist.service.users_store import UsersStore
 from gradist.tiers import load_tiers
+
+
+def seed_admin_from_env(users: UsersStore, environ: Mapping[str, str]) -> bool:
+    """Create the first admin from GRADIST_ADMIN_USERNAME/PASSWORD if no user exists yet."""
+    username = (environ.get("GRADIST_ADMIN_USERNAME") or "").strip()
+    password = environ.get("GRADIST_ADMIN_PASSWORD") or ""
+    if not username or not users.is_empty():
+        return False
+    try:
+        password_hash = hash_password(password)
+    except AuthError as exc:
+        raise RuntimeError(f"GRADIST_ADMIN_PASSWORD is not usable: {exc}") from exc
+    users.add(username, password_hash, "admin", notes="created from GRADIST_ADMIN_USERNAME")
+    return True
 
 
 def create() -> FastAPI:
@@ -84,6 +103,7 @@ def create() -> FastAPI:
     # Pass catalog_path into Store so PUT /v1/catalog/{id} can persist tier assignments (P1).
     store = Store(data_dir, catalog_path=catalog_path)
     users = UsersStore(path=store.root / "users.jsonl")
+    seed_admin_from_env(users, os.environ)
     seed_path = os.environ.get("GRADIST_RULES_SEED")
     if seed_path and store.load_rules().is_empty():
         store.save_rules(rules_from_file(seed_path))

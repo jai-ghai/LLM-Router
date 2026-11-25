@@ -309,6 +309,24 @@ def test_resolve_calls_are_recorded_in_history(client: TestClient) -> None:
     assert "timestamp" in entry
 
 
+def test_first_admin_comes_from_env_only_while_no_user_exists(tmp_path: Path) -> None:
+    from gradist.service.auth import verify_password
+    from gradist.service.main import seed_admin_from_env
+
+    users = UsersStore(path=tmp_path / "users.jsonl")
+    env = {"GRADIST_ADMIN_USERNAME": "jai", "GRADIST_ADMIN_PASSWORD": "pw-123"}
+    assert seed_admin_from_env(users, {}) is False
+    assert seed_admin_from_env(users, env) is True
+    admin = users.find_by_username("jai")
+    assert admin is not None and admin.role == "admin"
+    assert verify_password("pw-123", admin.password_hash)
+    assert "pw-123" not in (tmp_path / "users.jsonl").read_text(encoding="utf-8")
+    assert seed_admin_from_env(users, {**env, "GRADIST_ADMIN_USERNAME": "other"}) is False
+    assert [u.username for u in users.list_users()] == ["jai"]
+    with pytest.raises(RuntimeError, match="GRADIST_ADMIN_PASSWORD"):
+        seed_admin_from_env(UsersStore(path=tmp_path / "empty.jsonl"), {"GRADIST_ADMIN_USERNAME": "x"})
+
+
 def test_history_is_private_to_members_and_filterable_by_admins(tmp_path: Path) -> None:
     store = Store(tmp_path / "data")
     users = UsersStore(path=store.root / "users.jsonl")

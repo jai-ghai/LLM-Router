@@ -390,7 +390,8 @@ def create_app(
         if users.is_empty():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="no users exist yet; run `python -m gradist.service.bootstrap "
+                detail="no users exist yet; set GRADIST_ADMIN_USERNAME and GRADIST_ADMIN_PASSWORD "
+                "and restart, or run `python -m gradist.service.bootstrap "
                 "--username <name>` before anyone can log in",
             )
         try:
