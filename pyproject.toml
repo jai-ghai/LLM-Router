@@ -4,7 +4,7 @@
 # library's dep set. No secrets are stored in this file: passwords live in users.jsonl
 # as bcrypt hashes (see src/gradist/service/auth.py); the session signing secret lives
 # in the GRADIST_SESSION_SECRET env var and is never persisted here.
-# Driven by PLAN-v2.md §4 (P0 — Auth, Level B), operator-approved 2026-11-17 verbatim: "create
+# Operator-approved 2026-11-17 verbatim: "create
 # auth or required things because maybe user have different workflow and they can create
 # difference judgments". Duplicates checked: no other pyproject.toml in the tree (confirmed
 # via Glob). Schema: PEP 621 pyproject.
@@ -38,7 +38,7 @@ service = [
   "fastapi>=0.111",
   "uvicorn>=0.30",
   "python-multipart>=0.0.9",
-  # P0 (PLAN-v2.md §4): session auth + bcrypt password hashes.
+  # Session auth + bcrypt password hashes.
   # bcrypt directly (not via passlib) because passlib 1.7.4 is unmaintained and has a known
   # incompatibility with bcrypt>=4 (`error reading bcrypt version` + an init-time password-
   # length ValueError). One scheme, one small dep, no middle layer to break.

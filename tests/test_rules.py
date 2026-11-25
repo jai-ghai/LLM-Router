@@ -109,7 +109,7 @@ def test_coverage_counts_matching_attribute_sets() -> None:
 
 
 # -----------------------------------------------------------------------------------------
-# P2 — Rule.optimize_for (PLAN-v2.md §5). Two tests enumerated in §5.4, plus one for
+# Rule.optimize_for, plus one for
 # YAML rejecting an unknown mode.
 # -----------------------------------------------------------------------------------------
 

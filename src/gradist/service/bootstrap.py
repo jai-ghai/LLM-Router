@@ -15,8 +15,8 @@
 # GRADIST_SESSION_SECRET is not touched here.
 #
 # The user's verbatim instruction driving this file: "create auth or required things because
-# maybe user have different workflow and they can create difference judgments" — PLAN-v2.md
-# §4.1 names `python -m gradist.service.bootstrap --username <name>` as the gateway for
+# maybe user have different workflow and they can create difference judgments".
+# `python -m gradist.service.bootstrap --username <name>` is the gateway for
 # creating the first admin before the service accepts any login.
 
 """CLI: create the first admin user, or reset an existing user's password.

@@ -13,7 +13,7 @@ YOUR use case, or whether it is actually any good at YOUR tasks. Both of those s
 judgment — see catalog.py (`tier` is set by hand in catalog.yaml) and quality.py (a human rates
 real output). A public models list can tell you facts; it cannot tell you what you need.
 
-P3 (PLAN-v2.md §6): `supports_video` / `supports_audio` are parsed from the same
+`supports_video` / `supports_audio` are parsed from the same
 `architecture.input_modalities` list that already drives `supports_image`. Absent tokens
 default to False — never a crash.
 """

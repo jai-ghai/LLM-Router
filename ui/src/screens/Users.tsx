@@ -12,7 +12,7 @@
 // for the duration of the submit (same pattern as Login.tsx). Cleared on success.
 //
 // The user's verbatim instruction: "create auth or required things because maybe user have
-// different workflow and they can create difference judgments" — PLAN-v2.md §4.
+// different workflow and they can create difference judgments".
 
 import { Plus } from '@phosphor-icons/react'
 import {
@@ -39,8 +39,8 @@ import type { User, UserRole } from '../types'
 
 /**
  * Admin-only operator management. Create users, toggle disabled, see who exists. No
- * password reset or delete here — PLAN-v2.md §4.6 keeps reset on the CLI and defers
- * deletion to a later phase (so historical judgments stay attributable).
+ * password reset or delete here — reset stays on the bootstrap CLI, and deletion waits
+ * for a later phase (so historical judgments stay attributable).
  */
 export function Users() {
   const [users, setUsers] = useState<User[] | null>(null)

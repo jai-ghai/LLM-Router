@@ -29,7 +29,7 @@ export class ApiError extends Error {
 
 /**
  * All requests send `credentials: 'include'` so the signed session cookie from
- * SessionMiddleware (P0, PLAN-v2.md §4) flows cross-origin to the UI. The backend's
+ * SessionMiddleware flows cross-origin to the UI. The backend's
  * `allow_credentials=True` on CORS matches this; specific origins (not `*`) are required
  * at the backend for credentialed CORS to work.
  */
@@ -126,7 +126,7 @@ export const api = {
   history: (limit = 50, signal?: AbortSignal) =>
     request<{ history: HistoryEntry[] }>(`/v1/history?limit=${limit}`, { signal }),
   quality: (signal?: AbortSignal) => request<QualityResponse>('/v1/quality', { signal }),
-  // P3 — PLAN-v2.md §6. Returns the configured quality-bucket field name, or null.
+  // Returns the configured quality-bucket field name, or null.
   qualityField: (signal?: AbortSignal) =>
     request<{ field: string | null }>('/v1/quality/field', { signal }),
   // judged_by is intentionally omitted — the server records the session user (P0 anti-

@@ -2,7 +2,7 @@
 # (facts only, never changes tier) and add_new_entries (emits UNREVIEWED rows).
 # Existing test files: none for this module (new in P1). refresh_catalog behaviour is
 # covered here via refresh_existing_entries.
-# User's verbatim instruction: "yes i want it" — PLAN-v2.md §7.5.
+# User's verbatim instruction: "yes i want it".
 from __future__ import annotations
 
 import importlib.util

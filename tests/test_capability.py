@@ -90,7 +90,7 @@ def test_match_by_suffix_exact_then_suffix_then_none() -> None:
 
 
 # -----------------------------------------------------------------------------------------
-# P3 — video + audio modality parsing (PLAN-v2.md §6.4).
+# Video + audio modality parsing.
 # -----------------------------------------------------------------------------------------
 
 

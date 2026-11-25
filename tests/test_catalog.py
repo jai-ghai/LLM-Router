@@ -126,7 +126,7 @@ def test_quality_floor_is_ignored_rather_than_failing_the_request_if_nothing_pas
 
 
 # -----------------------------------------------------------------------------------------
-# P2 — optimize_for selection mode (PLAN-v2.md §5). Six tests enumerated in §5.4, plus one
+# optimize_for selection mode, plus one
 # defence-in-depth test for an invalid mode string.
 # -----------------------------------------------------------------------------------------
 
@@ -335,7 +335,7 @@ def test_pick_rejects_unknown_optimize_for_values() -> None:
 
 
 # -----------------------------------------------------------------------------------------
-# P3 — needs_video / needs_audio filters (PLAN-v2.md §6.4).
+# needs_video / needs_audio filters.
 # -----------------------------------------------------------------------------------------
 
 
@@ -373,7 +373,7 @@ def test_pick_filters_out_entries_without_audio_when_needs_audio() -> None:
 
 
 # -----------------------------------------------------------------------------------------
-# P1 — UNREVIEWED sentinel always excluded (PLAN-v2.md §7.5 / G5).
+# UNREVIEWED sentinel always excluded.
 # -----------------------------------------------------------------------------------------
 
 

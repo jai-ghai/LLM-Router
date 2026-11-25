@@ -14,7 +14,7 @@
 // not retained. The provider holds only the server's public `User` record (no hash).
 //
 // The user's verbatim instruction: "create auth or required things because maybe user have
-// different workflow and they can create difference judgments" — PLAN-v2.md §4.
+// different workflow and they can create difference judgments".
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ApiError, api } from './api'

@@ -8,7 +8,7 @@
 # Existing test files for it: none — this file is new in P0.
 #
 # The user's verbatim instruction: "create auth or required things because maybe user have
-# different workflow and they can create difference judgments" — PLAN-v2.md §4.
+# different workflow and they can create difference judgments".
 
 from __future__ import annotations
 

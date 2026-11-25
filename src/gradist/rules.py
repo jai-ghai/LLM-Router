@@ -12,7 +12,7 @@ fires for `task in {qc_review, audit}` without needing two separate rules.
 
 Each rule may optionally pin an `optimize_for` mode ("cost"/"accuracy"/"balanced"). When set,
 it overrides the per-request default — so an operator can mark "qc_review on video" as
-always-accuracy without changing every caller (P2 — PLAN-v2.md §5).
+always-accuracy without changing every caller.
 """
 
 from __future__ import annotations

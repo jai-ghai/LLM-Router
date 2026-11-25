@@ -10,7 +10,7 @@ export interface TiersResponse {
   low_confidence_fallback: string
 }
 
-// P2 — accuracy-first selection mode (PLAN-v2.md §5). `null` on a rule means "no per-rule
+// Accuracy-first selection mode. `null` on a rule means "no per-rule
 // preference"; a string value forces that mode when the rule matches, overriding whatever the
 // request asked for.
 export type OptimizeFor = 'cost' | 'accuracy' | 'balanced'
@@ -28,11 +28,11 @@ export interface CatalogEntry {
   tier: string
   cost: number
   supports_image: boolean
-  // P3 — PLAN-v2.md §6. Absent on older servers → treat as false in the UI.
+  // Absent on older servers → treat as false in the UI.
   supports_video?: boolean
   supports_audio?: boolean
   label: string
-  // P1 — PLAN-v2.md §7. Empty until an admin assigns a tier via PUT /v1/catalog/{id}.
+  // Empty until an admin assigns a tier via PUT /v1/catalog/{id}.
   assigned_by?: string
   capability?: number | null
   capability_source?: string
@@ -66,7 +66,7 @@ export interface QualityResponse {
   ratings?: { model_id: string; metadata: Record<string, string>; rating: number; judged_by: string }[]
 }
 
-// P0 — Auth (PLAN-v2.md §4). Mirrors the backend's `User.public()` shape; never carries
+// Auth. Mirrors the backend's `User.public()` shape; never carries
 // the password hash (the server never puts it on the wire).
 export type UserRole = 'admin' | 'member'
 

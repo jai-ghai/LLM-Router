@@ -10,7 +10,7 @@
 // over POST, never persisted. Browser manages the resulting session cookie.
 //
 // The user's verbatim instruction: "create auth or required things because maybe user have
-// different workflow and they can create difference judgments" — PLAN-v2.md §4.
+// different workflow and they can create difference judgments".
 
 import { Box, Button, Stack, TextField, Typography } from '@mui/material'
 import { useState, type FormEvent } from 'react'
@@ -20,7 +20,7 @@ import { PALETTE } from '../theme'
 
 /**
  * Centered login card. Deliberately spartan — no "forgot password" link because P0 has no
- * self-service reset (admin reissues via the bootstrap CLI; see PLAN-v2.md §4.6).
+ * self-service reset (admin reissues via the bootstrap CLI).
  */
 export function Login() {
   const { login } = useAuth()

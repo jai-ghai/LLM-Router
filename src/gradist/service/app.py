@@ -16,11 +16,10 @@
 # passwords only land as bcrypt hashes via `auth.hash_password`.
 #
 # The user's verbatim instruction driving this file: "create auth or required things because
-# maybe user have different workflow and they can create difference judgments" — PLAN-v2.md
-# §4 (P0 — Auth, Level B).
+# maybe user have different workflow and they can create difference judgments".
 
 """FastAPI app: tiers, rules, examples, human judgments, train, evaluate, resolve, plus
-session-based auth with admin/member roles (PLAN-v2.md §4).
+session-based auth with admin/member roles.
 
 Every mutating endpoint requires an authenticated session via `Depends(require_user)`;
 `/v1/users*` additionally requires the admin role. Read endpoints require auth by default;
@@ -504,7 +503,7 @@ def create_app(
                     "tier": e.tier,
                     "cost": e.cost,
                     "supports_image": e.supports_image,
-                    # P3 — PLAN-v2.md §6: modality booleans for the Catalog UI chips.
+                    # Modality booleans for the Catalog UI chips.
                     "supports_video": e.supports_video,
                     "supports_audio": e.supports_audio,
                     "label": e.label,

@@ -15,8 +15,7 @@
 # refuses to start if the env var is missing or empty (no insecure fallback).
 #
 # The user's verbatim instruction driving this file: "create auth or required things because
-# maybe user have different workflow and they can create difference judgments" — PLAN-v2.md
-# §4 (P0 — Auth, Level B).
+# maybe user have different workflow and they can create difference judgments".
 
 """Build the FastAPI app from environment variables.
 

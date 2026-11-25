@@ -149,7 +149,7 @@ def resolve(
     keeps "should this prediction be trusted" out of the classifier): a prediction below it is
     replaced by `tiers.low_confidence_fallback`, visibly, with the real confidence still reported
     so a caller can see how low it was. Its default, 0.0, trusts every classifier prediction;
-    set it explicitly once there is evidence (PLAN.md §8) for where the cutoff should be.
+    set it explicitly once there is evidence for where the cutoff should be.
 
     Without a catalog, the decided tier maps through `tiers.yaml` to one model name per provider.
 

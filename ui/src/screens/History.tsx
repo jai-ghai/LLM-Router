@@ -33,7 +33,7 @@ import type { HistoryEntry } from '../types'
  * Rating a row's output is how this project's only "accuracy" signal gets created (see
  * quality.py) — a model nobody has rated is never penalized at resolve time.
  *
- * P3 (PLAN-v2.md §6): the Rate modal no longer asks for a name — judged_by is the session
+ * The Rate modal no longer asks for a name — judged_by is the session
  * user (P0). When GRADIST_QUALITY_FIELD is configured, the modal shows that field's
  * value from the row's metadata (read-only; Q5.5.b = no re-tag at rating time).
  */

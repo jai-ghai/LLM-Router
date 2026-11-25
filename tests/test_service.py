@@ -4,8 +4,8 @@
 # /v1/quality, /v1/history, plus new /v1/auth/* + /v1/users* in P0).
 # Existing test files for it: this file. No other test file targets `app.py`.
 # User's verbatim instruction: "create auth or required things because maybe user have
-# different workflow and they can create difference judgments" — PLAN-v2.md §4 (P0 — Auth,
-# Level B). "tests_too" chosen in follow-up: tests included with every PR.
+# different workflow and they can create difference judgments".
+# "tests_too" chosen in follow-up: tests included with every PR.
 from __future__ import annotations
 
 import io
@@ -367,7 +367,7 @@ def test_resolve_min_quality_has_no_effect_without_quality_field(catalog_client:
 
 
 # -----------------------------------------------------------------------------------------
-# P2 — /v1/resolve optimize_for form field (PLAN-v2.md §5.4).
+# /v1/resolve optimize_for form field.
 # -----------------------------------------------------------------------------------------
 
 
@@ -505,7 +505,7 @@ def test_rules_endpoint_roundtrips_optimize_for(client: TestClient) -> None:
 
 
 # -----------------------------------------------------------------------------------------
-# P3 — modality booleans + quality/field + rating session user (PLAN-v2.md §6.4).
+# Modality booleans + quality/field + rating session user.
 # -----------------------------------------------------------------------------------------
 
 

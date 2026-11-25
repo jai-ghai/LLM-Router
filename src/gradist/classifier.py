@@ -253,7 +253,7 @@ def evaluate_classifier(
 ) -> EvalReport:
     """Classifier accuracy vs. always-`baseline_tier`, both overall and per `metadata_field`
 
-    bucket (including "__unknown__"). Per PLAN.md §8: a classifier that cannot clearly beat the
+    bucket (including "__unknown__"). A classifier that cannot clearly beat the
     baseline here is not ready to decide anything.
     """
     if not labels:

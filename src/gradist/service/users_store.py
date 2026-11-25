@@ -9,7 +9,7 @@
 # O(users), not O(requests)). Schema read: same JSONL on service start / each login lookup.
 # No secrets stored in plaintext: password_hash is the bcrypt output from passlib (see
 # auth.py). GRADIST_SESSION_SECRET is never persisted in this file.
-# Driven by PLAN-v2.md §4 (P0 — Auth, Level B). Operator's verbatim ask: "create auth or
+# Operator's verbatim ask: "create auth or
 # required things because maybe user have different workflow and they can create difference
 # judgments".
 

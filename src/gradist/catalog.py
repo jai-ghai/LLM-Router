@@ -6,7 +6,7 @@ Optional layer on top of tiers.yaml's simple "one model per tier per provider" m
 model that matches the tier a rule or the classifier decided on, filtered to whatever subset
 of the catalog the caller selected (or all of it), the requested provider, and the modalities
 the request needs. It never substitutes a model BELOW the decided tier — only at or above it,
-if the exact tier has no match in the current selection (G2 in PLAN-v2.md §3).
+if the exact tier has no match in the current selection.
 
 `optimize_for` (P2) decides which of the matching candidates wins:
   - "cost": cheapest (the original behaviour; stays the default so nothing changes for
@@ -153,11 +153,11 @@ class CatalogEntry:
     """Informational only (tokens) — not used in `pick()`. Refreshable from a live source via
     `experiments/sync_catalog.py`; see capability.py.
 
-    P3 (PLAN-v2.md §6): `supports_video` / `supports_audio` default False — most catalog
+    `supports_video` / `supports_audio` default False — most catalog
     rows today are text/image; video/audio is opt-in so an absent YAML key never silently
     claims a modality the model doesn't have.
 
-    P1 (PLAN-v2.md §7): `assigned_by` records which admin last set this entry's tier via
+    `assigned_by` records which admin last set this entry's tier via
     PUT /v1/catalog/{id}. Empty for rows that have never been reviewed through the UI.
     `tier == UNREVIEWED` means the entry is never a pick() candidate (G5).
     """
@@ -230,12 +230,12 @@ class ModelCatalog:
         """Entries from `tier`, ranked by `optimize_for`, from the selection/provider/modality
         filter, with an optional quality floor layered on top.
 
-        `needs_image` / `needs_video` / `needs_audio` (P3 — PLAN-v2.md §6) each drop candidates
+        `needs_image` / `needs_video` / `needs_audio` each drop candidates
         that don't declare the matching `supports_*` flag. Same filter shape for all three —
         a request that needs video never lands on a text-only model.
 
         `quality`/`quality_value`/`min_quality` are an optional human-reviewed quality floor
-        (see quality.py) — cost matters, but for some use cases (PLAN-v2.md §1's video-QC
+        (see quality.py) — cost matters, but for some use cases (the video-QC
         example) a wrong answer costs more than a cheap model saves. A candidate is excluded
         only if it HAS a recorded average rating for `quality_value` and that rating is below
         `min_quality`; a model nobody has reviewed yet is never excluded for failing a check
@@ -243,9 +243,9 @@ class ModelCatalog:
         it is dropped (noted) rather than failing the request — a stale catalog shouldn't be
         able to block every request.
 
-        `optimize_for` orders the candidates (P2 — PLAN-v2.md §5); see `_rank_by_mode`.
+        `optimize_for` orders the candidates; see `_rank_by_mode`.
 
-        P1 (PLAN-v2.md §7 / G5): entries with `tier == UNREVIEWED` are **always** excluded,
+        Entries with `tier == UNREVIEWED` are **always** excluded,
         even when listed in `selected`. An admin must assign a real tier before resolve()
         will pick them.
 

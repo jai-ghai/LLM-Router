@@ -5,15 +5,14 @@
 # helpers (refresh_existing_entries / add_new_entries) with injected capabilities.
 #
 # No existing file serves the same purpose: refresh_catalog.py only updated facts; this
-# script is the merged import + refresh tool (Q6.5.a / PLAN-v2.md §7).
+# script is the merged import + refresh tool.
 #
 # Data schemas: reads/writes catalog.yaml (`catalog: [{id, provider, tier, cost, …}]`);
 # reads OpenRouter /api/v1/models via capability.py (metadata only — no inference).
 #
 # No secrets in plaintext: no API key; OpenRouter models list is public.
 #
-# User's verbatim instruction: "yes i want it" — P1 Dynamic OpenRouter import + UNREVIEWED
-# (PLAN-v2.md §7).
+# User's verbatim instruction: "yes i want it" — dynamic OpenRouter import + UNREVIEWED.
 
 """Sync a catalog.yaml against OpenRouter's live model list.
 
@@ -203,7 +202,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args.only_existing and not args.add_new:
         parser.error(
             "exactly one of --only-existing or --add-new is required "
-            "(refusing to guess — see PLAN-v2.md §7 / Q6.5.c)"
+            "(refusing to guess)"
         )
     if not args.providers or not args.providers.strip():
         parser.error(

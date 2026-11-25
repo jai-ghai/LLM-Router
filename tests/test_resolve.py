@@ -189,7 +189,7 @@ def test_empty_request_uses_fallback_not_confident_classifier() -> None:
 
 
 # -----------------------------------------------------------------------------------------
-# P2 — optimize_for threading (PLAN-v2.md §5). Two tests enumerated in §5.4.
+# optimize_for threading.
 # -----------------------------------------------------------------------------------------
 
 
@@ -253,7 +253,7 @@ def test_rule_optimize_for_overrides_request_optimize_for_without_catalog() -> N
 
 
 # -----------------------------------------------------------------------------------------
-# P3 — metadata.modality → needs_video / needs_audio (PLAN-v2.md §6.4).
+# metadata.modality → needs_video / needs_audio.
 # -----------------------------------------------------------------------------------------
 
 

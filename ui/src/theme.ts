@@ -177,7 +177,7 @@ const TIER_TONE_MAP: Record<string, Tone> = {
   pro: 'tier3',
   heavy: 'tier3',
   // P1 — UNREVIEWED is catalog-only / never routable; keep it on the neutral tone so it
-  // never looks like a declared small/medium/large choice (PLAN-v2.md §7).
+  // never looks like a declared small/medium/large choice.
   unreviewed: 'default',
 }
 

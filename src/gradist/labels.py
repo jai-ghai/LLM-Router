@@ -1,4 +1,4 @@
-"""Labeled training data: strategy 1 + 2 from PLAN.md ("Labeling strategy: options").
+"""Labeled training data: rule-derived seed labels (strategy 1) + human judgments (strategy 2).
 
 Decision (2026-11-16): combine strategy 1 (today's known rules, turned into labels for free)
 with strategy 2 (a small, deliberately-sampled human-judged set covering exactly what no rule
@@ -46,7 +46,7 @@ class TierLabel:
     """One training label, tagged with where it came from.
 
     `source` matters for evaluation, not only for training: a rule-derived label only ever
-    repeats what the rule already encodes (PLAN.md's stated bias risk), so accuracy must be
+    repeats what the rule already encodes (a bias risk), so accuracy must be
     reported separately for rule-derived vs. human-judged examples — pooling them would make a
     classifier that merely learned the rules back look better than it is.
     """
@@ -215,7 +215,7 @@ def merge_labels(rule_labels: list[TierLabel], human_labels: list[TierLabel]) ->
     """Combine both sources. A human judgment overrides a rule label for the same example_id —
 
     a person deliberately looked at a case the rule also covered, which is more trustworthy
-    evidence than the rule guessing at it; see PLAN.md's bias-risk note on rule-derived labels.
+    evidence than the rule guessing at it, and it is not subject to the rule's bias.
     """
     by_id: dict[str, TierLabel] = {label.example_id: label for label in rule_labels}
     for label in human_labels:

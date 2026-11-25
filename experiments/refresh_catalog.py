@@ -2,7 +2,7 @@
 
 Kept so anyone with the old habit (`python experiments/refresh_catalog.py path [--write]`)
 still gets the same refresh-facts behaviour. New callers should use sync_catalog.py
-directly (PLAN-v2.md §7 / Q6.5.a).
+directly.
 """
 
 from __future__ import annotations
