@@ -1039,6 +1039,7 @@ def create_app(
                 "timestamp": datetime.now(UTC).isoformat(),
                 "requested_by": user.username,
                 "skill_needs": {s: round(v, 2) for s, v in skill_needs.needs.items() if v > 0},
+                "difficulty": None if skill_needs.difficulty is None else round(skill_needs.difficulty, 2),
                 "metadata": clean_metadata,
                 "text": text,
                 "has_image": image_bytes is not None,

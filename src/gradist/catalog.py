@@ -336,7 +336,7 @@ class ModelCatalog:
                 ordered, how = _rank_by_mode(bucket, optimize_for, quality, quality_value)
                 return ordered, how, {}
             ordered, fits, how_fit = rank_by_fit(
-                bucket, needs.needs, self.scale, optimize_for, quality, quality_value, learned
+                bucket, needs.needs, self.scale, optimize_for, quality, quality_value, learned, needs.difficulty
             )
             return ordered, how_fit, fits
 

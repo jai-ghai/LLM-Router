@@ -879,6 +879,22 @@ function SkillNeedsPanel({ needs }: { needs: SkillNeeds }) {
             Not needed: {notNeeded.map((s) => SKILL_LABELS[s]).join(', ')}
           </Typography>
         )}
+        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', pt: 0.5 }}>
+          <Typography sx={{ width: 170, fontSize: 12.5, color: PALETTE.textSecondary, flexShrink: 0 }}>Difficulty</Typography>
+          {needs.difficulty == null ? (
+            <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted }}>No signal — capability keeps its usual weight.</Typography>
+          ) : (
+            <>
+              <Box sx={{ width: 160, height: 10, borderRadius: 5, bgcolor: PALETTE.hairline, flexShrink: 0 }}>
+                <Box sx={{ width: `${Math.round(needs.difficulty * 100)}%`, height: '100%', borderRadius: 5, bgcolor: PALETTE.warningText }} />
+              </Box>
+              <Mono size={12}>{needs.difficulty.toFixed(2)}</Mono>
+              <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted, minWidth: 0 }}>
+                capability weight × {(0.5 + needs.difficulty).toFixed(2)} · {(needs.difficulty_reasons ?? []).join(' · ')}
+              </Typography>
+            </>
+          )}
+        </Stack>
       </Stack>
       <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted, mt: 0.75 }}>
         {needs.task_profile ? `Task profile “${needs.task_profile}” from config/task_skills.yaml, plus signals in the request. ` : 'From signals in the request (no task profile matched). '}

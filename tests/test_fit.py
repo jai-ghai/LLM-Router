@@ -40,6 +40,27 @@ def test_a_hindi_request_picks_the_hindi_model_over_the_cheapest() -> None:
     assert describe_fit(winner).startswith(f"fit {winner.score:.2f} (hindi +0.90")
 
 
+def test_a_hard_request_with_the_same_needs_pays_for_the_smarter_model() -> None:
+    def pick(difficulty: float | None) -> str:
+        hindi = SkillNeeds(needs={s: 1.0 if s == "hindi" else 0.0 for s in SKILLS}, difficulty=difficulty)
+        return CATALOG.pick_ranked("small", RANKS, optimize_for="balanced", needs=hindi).ranked[0].id
+
+    assert pick(None) == "hindi-strong"
+    assert pick(0.25) == "hindi-strong"
+    assert pick(1.0) == "smart-pricey"
+
+
+def test_difficulty_scales_only_the_capability_term_and_is_named_in_the_note() -> None:
+    plain = CATALOG.pick_ranked("small", RANKS, optimize_for="balanced", needs=needs(hindi=1.0))
+    hard = CATALOG.pick_ranked(
+        "small", RANKS, optimize_for="balanced", needs=SkillNeeds(needs=needs(hindi=1.0).needs, difficulty=1.0)
+    )
+    before, after = plain.fits["hindi-strong"].parts, hard.fits["hindi-strong"].parts
+    assert after["capability"] == before["capability"] * 1.5
+    assert after["hindi"] == before["hindi"] and after["price"] == before["price"]
+    assert hard.note is not None and "0.6 × 1.50 (difficulty 1.00) × capability" in hard.note
+
+
 def test_a_reasoning_heavy_request_pays_for_the_smart_model() -> None:
     cheap = CATALOG.pick_ranked("small", RANKS, optimize_for="cost", needs=needs(fast=1.0))
     hard = CATALOG.pick_ranked("small", RANKS, optimize_for="balanced", needs=needs(reasoning=1.0, writing=1.0))

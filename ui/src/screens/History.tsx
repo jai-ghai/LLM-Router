@@ -385,6 +385,9 @@ export function History({ refreshKey }: { refreshKey: number }) {
                         .map(([skill, need]) => (
                           <StateTag key={skill} label={`${SKILL_LABELS[skill] ?? skill} ${need.toFixed(1)}`} tone="brand" size="small" />
                         ))}
+                      {selected.difficulty != null && (
+                        <StateTag label={`Difficulty ${selected.difficulty.toFixed(2)}`} tone="warning" size="small" />
+                      )}
                     </Stack>
                     <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted, mt: 0.5 }}>
                       A rating moves {selected.model_name}'s value for these skills, weighted by how much each was needed.

@@ -6,6 +6,10 @@ Two sources, combined by taking the larger value per skill:
   type, input length and the QC-risk score.
 
 Every non-zero need carries the reasons behind it, so a decision can explain why a model fits.
+
+`difficulty` (0–1) is how hard this particular request looks, separate from which skills it needs:
+the largest of the QC-risk score, input length, how many figures and conditions the text holds,
+and a low score for short text-only requests. None when no signal applies (neutral).
 The skill names match the catalog's model profile: video and audio map to supports_video /
 supports_audio, hindi to multilingual, reasoning and writing to capability, long_input to
 context_length, and fast to cost.
@@ -13,6 +17,7 @@ context_length, and fast to cost.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -28,6 +33,14 @@ HINDI_LANGUAGE_VALUES = {"hi", "hin", "hindi", "hinglish"}
 LONG_INPUT_TOKENS = 32_000
 SHORT_REQUEST_WORDS = 150
 WORDY_REQUEST_WORDS = 400
+EASY_DIFFICULTY = 0.25
+MANY_FIGURES = 5
+MANY_CONDITIONS = 3
+FIGURE = re.compile(r"\d[\d,.:/%]*")
+CONDITION = re.compile(
+    r"\b(?:if|unless|except|only|but|however|must not|do not)\b|अगर|यदि|लेकिन|परंतु|सिवाय|केवल|नहीं",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -37,6 +50,8 @@ class SkillNeeds:
     task_profile: str | None = None
     input_tokens: int = 0
     """Rough size of text + on-screen text (characters ÷ 4); models with a smaller window are dropped."""
+    difficulty: float | None = None
+    difficulty_reasons: list[str] = field(default_factory=list)
 
     def as_signal(self) -> dict[str, object]:
         return {
@@ -44,6 +59,8 @@ class SkillNeeds:
             "reasons": {s: r for s, r in self.reasons.items() if r},
             "task_profile": self.task_profile,
             "input_tokens": self.input_tokens,
+            "difficulty": None if self.difficulty is None else round(self.difficulty, 2),
+            "difficulty_reasons": self.difficulty_reasons,
         }
 
 
@@ -133,12 +150,35 @@ def request_needs(
     if tokens >= LONG_INPUT_TOKENS / 8:
         need("long_input", tokens / LONG_INPUT_TOKENS, f"about {tokens:,.0f} tokens of input")
 
-    if modality != "video" and not has_image and 0 < words < SHORT_REQUEST_WORDS:
+    short_text_only = modality != "video" and not has_image and 0 < words < SHORT_REQUEST_WORDS
+    if short_text_only:
         need("fast", 0.5, f"short text-only request ({words} words)")
 
+    difficulty, difficulty_reasons = _difficulty(f"{text}\n{screen_text}", words, qc_risk, short_text_only)
     return SkillNeeds(
         needs=needs,
         reasons=reasons,
         task_profile=task if profile is not None else None,
         input_tokens=round(tokens),
+        difficulty=difficulty,
+        difficulty_reasons=difficulty_reasons,
     )
+
+
+def _difficulty(text: str, words: int, qc_risk: float | None, short_text_only: bool) -> tuple[float | None, list[str]]:
+    signals: list[tuple[float, str]] = []
+    if qc_risk is not None:
+        signals.append((qc_risk, "QC-risk score"))
+    if words >= WORDY_REQUEST_WORDS:
+        signals.append((min(words / (2 * WORDY_REQUEST_WORDS), 1.0), f"{words} words of input"))
+    figures = len(FIGURE.findall(text))
+    if figures >= MANY_FIGURES:
+        signals.append((min(0.4 + 0.05 * figures, 1.0), f"{figures} figures to keep straight"))
+    conditions = len(CONDITION.findall(text))
+    if conditions >= MANY_CONDITIONS:
+        signals.append((min(0.3 + 0.1 * conditions, 1.0), f"{conditions} conditions or exceptions"))
+    if short_text_only and not signals:
+        signals.append((EASY_DIFFICULTY, f"short text-only request ({words} words)"))
+    if not signals:
+        return None, []
+    return max(v for v, _ in signals), [f"{why} ({v:.2f})" for v, why in sorted(signals, reverse=True)]

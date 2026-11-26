@@ -18,7 +18,7 @@ The "what": modules, data shapes, storage and API. The "how and why" is in
 | `tiers.py` | `TierTable` from `tiers*.yaml`: tier order, per-provider fallback model, `low_confidence_fallback` |
 | `catalog.py` | `ModelCatalog`: filter by tier / scope / provider / modality / quality / context window, `pick_ranked` by fit (with skill needs) or by mode (without); tier labelling helpers |
 | `feedback.py` | `learn_skills(ratings)` → model → skill → `SkillEvidence` (need-weighted mean score, weight, count); `blend` with the catalog value as a prior worth `PRIOR_WEIGHT` = 3 ratings; `fast` is never learned |
-| `fit.py` | `fit()` = Σ need × model skill + q × capability − λ × price; `model_skills` (catalog → 0–1 per skill, estimated × 0.85), `MODE_WEIGHTS` per `optimize_for`, `rank_by_fit`, `describe_fit` |
+| `fit.py` | `fit()` = Σ need × model skill + q × (0.5 + difficulty) × capability − λ × price (q unscaled when difficulty is None); `model_skills` (catalog → 0–1 per skill, estimated × 0.85), `MODE_WEIGHTS` per `optimize_for`, `rank_by_fit`, `describe_fit` |
 | `capability.py` | Parse OpenRouter's public model list (price, context, image/video/audio support) — offline scripts only |
 | `quality.py` | Human quality ratings keyed by `GRADIST_QUALITY_FIELD` |
 | `labels.py` | Rule-derived seed labels for training |
@@ -56,7 +56,7 @@ The "what": modules, data shapes, storage and API. The "how and why" is in
 | `rule_outcome`, `classifier_outcome`, `fallback_outcome` | What each ladder step did |
 | `tier_scores`, `tier_scores_kind` | Evidence for the tier (classifier probabilities or quality-head scores) |
 | `candidates`, `pool_size` | Top 8 of the tier after ranking (each with `fit`, `fit_parts` per term, `skill_sources` and `learned` {skill: prior, value, ratings}), and the pool size |
-| `signals` | What was received: text size, metadata used/ignored, image bytes, modality, providers, `screen_text` {engine, lines, frames_read}, `classifier_inputs` {metadata buckets, embedders, `image_used`, `screen_text_used`, odds `without_image` / `without_text` / `without_screen_text` / `without_metadata`}, QC-risk score, `skill_needs` {needs, reasons, task_profile, input_tokens} — what the candidates are ranked against, `moved_by_ratings` [{id, rank, fit, learned}] — up to 5 models in the tier whose skills ratings changed, with their rank even outside the top 8 |
+| `signals` | What was received: text size, metadata used/ignored, image bytes, modality, providers, `screen_text` {engine, lines, frames_read}, `classifier_inputs` {metadata buckets, embedders, `image_used`, `screen_text_used`, odds `without_image` / `without_text` / `without_screen_text` / `without_metadata`}, QC-risk score, `skill_needs` {needs, reasons, task_profile, input_tokens, difficulty, difficulty_reasons} — what the candidates are ranked against, `moved_by_ratings` [{id, rank, fit, learned}] — up to 5 models in the tier whose skills ratings changed, with their rank even outside the top 8 |
 
 ## Configuration
 

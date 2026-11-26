@@ -97,7 +97,9 @@ flowchart TD
 5. **Catalog pick.** Within the tier the candidate pool is filtered (scope, provider, media,
    quality floor, context window ≥ input), then ranked by fit to the request's skill needs
    (`fit.py`): Σ need × model skill + q × capability − λ × price, where `optimize_for` sets q and
-   λ. Model skills are scaled 0–1: declared video/audio support, the multilingual index for
+   λ, and q is scaled by 0.5 + the request's difficulty (`skills.py`: the largest of QC risk,
+   length, figures and conditions in the text, 0.25 for a short plain request; unscaled when none
+   applies). Model skills are scaled 0–1: declared video/audio support, the multilingual index for
    Hindi, capability for reasoning and writing, context window (log, 8K–1M) for long input, and
    cheapness for speed; price is a fixed log scale, so a gap weighs the same in a two-model pool
    as in the whole catalog. Capability is OpenRouter's Artificial Analysis intelligence index (91

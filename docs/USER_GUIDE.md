@@ -34,7 +34,11 @@ decision step in front of that — not the proxy itself.
 6. **Catalog pick** — models in the tier that pass the scope, provider, media and quality filters,
    and whose context window holds the input, are ranked by **fit to what the request needs**:
    Σ need × skill + q × capability − λ × price (see below). `optimize_for` sets the weights:
-   `cost` q 0.1 / λ 1.0, `balanced` 0.6 / 0.6, `accuracy` 1.0 / 0.2. A model's skills are
+   `cost` q 0.1 / λ 1.0, `balanced` 0.6 / 0.6, `accuracy` 1.0 / 0.2. The request's
+   **difficulty** (0–1) scales q by 0.5 + difficulty, so two requests with the same needs can get
+   different picks: a short plain request (0.25) leans toward price, one with many figures,
+   conditions, a long input or a high QC-risk score leans toward capability. With no such signal q
+   is unchanged. The Playground shows it under the needs. A model's skills are
    video/audio support, the Hindi (multilingual) score, capability for reasoning and writing
    (a human quality rating replaces it where present), context window for long input, and
    cheapness for speed. Capability is the Artificial Analysis intelligence index from OpenRouter

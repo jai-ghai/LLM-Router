@@ -45,6 +45,7 @@ export interface HistoryEntry {
   /** Absent on entries recorded before the feedback loop existed; those rate by model only. */
   request_id?: string
   skill_needs?: Partial<Record<Skill, number>>
+  difficulty?: number | null
   /** Ratings given to this request's pick (by request_id). */
   ratings?: { rating: number; judged_by: string }[]
   timestamp: string
@@ -198,6 +199,10 @@ export interface SkillNeeds {
   needs: Record<Skill, number>
   reasons: Partial<Record<Skill, string[]>>
   task_profile: string | null
+  input_tokens?: number
+  /** How hard this request looks, 0–1; scales the capability weight by 0.5 + difficulty. Null = neutral. */
+  difficulty?: number | null
+  difficulty_reasons?: string[]
 }
 
 export interface ScreenText {

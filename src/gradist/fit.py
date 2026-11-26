@@ -17,7 +17,9 @@ rising past it, so a price gap weighs the same in a two-model task pool as in th
 
 Estimated values (fit on price and release date, not published) count at ESTIMATE_TRUST.
 Ratings of the model's real outputs then pull each skill toward what users saw (feedback.py).
-`q` and `λ` come from optimize_for: cost leans on price, accuracy on capability.
+`q` and `λ` come from optimize_for: cost leans on price, accuracy on capability. The request's
+difficulty (skills.SkillNeeds) scales q by 0.5 + difficulty: an easy request halves the pull of
+capability, a hard one raises it by half; no difficulty signal leaves q as is.
 """
 
 from __future__ import annotations
@@ -143,6 +145,10 @@ class Fit:
         }
 
 
+def difficulty_factor(difficulty: float | None) -> float:
+    return 1.0 if difficulty is None else 0.5 + min(max(difficulty, 0.0), 1.0)
+
+
 def fit(
     entry: CatalogEntry,
     needs: Mapping[str, float],
@@ -150,8 +156,10 @@ def fit(
     mode: str,
     rating: float | None = None,
     learned: Mapping[str, SkillEvidence] | None = None,
+    difficulty: float | None = None,
 ) -> Fit:
     q, lam = MODE_WEIGHTS[mode]
+    q *= difficulty_factor(difficulty)
     skills = model_skills(entry, scale, rating, learned)
     parts = {s: needs[s] * skills[s].trusted for s in SKILLS if needs.get(s, 0.0) > 0}
     parts["capability"] = q * skills["reasoning"].trusted
@@ -167,6 +175,7 @@ def rank_by_fit(
     quality: Mapping[tuple[str, str], float] | None = None,
     quality_value: str | None = None,
     learned: Mapping[str, Mapping[str, SkillEvidence]] | None = None,
+    difficulty: float | None = None,
 ) -> tuple[list[CatalogEntry], dict[str, Fit], str]:
     """Candidates best fit first (cost, then id, break ties), their fits, and a note on how."""
     fits = {
@@ -177,15 +186,17 @@ def rank_by_fit(
             mode,
             quality.get((e.id, quality_value)) if quality and quality_value else None,
             (learned or {}).get(e.id),
+            difficulty,
         )
         for e in candidates
     }
     ranked = sorted(candidates, key=lambda e: (-fits[e.id].score, e.cost, e.id))
     q, lam = MODE_WEIGHTS[mode]
     needed = [s for s in SKILLS if needs.get(s, 0.0) > 0]
+    weight = f"{q:g}" if difficulty is None else f"{q:g} × {difficulty_factor(difficulty):.2f} (difficulty {difficulty:.2f})"
     note = (
         f"ranked by fit to the request: Σ need × skill over {', '.join(needed) or 'no specific skills'}"
-        f" + {q:g} × capability − {lam:g} × price ({mode})"
+        f" + {weight} × capability − {lam:g} × price ({mode})"
     )
     return ranked, fits, note
 

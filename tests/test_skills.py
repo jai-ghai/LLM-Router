@@ -42,6 +42,27 @@ def test_qc_risk_and_long_input_raise_their_needs_without_a_task_profile() -> No
     assert needs.task_profile is None
 
 
+def test_difficulty_is_low_for_a_short_plain_request_and_high_for_figures_and_conditions() -> None:
+    easy = request_needs({}, "Is this headline the same story as that one?")
+    assert easy.difficulty == 0.25
+    assert easy.difficulty_reasons == ["short text-only request (9 words) (0.25)"]
+
+    hard = request_needs(
+        {},
+        "Pass only if the score is 3/5 or more, unless the clip is under 30 s; "
+        "however reject it if 2 of the 4 frames or 10% of the audio are missing.",
+    )
+    assert hard.difficulty is not None and hard.difficulty >= 0.6
+    assert any("figures" in r for r in hard.difficulty_reasons)
+    assert any("conditions" in r for r in hard.difficulty_reasons)
+
+
+def test_difficulty_follows_qc_risk_and_is_neutral_without_any_signal() -> None:
+    assert request_needs({}, "x", qc_risk=0.8).difficulty == 0.8
+    assert request_needs({"modality": "video"}, "").difficulty is None
+    assert request_needs({}, "").as_signal()["difficulty"] is None
+
+
 def test_the_shipped_task_skills_file_is_valid() -> None:
     profiles = load_task_skills(REPO_TASK_SKILLS)
     assert profiles["v3_single"]["video"] == 1.0

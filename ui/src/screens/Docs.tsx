@@ -124,6 +124,7 @@ export function Docs() {
      skills: video/audio support · Hindi score · capability (reasoning, writing) ·
      context window (long input) · cheapness (fast)
      optimize_for sets q / λ: cost 0.1 / 1.0 · balanced 0.6 / 0.6 · accuracy 1.0 / 0.2
+     q × (0.5 + difficulty): figures, conditions, length, QC risk raise it; short plain text lowers it
    Models whose context window is smaller than the input are dropped.
    Human ratings, when present, replace capability (~ = estimated, counted at 85%).
    UNREVIEWED models are never selected.
