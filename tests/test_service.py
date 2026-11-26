@@ -371,6 +371,45 @@ def test_rating_by_request_id_checks_the_request_exists_and_belongs_to_you(tmp_p
     assert member.post("/v1/quality", json={"request_id": request_id, "rating": 3}).status_code == 403
 
 
+def test_reviews_beyond_stars_are_stored_and_shown_on_the_request(tmp_path: Path) -> None:
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("cheap-english", "gemini", "small", cost=0.0001, multilingual=0.6, multilingual_source="measured"),
+            CatalogEntry("hindi-strong", "gemini", "small", cost=0.0003, multilingual=0.9, multilingual_source="measured"),
+        )
+    )
+    client = _authed_client(tmp_path, catalog=catalog)
+    client.put("/v1/rules", json={"rules": [{"when": {"task": "news"}, "tier": "small"}]})
+    form = {"metadata": json.dumps({"task": "news"}), "text": "मुख्यमंत्री ने आज नई योजना की घोषणा की"}
+    request_id = client.post("/v1/resolve", data=form).json()["request_id"]
+
+    rated = client.post("/v1/quality", json={"request_id": request_id, "rating": 2, "wrong_skills": ["hindi", "hindi"]})
+    assert rated.status_code == 200, rated.text
+    assert client.post("/v1/quality", json={"request_id": request_id, "rating": 2, "wrong_skills": ["poetry"]}).status_code == 422
+
+    preferred = client.post("/v1/preferences", json={"request_id": request_id, "other_model": "cheap-english", "outcome": "other", "skills": ["hindi"]})
+    assert preferred.status_code == 200, preferred.text
+    for bad in (
+        {"request_id": request_id, "other_model": "hindi-strong", "outcome": "tie"},
+        {"request_id": request_id, "other_model": "not-in-catalog", "outcome": "tie"},
+        {"request_id": request_id, "other_model": "cheap-english", "outcome": "maybe"},
+    ):
+        assert client.post("/v1/preferences", json=bad).status_code == 422, bad
+    assert client.post("/v1/preferences", json={"request_id": "nope", "other_model": "cheap-english", "outcome": "tie"}).status_code == 404
+
+    labelled = client.post("/v1/need-labels", json={"request_id": request_id, "needs": {"hindi": 1.0, "reasoning": 0.6}})
+    assert labelled.status_code == 200, labelled.text
+    assert client.post("/v1/need-labels", json={"request_id": request_id, "needs": {"hindi": 1.5}}).status_code == 422
+
+    entry = client.get("/v1/history").json()["history"][0]
+    assert entry["shortlist"] == ["hindi-strong", "cheap-english"]
+    assert entry["preferences"] == [{"other": "cheap-english", "outcome": "other", "skills": ["hindi"], "judged_by": entry["ratings"][0]["judged_by"]}]
+    assert entry["need_label"]["needs"] == {"hindi": 1.0, "reasoning": 0.6}
+    stored = client.get("/v1/need-labels").json()["need_labels"][0]
+    assert stored["rule_needs"] == entry["skill_needs"]
+    assert json.loads((tmp_path / "data" / "quality.jsonl").read_text(encoding="utf-8").splitlines()[0])["wrong_skills"] == ["hindi"]
+
+
 def test_resolve_calls_are_recorded_in_history(client: TestClient) -> None:
     assert client.get("/v1/history").json() == {"history": []}
     client.put("/v1/rules", json={"rules": [{"when": {"task": "news"}, "tier": "small"}]})

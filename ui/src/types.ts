@@ -48,6 +48,11 @@ export interface HistoryEntry {
   difficulty?: number | null
   /** Ratings given to this request's pick (by request_id). */
   ratings?: { rating: number; judged_by: string }[]
+  /** The tier's top candidates at resolve time, best first; Compare offers these. */
+  shortlist?: string[]
+  preferences?: { other: string; outcome: PreferenceOutcome; skills: Skill[]; judged_by: string }[]
+  /** The latest reviewer correction of this request's needs. */
+  need_label?: { needs: Partial<Record<Skill, number>>; judged_by: string }
   timestamp: string
   /** Absent on entries recorded before auth existed. */
   requested_by?: string
@@ -194,6 +199,9 @@ export interface Decision {
 }
 
 export type Skill = 'video' | 'audio' | 'hindi' | 'reasoning' | 'long_input' | 'writing' | 'fast'
+
+/** Which output was better: the router's pick, the other model's, or neither. */
+export type PreferenceOutcome = 'picked' | 'other' | 'tie'
 
 export interface SkillNeeds {
   needs: Record<Skill, number>

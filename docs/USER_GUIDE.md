@@ -92,6 +92,17 @@ To give a review:
    rated it). Rated rows show their average stars. The details panel shows **What this request
    needed** (the skills a rating will move) and every rating with who gave it.
 
+With 3 stars or fewer, **What went wrong?** lets you tick the skills the output got wrong.
+
+Two more reviews are collected for learning later. They are stored and shown on the request,
+but do not change picks yet:
+
+- **Compare** (Request logs): run the request on the pick and on another model outside the
+  router, then record which output was better, or "Same", and optionally where the difference
+  showed. The other model defaults to the runner-up from that request's shortlist.
+- **Correct these needs** (Playground, next to the needs): set what the request really needed,
+  per skill. The rules' values are kept alongside, so the correction can be learned.
+
 The decision returns `tier_scores`, the top-8 `candidates`, `pool_size` and `signals`. When the
 classifier decides, `signals.classifier_inputs` lists exactly what it read and the tier odds
 **without** the image, text, screen text or metadata — the Playground shows this as "What moved

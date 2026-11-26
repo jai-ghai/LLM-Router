@@ -5,10 +5,12 @@ import type {
   ExampleRow,
   HistoryEntry,
   OptimizeFor,
+  PreferenceOutcome,
   QualityResponse,
   RuleEntry,
   RulesResponse,
   ScreenText,
+  Skill,
   Status,
   TiersResponse,
   TrainResult,
@@ -138,7 +140,14 @@ export const api = {
   // judged_by is intentionally omitted — the server records the session user (P0 anti-
   // impersonation). Passing it would be ignored anyway.
   // With requestId the server takes the model, metadata and skill needs from that request.
-  rateQuality: (input: { modelId: string; metadata: Record<string, string>; rating: number; notes?: string; requestId?: string | null }) =>
+  rateQuality: (input: {
+    modelId: string
+    metadata: Record<string, string>
+    rating: number
+    notes?: string
+    requestId?: string | null
+    wrongSkills?: Skill[]
+  }) =>
     request<{ status: string }>(
       '/v1/quality',
       json({
@@ -147,8 +156,22 @@ export const api = {
         rating: input.rating,
         notes: input.notes ?? '',
         request_id: input.requestId ?? '',
+        wrong_skills: input.wrongSkills ?? [],
       }),
     ),
+  comparePick: (input: { requestId: string; otherModel: string; outcome: PreferenceOutcome; skills?: Skill[]; notes?: string }) =>
+    request<{ status: string }>(
+      '/v1/preferences',
+      json({
+        request_id: input.requestId,
+        other_model: input.otherModel,
+        outcome: input.outcome,
+        skills: input.skills ?? [],
+        notes: input.notes ?? '',
+      }),
+    ),
+  correctNeeds: (requestId: string, needs: Partial<Record<Skill, number>>) =>
+    request<{ status: string }>('/v1/need-labels', json({ request_id: requestId, needs })),
   ocr: (frames: File[]) => {
     const form = new FormData()
     for (const frame of frames) form.append('frames', frame)

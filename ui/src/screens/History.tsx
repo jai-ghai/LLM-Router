@@ -1,6 +1,7 @@
-import { ArrowClockwise, Copy, Image as ImageIcon, MagnifyingGlass, Star } from '@phosphor-icons/react'
+import { ArrowClockwise, Copy, Image as ImageIcon, MagnifyingGlass, Scales, Star } from '@phosphor-icons/react'
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Dialog,
@@ -18,6 +19,8 @@ import {
   TableHead,
   TableRow,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
@@ -25,8 +28,8 @@ import { api, describeError } from '../api'
 import { useUser } from '../auth'
 import { InfoBanner, Mono, PageHead, Panel, ResolutionPath, StateTag } from '../components/Primitives'
 import { PALETTE, tierTone } from '../theme'
-import type { HistoryEntry, Skill } from '../types'
-import { SKILL_LABELS } from './Resolve'
+import type { HistoryEntry, PreferenceOutcome, Skill } from '../types'
+import { SKILL_FAULTS, SKILL_LABELS, SkillPicker } from '../components/SkillPicker'
 
 function averageRating(entry: HistoryEntry): number | null {
   const ratings = entry.ratings ?? []
@@ -50,7 +53,12 @@ export function History({ refreshKey }: { refreshKey: number }) {
   const [selected, setSelected] = useState<HistoryEntry | null>(null)
   const [rateOpen, setRateOpen] = useState(false)
   const [rating, setRating] = useState<number | null>(null)
+  const [wrong, setWrong] = useState<Skill[]>([])
   const [notes, setNotes] = useState('')
+  const [compareOpen, setCompareOpen] = useState(false)
+  const [otherModel, setOtherModel] = useState('')
+  const [outcome, setOutcome] = useState<PreferenceOutcome | null>(null)
+  const [compareSkills, setCompareSkills] = useState<Skill[]>([])
   const [rateError, setRateError] = useState('')
   const [saving, setSaving] = useState(false)
   const [qualityField, setQualityField] = useState<string | null>(null)
@@ -102,9 +110,34 @@ export function History({ refreshKey }: { refreshKey: number }) {
 
   function openRate() {
     setRating(null)
+    setWrong([])
     setNotes('')
     setRateError('')
     setRateOpen(true)
+  }
+
+  function openCompare() {
+    setOtherModel(selected?.shortlist?.find((id) => id !== selected.model_name) ?? '')
+    setOutcome(null)
+    setCompareSkills([])
+    setNotes('')
+    setRateError('')
+    setCompareOpen(true)
+  }
+
+  async function submitCompare() {
+    if (!selected?.request_id || !otherModel || !outcome) return
+    setSaving(true)
+    setRateError('')
+    try {
+      await api.comparePick({ requestId: selected.request_id, otherModel, outcome, skills: compareSkills, notes })
+      setCompareOpen(false)
+      await load()
+    } catch (err) {
+      setRateError(describeError(err))
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function submitRating() {
@@ -112,7 +145,14 @@ export function History({ refreshKey }: { refreshKey: number }) {
     setSaving(true)
     setRateError('')
     try {
-      await api.rateQuality({ modelId: selected.model_name, metadata: selected.metadata, rating, notes, requestId: selected.request_id })
+      await api.rateQuality({
+        modelId: selected.model_name,
+        metadata: selected.metadata,
+        rating,
+        notes,
+        requestId: selected.request_id,
+        wrongSkills: rating <= 3 ? wrong : [],
+      })
       setRateOpen(false)
       await load()
     } catch (err) {
@@ -415,6 +455,43 @@ export function History({ refreshKey }: { refreshKey: number }) {
                   )}
                 </Box>
 
+                {selected.preferences?.length ? (
+                  <Box>
+                    <Typography sx={{ fontSize: 11, fontWeight: 650, letterSpacing: '0.04em', textTransform: 'uppercase', color: PALETTE.textMuted, mb: 0.5 }}>
+                      Comparisons
+                    </Typography>
+                    <Stack spacing={0.25}>
+                      {selected.preferences.map((p, i) => (
+                        <Typography key={i} sx={{ fontSize: 12.5, color: PALETTE.textSecondary }}>
+                          {p.outcome === 'tie'
+                            ? `Same as ${p.other}`
+                            : p.outcome === 'picked'
+                              ? `Better than ${p.other}`
+                              : `${p.other} was better`}
+                          {p.skills.length > 0 && ` · ${p.skills.map((s) => SKILL_LABELS[s] ?? s).join(', ')}`}
+                          <Box component="span" sx={{ color: PALETTE.textMuted }}> · by {p.judged_by}</Box>
+                        </Typography>
+                      ))}
+                    </Stack>
+                  </Box>
+                ) : null}
+
+                {selected.need_label && (
+                  <Box>
+                    <Typography sx={{ fontSize: 11, fontWeight: 650, letterSpacing: '0.04em', textTransform: 'uppercase', color: PALETTE.textMuted, mb: 0.5 }}>
+                      Corrected needs
+                    </Typography>
+                    <Typography sx={{ fontSize: 12.5, color: PALETTE.textSecondary }}>
+                      {(Object.entries(selected.need_label.needs) as [Skill, number][])
+                        .filter(([, v]) => v > 0)
+                        .sort(([, a], [, b]) => b - a)
+                        .map(([s, v]) => `${SKILL_LABELS[s] ?? s} ${v.toFixed(1)}`)
+                        .join(' · ') || 'No specific skill'}
+                      <Box component="span" sx={{ color: PALETTE.textMuted }}> · by {selected.need_label.judged_by}</Box>
+                    </Typography>
+                  </Box>
+                )}
+
                 <Box>
                   <Typography sx={{ fontSize: 11, fontWeight: 650, letterSpacing: '0.04em', textTransform: 'uppercase', color: PALETTE.textMuted, mb: 0.5 }}>
                     Resolution path
@@ -429,6 +506,11 @@ export function History({ refreshKey }: { refreshKey: number }) {
                   <Button variant="outlined" startIcon={<Star size={14} />} onClick={openRate}>
                     {selected.ratings?.some((r) => r.judged_by === user?.username) ? 'Rate again' : 'Rate'}
                   </Button>
+                  {selected.request_id && (
+                    <Button variant="outlined" startIcon={<Scales size={14} />} onClick={openCompare}>
+                      Compare
+                    </Button>
+                  )}
                 </Stack>
               </Stack>
             )}
@@ -462,6 +544,9 @@ export function History({ refreshKey }: { refreshKey: number }) {
                   <Typography sx={{ fontSize: 12, color: PALETTE.textMuted }}>Quality (1 = wrong, 5 = correct)</Typography>
                   <Rating value={rating} onChange={(_, v) => setRating(v)} />
                 </Stack>
+                {rating !== null && rating <= 3 && selected.request_id && (
+                  <SkillPicker label="What went wrong? (optional)" value={wrong} onChange={setWrong} labels={SKILL_FAULTS} />
+                )}
                 {/* P3: quality-field chip is read-only from the row's metadata (Q5.5.b = no re-tag).
                     Hidden entirely when the deployment has no GRADIST_QUALITY_FIELD. */}
                 {qualityField && (
@@ -484,6 +569,61 @@ export function History({ refreshKey }: { refreshKey: number }) {
               <Button onClick={() => setRateOpen(false)}>Cancel</Button>
               <Button variant="contained" onClick={() => void submitRating()} disabled={!rating || saving}>
                 Save rating
+              </Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
+
+      <Dialog open={compareOpen} onClose={() => setCompareOpen(false)} maxWidth="xs" fullWidth>
+        {selected && (
+          <>
+            <DialogTitle sx={{ fontSize: 16, fontWeight: 650 }}>
+              Compare <Mono size={14}>{selected.model_name}</Mono> with another model
+            </DialogTitle>
+            <DialogContent>
+              <Stack spacing={1.5} sx={{ pt: 0.5 }}>
+                <Typography sx={{ fontSize: 12.5, color: PALETTE.textMuted }}>
+                  Run this request on both models outside the router, then record which output was better. Saved as a
+                  comparison for learning later; it does not change picks yet.
+                </Typography>
+                {rateError && <Alert severity="error">{rateError}</Alert>}
+                <Autocomplete
+                  freeSolo
+                  size="small"
+                  options={(selected.shortlist ?? []).filter((id) => id !== selected.model_name)}
+                  value={otherModel}
+                  onInputChange={(_, v) => setOtherModel(v.trim())}
+                  renderInput={(params) => (
+                    <TextField {...params} label="Other model" helperText="From this request's shortlist, or any catalog model id" />
+                  )}
+                />
+                <Stack spacing={0.5}>
+                  <Typography sx={{ fontSize: 12, color: PALETTE.textMuted }}>Which output was better?</Typography>
+                  <ToggleButtonGroup
+                    exclusive
+                    size="small"
+                    value={outcome}
+                    onChange={(_, v: PreferenceOutcome | null) => setOutcome(v)}
+                    sx={{ flexWrap: 'wrap' }}
+                  >
+                    <ToggleButton value="picked" sx={{ textTransform: 'none' }}>{selected.model_name}</ToggleButton>
+                    <ToggleButton value="tie" sx={{ textTransform: 'none' }}>Same</ToggleButton>
+                    <ToggleButton value="other" sx={{ textTransform: 'none' }} disabled={!otherModel}>
+                      {otherModel || 'Other model'}
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+                </Stack>
+                {outcome && outcome !== 'tie' && (
+                  <SkillPicker label="Where did the difference show? (optional)" value={compareSkills} onChange={setCompareSkills} />
+                )}
+                <TextField label="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} multiline rows={2} fullWidth />
+              </Stack>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setCompareOpen(false)}>Cancel</Button>
+              <Button variant="contained" onClick={() => void submitCompare()} disabled={!otherModel || !outcome || saving}>
+                Save comparison
               </Button>
             </DialogActions>
           </>

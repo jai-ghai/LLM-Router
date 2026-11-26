@@ -16,6 +16,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from gradist.rules import canonical_key, canonical_value
+from gradist.skills import SKILLS
 
 
 class QualityError(ValueError):
@@ -35,12 +36,18 @@ class QualityRating:
     """The history entry this rates, when rated from History or the Playground."""
     needs: Mapping[str, float] | None = None
     """That request's skill needs, copied server-side from history; feeds feedback.learn_skills."""
+    wrong_skills: tuple[str, ...] = ()
+    """Skills the reviewer said the output got wrong ("What went wrong?"); labels for learned needs."""
 
     def __post_init__(self) -> None:
         if not 1 <= self.rating <= 5:
             raise QualityError(f"rating must be 1-5, got {self.rating}")
         if not self.judged_by.strip():
             raise QualityError("judged_by is required — a rating with no reviewer is not a review")
+        unknown = [s for s in self.wrong_skills if s not in SKILLS]
+        if unknown:
+            raise QualityError(f"unknown skill(s) {', '.join(unknown)} (known: {', '.join(SKILLS)})")
+        object.__setattr__(self, "wrong_skills", tuple(dict.fromkeys(self.wrong_skills)))
 
 
 def quality_lookup(ratings: Sequence[QualityRating], field: str) -> dict[tuple[str, str], float]:

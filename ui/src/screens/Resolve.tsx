@@ -31,6 +31,7 @@ import { api, describeError } from '../api'
 import { ImagePicker, type MediaInfo } from '../components/ImagePicker'
 import { MetadataFieldsEditor } from '../components/MetadataFieldsEditor'
 import { Mono, PageHead, Panel, StateTag } from '../components/Primitives'
+import { SKILL_FAULTS, SKILL_LABELS, SkillPicker } from '../components/SkillPicker'
 import { PALETTE, TONE_SOFT, tierTone } from '../theme'
 import type { CatalogEntry, ClassifierInputs, Decision, OptimizeFor, Skill, SkillNeeds, TiersResponse } from '../types'
 
@@ -627,11 +628,13 @@ export function Resolve({
                 </Stack>
               </Box>
 
-              <RatePick key={decision.request_id ?? ''} decision={decision} onRepick={() => void run()} repicking={loading} />
+              <RatePick key={`rate-${decision.request_id ?? ''}`} decision={decision} onRepick={() => void run()} repicking={loading} />
 
               <TierEvidence decision={decision} />
 
-              {decision.signals?.skill_needs && <SkillNeedsPanel needs={decision.signals.skill_needs} />}
+              {decision.signals?.skill_needs && (
+                <SkillNeedsPanel key={`needs-${decision.request_id ?? ''}`} needs={decision.signals.skill_needs} requestId={decision.request_id ?? null} />
+              )}
 
               {decision.candidates && decision.candidates.length > 0 && (
                 <Shortlist decision={decision} />
@@ -838,24 +841,17 @@ function TierEvidence({ decision }: { decision: Decision }) {
   )
 }
 
-export const SKILL_LABELS: Record<Skill, string> = {
-  video: 'Video watching',
-  audio: 'Hearing speech',
-  hindi: 'Hindi / Indian languages',
-  reasoning: 'Reasoning and rules',
-  long_input: 'Long input',
-  writing: 'Writing',
-  fast: 'Quick and cheap',
-}
-
 /** How much the request needs each skill, and why. The shortlist is ranked by fit to these. */
-function SkillNeedsPanel({ needs }: { needs: SkillNeeds }) {
+function SkillNeedsPanel({ needs, requestId }: { needs: SkillNeeds; requestId: string | null }) {
   const skills = (Object.keys(SKILL_LABELS) as Skill[]).sort((a, b) => (needs.needs[b] ?? 0) - (needs.needs[a] ?? 0))
   const needed = skills.filter((s) => (needs.needs[s] ?? 0) > 0)
   const notNeeded = skills.filter((s) => (needs.needs[s] ?? 0) <= 0)
   return (
     <Box>
-      <SectionLabel>What this request needs</SectionLabel>
+      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+        <SectionLabel>What this request needs</SectionLabel>
+        {requestId && <CorrectNeeds needs={needs} requestId={requestId} />}
+      </Stack>
       <Stack spacing={0.75}>
         {needed.length === 0 && (
           <Typography sx={{ fontSize: 12.5, color: PALETTE.textMuted }}>No specific skill — general capability and price decide.</Typography>
@@ -958,18 +954,84 @@ function MovedByRatings({ decision }: { decision: Decision }) {
 }
 
 /** Rate the pick right here; the server ties it to this request's needs and learns from it. */
+/** A reviewer's correction of the needs, stored as a label for learning needs later. */
+function CorrectNeeds({ needs, requestId }: { needs: SkillNeeds; requestId: string }) {
+  const [open, setOpen] = useState(false)
+  const [draft, setDraft] = useState<Record<Skill, number>>({ ...needs.needs })
+  const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [error, setError] = useState('')
+
+  async function save() {
+    setState('saving')
+    try {
+      await api.correctNeeds(requestId, draft)
+      setState('saved')
+      setOpen(false)
+    } catch (err) {
+      setError(describeError(err))
+      setState('error')
+    }
+  }
+
+  return (
+    <>
+      <Button size="small" onClick={() => setOpen(true)} sx={{ textTransform: 'none' }}>
+        {state === 'saved' ? 'Correction saved · edit' : 'Correct these needs'}
+      </Button>
+      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontSize: 16, fontWeight: 650 }}>What did this request really need?</DialogTitle>
+        <DialogContent>
+          <Stack spacing={1}>
+            <Typography sx={{ fontSize: 12.5, color: PALETTE.textMuted }}>
+              Saved as a label for learning needs from examples. It does not change this pick or the rules.
+            </Typography>
+            {error && state === 'error' && <Alert severity="error">{error}</Alert>}
+            {(Object.keys(SKILL_LABELS) as Skill[]).map((skill) => (
+              <Stack key={skill} direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+                <Typography sx={{ width: 160, fontSize: 12.5, flexShrink: 0 }}>{SKILL_LABELS[skill]}</Typography>
+                <Slider
+                  size="small"
+                  min={0}
+                  max={1}
+                  step={0.1}
+                  value={draft[skill] ?? 0}
+                  onChange={(_, v) => setDraft({ ...draft, [skill]: v as number })}
+                  aria-label={SKILL_LABELS[skill]}
+                />
+                <Mono size={12}>{(draft[skill] ?? 0).toFixed(1)}</Mono>
+              </Stack>
+            ))}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={() => void save()} disabled={state === 'saving'}>
+            Save correction
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  )
+}
+
 function RatePick({ decision, onRepick, repicking }: { decision: Decision; onRepick: () => void; repicking: boolean }) {
   const [rating, setRating] = useState<number | null>(null)
+  const [wrong, setWrong] = useState<Skill[]>([])
   const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [error, setError] = useState('')
   if (!decision.request_id) return null
 
-  async function save(value: number | null) {
-    setRating(value)
-    if (!value || !decision.request_id) return
+  async function save() {
+    if (!rating || !decision.request_id) return
     setState('saving')
     try {
-      await api.rateQuality({ modelId: decision.model_name, metadata: {}, rating: value, requestId: decision.request_id })
+      await api.rateQuality({
+        modelId: decision.model_name,
+        metadata: {},
+        rating,
+        requestId: decision.request_id,
+        wrongSkills: rating <= 3 ? wrong : [],
+      })
       setState('saved')
     } catch (err) {
       setError(describeError(err))
@@ -980,19 +1042,37 @@ function RatePick({ decision, onRepick, repicking }: { decision: Decision; onRep
   return (
     <Box>
       <SectionLabel>Rate this pick</SectionLabel>
-      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-        <Rating value={rating} onChange={(_, v) => void save(v)} disabled={state === 'saving'} size="small" />
-        <Typography sx={{ fontSize: 11.5, color: state === 'error' ? PALETTE.critical : PALETTE.textMuted }}>
-          {state === 'saved'
-            ? `Saved. ${decision.model_name}'s skills that this request needed now include your rating.`
-            : state === 'error'
-              ? error
-              : `How good was ${decision.model_name}'s real output for this request? 1 = wrong, 5 = right.`}
-        </Typography>
-        {state === 'saved' && (
-          <Button size="small" variant="outlined" onClick={onRepick} disabled={repicking} sx={{ textTransform: 'none' }}>
-            {repicking ? 'Picking…' : 'Pick again'}
-          </Button>
+      <Stack spacing={1}>
+        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+          <Rating
+            value={rating}
+            onChange={(_, v) => {
+              setRating(v)
+              setState('idle')
+            }}
+            disabled={state === 'saving'}
+            size="small"
+          />
+          <Typography sx={{ fontSize: 11.5, color: state === 'error' ? PALETTE.critical : PALETTE.textMuted }}>
+            {state === 'saved'
+              ? `Saved. ${decision.model_name}'s skills that this request needed now include your rating.`
+              : state === 'error'
+                ? error
+                : `How good was ${decision.model_name}'s real output for this request? 1 = wrong, 5 = right.`}
+          </Typography>
+          {rating && state !== 'saved' && (
+            <Button size="small" variant="contained" onClick={() => void save()} disabled={state === 'saving'} sx={{ textTransform: 'none' }}>
+              Save rating
+            </Button>
+          )}
+          {state === 'saved' && (
+            <Button size="small" variant="outlined" onClick={onRepick} disabled={repicking} sx={{ textTransform: 'none' }}>
+              {repicking ? 'Picking…' : 'Pick again'}
+            </Button>
+          )}
+        </Stack>
+        {rating !== null && rating <= 3 && state !== 'saved' && (
+          <SkillPicker label="What went wrong? (optional)" value={wrong} onChange={setWrong} labels={SKILL_FAULTS} />
         )}
       </Stack>
     </Box>

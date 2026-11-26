@@ -130,7 +130,9 @@ export function Docs() {
    UNREVIEWED models are never selected.
 7. Feedback — rate a pick (Playground "Rate this pick" or Request logs "Rate"):
    the rating moves the model's skills that request needed, weighted by need;
-   the catalog value counts as 3 ratings; moved skills show * in the shortlist.`}</Code>
+   the catalog value counts as 3 ratings; moved skills show * in the shortlist.
+   Also collected for later learning, not used in picks yet: "What went wrong?" skills,
+   Compare (pick vs another model, Request logs) and Correct these needs (Playground).`}</Code>
         <P>
           Providers can be combined (provider=anthropic,google). Every decision shows the tier evidence,
           the shortlist inside the tier, and exactly what the router received — for a video, the file

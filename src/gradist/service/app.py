@@ -85,6 +85,7 @@ from gradist.qc_risk import QcRiskHead
 from gradist.quality import QualityError, quality_lookup
 from gradist.quality_head import TierQualityHead
 from gradist.resolve import Decision, resolve, validate_setup
+from gradist.reviews import NeedLabel, Preference, ReviewError
 from gradist.rules import Rule, RuleError, RuleSet, canonical_value
 from gradist.service.auth import (
     AuthError,
@@ -132,6 +133,22 @@ class QualityIn(BaseModel):
     notes: str = ""
     request_id: str = ""
     """When set, model_id and metadata come from that history entry, not the client."""
+    wrong_skills: list[str] = []
+    """"What went wrong?" — skills the output got wrong. Only kept with request_id."""
+
+
+class PreferenceIn(BaseModel):
+    request_id: str
+    other_model: str
+    outcome: str
+    """"picked", "other" or "tie"."""
+    skills: list[str] = []
+    notes: str = ""
+
+
+class NeedLabelIn(BaseModel):
+    request_id: str
+    needs: dict[str, float]
 
 
 class LoginIn(BaseModel):
@@ -665,24 +682,92 @@ def create_app(
         model_id, metadata = rating.model_id, rating.metadata
         needs: dict[str, float] | None = None
         if rating.request_id:
-            entry = store.find_history(rating.request_id)
-            if entry is None:
-                raise HTTPException(status_code=404, detail=f"no request with id '{rating.request_id}'")
-            if user.role != "admin" and entry.get("requested_by") != user.username:
-                raise HTTPException(status_code=403, detail="you can only rate your own requests")
+            entry = owned_history(rating.request_id, user)
             model_id = str(entry.get("model_name") or "")
             metadata = {str(k): str(v) for k, v in dict(entry.get("metadata") or {}).items()}  # type: ignore[call-overload]
-            raw_needs = entry.get("skill_needs")
-            needs = {str(k): float(v) for k, v in raw_needs.items()} if isinstance(raw_needs, dict) else None
+            needs = history_needs(entry)
         if not model_id:
             raise HTTPException(status_code=422, detail="model_id (or request_id) is required")
         try:
             store.add_quality_rating(
-                model_id, metadata, rating.rating, user.username, rating.notes, request_id=rating.request_id, needs=needs
+                model_id,
+                metadata,
+                rating.rating,
+                user.username,
+                rating.notes,
+                request_id=rating.request_id,
+                needs=needs,
+                wrong_skills=rating.wrong_skills if rating.request_id else (),
             )
         except QualityError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return {"status": "ok"}
+
+    def owned_history(request_id: str, user: User) -> dict[str, object]:
+        entry = store.find_history(request_id)
+        if entry is None:
+            raise HTTPException(status_code=404, detail=f"no request with id '{request_id}'")
+        if user.role != "admin" and entry.get("requested_by") != user.username:
+            raise HTTPException(status_code=403, detail="you can only review your own requests")
+        return entry
+
+    def history_needs(entry: dict[str, object]) -> dict[str, float] | None:
+        raw = entry.get("skill_needs")
+        return {str(k): float(v) for k, v in raw.items()} if isinstance(raw, dict) else None
+
+    @app.post("/v1/preferences")
+    def add_preference(body: PreferenceIn, user: User = Depends(require_user)) -> dict[str, str]:
+        """Which was better for this request: the router's pick or another model? Outputs are
+        produced outside the router; the pick and the request's needs come from history."""
+        entry = owned_history(body.request_id, user)
+        other = body.other_model.strip()
+        if state.catalog is not None and other and all(e.id != other for e in state.catalog.entries):
+            raise HTTPException(status_code=422, detail=f"'{other}' is not in the catalog")
+        try:
+            store.add_preference(
+                Preference(
+                    body.request_id,
+                    str(entry.get("model_name") or ""),
+                    other,
+                    body.outcome,
+                    user.username,
+                    tuple(body.skills),
+                    history_needs(entry),
+                    body.notes,
+                )
+            )
+        except ReviewError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return {"status": "ok"}
+
+    @app.get("/v1/preferences")
+    def get_preferences(_: User | None = Depends(_require_read)) -> dict[str, Any]:
+        return {
+            "preferences": [
+                {"request_id": p.request_id, "picked": p.picked, "other": p.other, "outcome": p.outcome,
+                 "skills": list(p.skills), "judged_by": p.judged_by}
+                for p in store.list_preferences()
+            ]
+        }
+
+    @app.post("/v1/need-labels")
+    def add_need_label(body: NeedLabelIn, user: User = Depends(require_user)) -> dict[str, str]:
+        """What this request really needed, per skill, as corrected by a reviewer."""
+        entry = owned_history(body.request_id, user)
+        try:
+            store.add_need_label(NeedLabel(body.request_id, body.needs, user.username, history_needs(entry) or {}))
+        except ReviewError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return {"status": "ok"}
+
+    @app.get("/v1/need-labels")
+    def get_need_labels(_: User | None = Depends(_require_read)) -> dict[str, Any]:
+        return {
+            "need_labels": [
+                {"request_id": n.request_id, "needs": dict(n.needs), "rule_needs": dict(n.rule_needs), "judged_by": n.judged_by}
+                for n in store.list_need_labels()
+            ]
+        }
 
     @app.get("/v1/quality")
     def get_quality(_: User | None = Depends(_require_read)) -> dict[str, Any]:
@@ -1051,6 +1136,7 @@ def create_app(
                 "optimize_for": decision.optimize_for,
                 "tier": decision.tier,
                 "model_name": decision.model_name,
+                "shortlist": [str(c["id"]) for c in decision.candidates if c.get("id")],
                 "confidence": decision.confidence,
                 "reason": decision.reason,
                 "rule_outcome": decision.rule_outcome,
@@ -1074,10 +1160,21 @@ def create_app(
                 ratings_by_request.setdefault(rating.request_id, []).append(
                     {"rating": rating.rating, "judged_by": rating.judged_by}
                 )
+        preferences_by_request: dict[str, list[dict[str, object]]] = {}
+        for p in store.list_preferences():
+            preferences_by_request.setdefault(p.request_id, []).append(
+                {"other": p.other, "outcome": p.outcome, "skills": list(p.skills), "judged_by": p.judged_by}
+            )
+        need_label_by_request = {n.request_id: {"needs": dict(n.needs), "judged_by": n.judged_by} for n in store.list_need_labels()}
         for entry in entries:
-            found = ratings_by_request.get(str(entry.get("request_id") or ""))
-            if found:
-                entry["ratings"] = found
+            request_id = str(entry.get("request_id") or "")
+            for key, found in (
+                ("ratings", ratings_by_request.get(request_id)),
+                ("preferences", preferences_by_request.get(request_id)),
+                ("need_label", need_label_by_request.get(request_id)),
+            ):
+                if found:
+                    entry[key] = found
         return {"history": entries}
 
     return app

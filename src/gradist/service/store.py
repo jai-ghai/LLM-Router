@@ -9,7 +9,10 @@ from __future__ import annotations
 import dataclasses
 import json
 import uuid
+from collections.abc import Mapping, Sequence
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -22,6 +25,7 @@ from gradist.labels import (
     load_human_judgments,
 )
 from gradist.quality import QualityError, QualityRating
+from gradist.reviews import NeedLabel, Preference, ReviewError
 from gradist.rules import RuleError, RuleSet, canonical_value, rules_from_file
 
 
@@ -37,6 +41,8 @@ class Store:
         self.classifier_path = self.root / "classifier.joblib"
         self.history_path = self.root / "history.jsonl"
         self.quality_path = self.root / "quality.jsonl"
+        self.preferences_path = self.root / "preferences.jsonl"
+        self.need_labels_path = self.root / "need_labels.jsonl"
         # Task → model id lists for the catalog-first Playground flow (resolve + /v1/task-pools).
         self.task_pools_path = self.root / "task_pools.yaml"
         # Optional path to the live catalog.yaml (GRADIST_CATALOG). Needed so
@@ -236,10 +242,13 @@ class Store:
         *,
         request_id: str = "",
         needs: dict[str, float] | None = None,
+        wrong_skills: Sequence[str] = (),
     ) -> None:
         """Raises QualityError if the rating is malformed (1-5, a named reviewer) — validated
         here, not just trusted from the request, same discipline as every other write path."""
-        validated = QualityRating(model_id, metadata, rating, judged_by, notes, request_id, needs)  # raises QualityError
+        validated = QualityRating(
+            model_id, metadata, rating, judged_by, notes, request_id, needs, tuple(wrong_skills)
+        )  # raises QualityError
         record: dict[str, object] = {
             "model_id": validated.model_id,
             "metadata": dict(validated.metadata),
@@ -251,6 +260,8 @@ class Store:
             record["request_id"] = request_id
         if needs:
             record["needs"] = dict(needs)
+        if validated.wrong_skills:
+            record["wrong_skills"] = list(validated.wrong_skills)
         with self.quality_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")
 
@@ -273,11 +284,83 @@ class Store:
                         raw.get("notes", ""),
                         raw.get("request_id", ""),
                         raw.get("needs"),
+                        tuple(raw.get("wrong_skills", ())),
                     )
                 )
             except QualityError:
                 continue  # a malformed stored row should never crash every later read
         return ratings
+
+    # ---- preferences and need labels (collected for learners; nothing reads them at resolve) ---
+
+    def add_preference(self, preference: Preference) -> None:
+        record: dict[str, object] = {
+            "request_id": preference.request_id,
+            "picked": preference.picked,
+            "other": preference.other,
+            "outcome": preference.outcome,
+            "judged_by": preference.judged_by,
+            "timestamp": datetime.now(UTC).isoformat(),
+        }
+        if preference.skills:
+            record["skills"] = list(preference.skills)
+        if preference.needs:
+            record["needs"] = dict(preference.needs)
+        if preference.notes:
+            record["notes"] = preference.notes
+        _append_jsonl(self.preferences_path, record)
+
+    def list_preferences(self) -> list[Preference]:
+        preferences = []
+        for raw in _read_jsonl(self.preferences_path):
+            try:
+                preferences.append(
+                    Preference(
+                        raw["request_id"],
+                        raw["picked"],
+                        raw["other"],
+                        raw["outcome"],
+                        raw["judged_by"],
+                        tuple(raw.get("skills", ())),
+                        raw.get("needs"),
+                        raw.get("notes", ""),
+                    )
+                )
+            except (KeyError, ReviewError):
+                continue
+        return preferences
+
+    def add_need_label(self, label: NeedLabel) -> None:
+        _append_jsonl(
+            self.need_labels_path,
+            {
+                "request_id": label.request_id,
+                "needs": dict(label.needs),
+                "rule_needs": dict(label.rule_needs),
+                "judged_by": label.judged_by,
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+        )
+
+    def list_need_labels(self) -> list[NeedLabel]:
+        labels = []
+        for raw in _read_jsonl(self.need_labels_path):
+            try:
+                labels.append(NeedLabel(raw["request_id"], raw["needs"], raw["judged_by"], raw.get("rule_needs", {})))
+            except (KeyError, ReviewError):
+                continue
+        return labels
+
+
+def _append_jsonl(path: Path, record: Mapping[str, object]) -> None:
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
 def guess_image_ext(filename: str | None, content_type: str | None) -> str:
