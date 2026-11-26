@@ -78,6 +78,16 @@ move it to 0.45. The shortlist marks a moved skill with `*` and shows the change
 `hindi +0.68* (0.90→0.68, 1 rating)`. Speed (price) is never learned, and ratings never give a
 model video or audio support it lacks. Members can rate only their own requests.
 
+To give a review:
+
+1. **Playground:** resolve a request, check the model's real output, then pick stars under
+   **Rate this pick** and press **Save rating**. Press **Pick again** to resolve the same request
+   with the rating applied. **Moved by ratings** lists each model whose skills ratings changed,
+   with its new rank, even when it has dropped out of the top of the shortlist.
+2. **Request logs:** select a row and press **Rate** (it becomes **Rate again** once you have
+   rated it). Rated rows show their average stars. The details panel shows **What this request
+   needed** (the skills a rating will move) and every rating with who gave it.
+
 The decision returns `tier_scores`, the top-8 `candidates`, `pool_size` and `signals`. When the
 classifier decides, `signals.classifier_inputs` lists exactly what it read and the tier odds
 **without** the image, text, screen text or metadata — the Playground shows this as "What moved

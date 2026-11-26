@@ -56,7 +56,7 @@ The "what": modules, data shapes, storage and API. The "how and why" is in
 | `rule_outcome`, `classifier_outcome`, `fallback_outcome` | What each ladder step did |
 | `tier_scores`, `tier_scores_kind` | Evidence for the tier (classifier probabilities or quality-head scores) |
 | `candidates`, `pool_size` | Top 8 of the tier after ranking (each with `fit`, `fit_parts` per term, `skill_sources` and `learned` {skill: prior, value, ratings}), and the pool size |
-| `signals` | What was received: text size, metadata used/ignored, image bytes, modality, providers, `screen_text` {engine, lines, frames_read}, `classifier_inputs` {metadata buckets, embedders, `image_used`, `screen_text_used`, odds `without_image` / `without_text` / `without_screen_text` / `without_metadata`}, QC-risk score, `skill_needs` {needs, reasons, task_profile, input_tokens} — what the candidates are ranked against |
+| `signals` | What was received: text size, metadata used/ignored, image bytes, modality, providers, `screen_text` {engine, lines, frames_read}, `classifier_inputs` {metadata buckets, embedders, `image_used`, `screen_text_used`, odds `without_image` / `without_text` / `without_screen_text` / `without_metadata`}, QC-risk score, `skill_needs` {needs, reasons, task_profile, input_tokens} — what the candidates are ranked against, `moved_by_ratings` [{id, rank, fit, learned}] — up to 5 models in the tier whose skills ratings changed, with their rank even outside the top 8 |
 
 ## Configuration
 
@@ -85,7 +85,7 @@ The "what": modules, data shapes, storage and API. The "how and why" is in
 | `ocr_cache.json` | OCR lines by image sha1 |
 | `rules.yaml`, `task_pools.yaml` | Operator rules and named model pools |
 | `quality.jsonl` | Human quality ratings; rows rated by `request_id` also carry that request's `needs` |
-| `history.jsonl` | Every resolve: `request_id`, request summary, `skill_needs`, decision |
+| `history.jsonl` | Every resolve: `request_id`, request summary, `skill_needs`, decision. `GET /v1/history` adds `ratings` [{rating, judged_by}] from `quality.jsonl` |
 | `users.jsonl` | Users with bcrypt hashes, role, enabled flag (UTF-8 without BOM) |
 
 ## API

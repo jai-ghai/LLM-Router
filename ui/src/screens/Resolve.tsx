@@ -627,7 +627,7 @@ export function Resolve({
                 </Stack>
               </Box>
 
-              <RatePick key={decision.request_id ?? ''} decision={decision} />
+              <RatePick key={decision.request_id ?? ''} decision={decision} onRepick={() => void run()} repicking={loading} />
 
               <TierEvidence decision={decision} />
 
@@ -636,6 +636,8 @@ export function Resolve({
               {decision.candidates && decision.candidates.length > 0 && (
                 <Shortlist decision={decision} />
               )}
+
+              {decision.signals?.moved_by_ratings && <MovedByRatings decision={decision} />}
 
               {sent && <RequestSent sent={sent} decision={decision} />}
 
@@ -836,7 +838,7 @@ function TierEvidence({ decision }: { decision: Decision }) {
   )
 }
 
-const SKILL_LABELS: Record<Skill, string> = {
+export const SKILL_LABELS: Record<Skill, string> = {
   video: 'Video watching',
   audio: 'Hearing speech',
   hindi: 'Hindi / Indian languages',
@@ -849,15 +851,20 @@ const SKILL_LABELS: Record<Skill, string> = {
 /** How much the request needs each skill, and why. The shortlist is ranked by fit to these. */
 function SkillNeedsPanel({ needs }: { needs: SkillNeeds }) {
   const skills = (Object.keys(SKILL_LABELS) as Skill[]).sort((a, b) => (needs.needs[b] ?? 0) - (needs.needs[a] ?? 0))
+  const needed = skills.filter((s) => (needs.needs[s] ?? 0) > 0)
+  const notNeeded = skills.filter((s) => (needs.needs[s] ?? 0) <= 0)
   return (
     <Box>
       <SectionLabel>What this request needs</SectionLabel>
       <Stack spacing={0.75}>
-        {skills.map((skill) => {
+        {needed.length === 0 && (
+          <Typography sx={{ fontSize: 12.5, color: PALETTE.textMuted }}>No specific skill — general capability and price decide.</Typography>
+        )}
+        {needed.map((skill) => {
           const value = needs.needs[skill] ?? 0
           const why = needs.reasons[skill] ?? []
           return (
-            <Stack key={skill} direction="row" spacing={1.25} sx={{ alignItems: 'center', opacity: value > 0 ? 1 : 0.5 }}>
+            <Stack key={skill} direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
               <Typography sx={{ width: 170, fontSize: 12.5, color: PALETTE.textSecondary, flexShrink: 0 }}>{SKILL_LABELS[skill]}</Typography>
               <Box sx={{ width: 160, height: 10, borderRadius: 5, bgcolor: PALETTE.hairline, flexShrink: 0 }}>
                 <Box sx={{ width: `${Math.round(value * 100)}%`, height: '100%', borderRadius: 5, bgcolor: PALETTE.accent }} />
@@ -867,6 +874,11 @@ function SkillNeedsPanel({ needs }: { needs: SkillNeeds }) {
             </Stack>
           )
         })}
+        {notNeeded.length > 0 && (
+          <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted }}>
+            Not needed: {notNeeded.map((s) => SKILL_LABELS[s]).join(', ')}
+          </Typography>
+        )}
       </Stack>
       <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted, mt: 0.75 }}>
         {needs.task_profile ? `Task profile “${needs.task_profile}” from config/task_skills.yaml, plus signals in the request. ` : 'From signals in the request (no task profile matched). '}
@@ -902,8 +914,35 @@ function describeFitParts(
     .join(' · ')
 }
 
+/** Every model in the tier that ratings have moved, with where it ranks now — even outside the top 8. */
+function MovedByRatings({ decision }: { decision: Decision }) {
+  const rows = decision.signals?.moved_by_ratings ?? []
+  return (
+    <Box>
+      <SectionLabel>Moved by ratings</SectionLabel>
+      <Stack spacing={0.5}>
+        {rows.map((m) => (
+          <Stack key={m.id} direction="row" spacing={1.25} sx={{ alignItems: 'baseline', flexWrap: 'wrap' }}>
+            <Mono size={12}>#{m.rank}</Mono>
+            <Mono size={12}>{m.id}</Mono>
+            <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted }}>
+              fit {m.fit.toFixed(2)} ·{' '}
+              {Object.entries(m.learned)
+                .map(([skill, l]) => `${skill} ${l!.prior.toFixed(2)} → ${l!.value.toFixed(2)} (${l!.ratings} rating${l!.ratings === 1 ? '' : 's'})`)
+                .join(' · ')}
+            </Typography>
+          </Stack>
+        ))}
+      </Stack>
+      <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted, mt: 0.5 }}>
+        Each rating pulls the skills that request needed toward the stars given; the catalog value counts as 3 ratings.
+      </Typography>
+    </Box>
+  )
+}
+
 /** Rate the pick right here; the server ties it to this request's needs and learns from it. */
-function RatePick({ decision }: { decision: Decision }) {
+function RatePick({ decision, onRepick, repicking }: { decision: Decision; onRepick: () => void; repicking: boolean }) {
   const [rating, setRating] = useState<number | null>(null)
   const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [error, setError] = useState('')
@@ -929,11 +968,16 @@ function RatePick({ decision }: { decision: Decision }) {
         <Rating value={rating} onChange={(_, v) => void save(v)} disabled={state === 'saving'} size="small" />
         <Typography sx={{ fontSize: 11.5, color: state === 'error' ? PALETTE.critical : PALETTE.textMuted }}>
           {state === 'saved'
-            ? `Saved. ${decision.model_name}'s skills that this request needed now include your rating — pick again to see the effect.`
+            ? `Saved. ${decision.model_name}'s skills that this request needed now include your rating.`
             : state === 'error'
               ? error
               : `How good was ${decision.model_name}'s real output for this request? 1 = wrong, 5 = right.`}
         </Typography>
+        {state === 'saved' && (
+          <Button size="small" variant="outlined" onClick={onRepick} disabled={repicking} sx={{ textTransform: 'none' }}>
+            {repicking ? 'Picking…' : 'Pick again'}
+          </Button>
+        )}
       </Stack>
     </Box>
   )

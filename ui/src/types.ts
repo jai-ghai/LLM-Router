@@ -45,6 +45,8 @@ export interface HistoryEntry {
   /** Absent on entries recorded before the feedback loop existed; those rate by model only. */
   request_id?: string
   skill_needs?: Partial<Record<Skill, number>>
+  /** Ratings given to this request's pick (by request_id). */
+  ratings?: { rating: number; judged_by: string }[]
   timestamp: string
   /** Absent on entries recorded before auth existed. */
   requested_by?: string
@@ -180,6 +182,13 @@ export interface Decision {
     classifier_inputs?: ClassifierInputs
     screen_text?: ScreenText
     skill_needs?: SkillNeeds
+    /** Models in the tier whose skills ratings have moved, with their rank now (may be outside the top 8). */
+    moved_by_ratings?: {
+      id: string
+      rank: number
+      fit: number
+      learned: Partial<Record<Skill, { prior: number; value: number; ratings: number }>>
+    }[]
   }
 }
 

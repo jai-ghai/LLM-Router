@@ -344,10 +344,17 @@ def test_bad_ratings_on_hindi_requests_move_the_next_pick(tmp_path: Path) -> Non
 
     stored = client.get("/v1/quality").json()["ratings"]
     assert stored[0]["model_id"] == "hindi-strong"
+    logged = client.get("/v1/history").json()["history"][0]
+    assert logged["skill_needs"]["hindi"] > 0
+    assert [r["rating"] for r in logged["ratings"]] == [1]
+    assert logged["ratings"][0]["judged_by"] == stored[0]["judged_by"]
     after = client.post("/v1/resolve", data=form).json()
     assert after["model_name"] == "cheap-english"
     loser = next(c for c in after["candidates"] if c["id"] == "hindi-strong")
     assert loser["learned"]["hindi"] == {"prior": 0.9, "value": 0.675, "ratings": 1}
+    assert after["signals"]["moved_by_ratings"] == [
+        {"id": "hindi-strong", "rank": 2, "fit": loser["fit"], "learned": loser["learned"]}
+    ]
 
 
 def test_rating_by_request_id_checks_the_request_exists_and_belongs_to_you(tmp_path: Path) -> None:

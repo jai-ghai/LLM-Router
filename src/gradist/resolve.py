@@ -35,6 +35,7 @@ _NON_DOMAIN_META_KEYS = _WEAK_META_KEYS | {"task"}
 # the mode's share — cost only upgrades when fairly sure, accuracy upgrades on a real chance.
 NEED_SHARE: dict[OptimizeFor, float] = {"cost": 0.7, "balanced": 0.5, "accuracy": 0.3}
 SHORTLIST_SIZE = 8
+MOVED_BY_RATINGS_SHOWN = 5
 
 
 def tier_by_need(
@@ -315,6 +316,13 @@ def resolve(
         )
         entry, note = ranking.ranked[0], ranking.note
         winner_fit = ranking.fits.get(entry.id)
+        moved = [
+            {"id": e.id, "rank": rank, "fit": round(ranking.fits[e.id].score, 3), "learned": learned}
+            for rank, e in enumerate(ranking.ranked, start=1)
+            if e.id in ranking.fits and (learned := ranking.fits[e.id].as_dict()["learned"])
+        ]
+        if moved:
+            signals["moved_by_ratings"] = moved[:MOVED_BY_RATINGS_SHOWN]
         pick_reason = (
             f"{reason} → catalog tier='{tier}'"
             + (f", task='{task}'" if task else "")

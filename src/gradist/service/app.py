@@ -1066,6 +1066,17 @@ def create_app(
         # Requests are private to whoever made them; only admins may see (or filter) everyone's.
         # This deliberately ignores GRADIST_ALLOW_READ_WITHOUT_AUTH: request text is user data.
         owner = (requested_by or None) if viewer.role == "admin" else viewer.username
-        return {"history": store.history(limit, requested_by=owner)}
+        entries = store.history(limit, requested_by=owner)
+        ratings_by_request: dict[str, list[dict[str, object]]] = {}
+        for rating in store.list_quality_ratings():
+            if rating.request_id:
+                ratings_by_request.setdefault(rating.request_id, []).append(
+                    {"rating": rating.rating, "judged_by": rating.judged_by}
+                )
+        for entry in entries:
+            found = ratings_by_request.get(str(entry.get("request_id") or ""))
+            if found:
+                entry["ratings"] = found
+        return {"history": entries}
 
     return app

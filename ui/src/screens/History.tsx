@@ -25,7 +25,13 @@ import { api, describeError } from '../api'
 import { useUser } from '../auth'
 import { InfoBanner, Mono, PageHead, Panel, ResolutionPath, StateTag } from '../components/Primitives'
 import { PALETTE, tierTone } from '../theme'
-import type { HistoryEntry } from '../types'
+import type { HistoryEntry, Skill } from '../types'
+import { SKILL_LABELS } from './Resolve'
+
+function averageRating(entry: HistoryEntry): number | null {
+  const ratings = entry.ratings ?? []
+  return ratings.length ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length : null
+}
 
 /**
  * Every real resolve() call made from this console, newest first — a master-detail layout:
@@ -108,6 +114,7 @@ export function History({ refreshKey }: { refreshKey: number }) {
     try {
       await api.rateQuality({ modelId: selected.model_name, metadata: selected.metadata, rating, notes, requestId: selected.request_id })
       setRateOpen(false)
+      await load()
     } catch (err) {
       setRateError(describeError(err))
     } finally {
@@ -254,6 +261,12 @@ export function History({ refreshKey }: { refreshKey: number }) {
                           <Typography sx={{ fontSize: 11, color: PALETTE.textMuted, display: 'flex', alignItems: 'center', gap: 0.4 }}>
                             {new Date(entry.timestamp).toLocaleTimeString()}
                             {entry.has_image && <ImageIcon size={12} color={PALETTE.textMuted} />}
+                            {averageRating(entry) !== null && (
+                              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, color: PALETTE.warningText }}>
+                                <Star size={11} weight="fill" />
+                                {averageRating(entry)!.toFixed(1)}
+                              </Box>
+                            )}
                           </Typography>
                         </TableCell>
                         {isAdmin && (
@@ -361,6 +374,44 @@ export function History({ refreshKey }: { refreshKey: number }) {
                   </Box>
                 )}
 
+                {selected.skill_needs && Object.keys(selected.skill_needs).length > 0 && (
+                  <Box>
+                    <Typography sx={{ fontSize: 11, fontWeight: 650, letterSpacing: '0.04em', textTransform: 'uppercase', color: PALETTE.textMuted, mb: 0.5 }}>
+                      What this request needed
+                    </Typography>
+                    <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.75 }}>
+                      {(Object.entries(selected.skill_needs) as [Skill, number][])
+                        .sort(([, a], [, b]) => b - a)
+                        .map(([skill, need]) => (
+                          <StateTag key={skill} label={`${SKILL_LABELS[skill] ?? skill} ${need.toFixed(1)}`} tone="brand" size="small" />
+                        ))}
+                    </Stack>
+                    <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted, mt: 0.5 }}>
+                      A rating moves {selected.model_name}'s value for these skills, weighted by how much each was needed.
+                    </Typography>
+                  </Box>
+                )}
+
+                <Box>
+                  <Typography sx={{ fontSize: 11, fontWeight: 650, letterSpacing: '0.04em', textTransform: 'uppercase', color: PALETTE.textMuted, mb: 0.5 }}>
+                    Ratings
+                  </Typography>
+                  {selected.ratings?.length ? (
+                    <Stack spacing={0.25}>
+                      {selected.ratings.map((r, i) => (
+                        <Stack key={i} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                          <Rating value={r.rating} readOnly size="small" />
+                          <Typography sx={{ fontSize: 12, color: PALETTE.textMuted }}>by {r.judged_by}</Typography>
+                        </Stack>
+                      ))}
+                    </Stack>
+                  ) : (
+                    <Typography sx={{ fontSize: 12.5, color: PALETTE.textMuted }}>
+                      Not rated yet — use Rate below once you have checked the model's real output.
+                    </Typography>
+                  )}
+                </Box>
+
                 <Box>
                   <Typography sx={{ fontSize: 11, fontWeight: 650, letterSpacing: '0.04em', textTransform: 'uppercase', color: PALETTE.textMuted, mb: 0.5 }}>
                     Resolution path
@@ -373,7 +424,7 @@ export function History({ refreshKey }: { refreshKey: number }) {
                     {copied ? 'Copied' : 'Copy decision'}
                   </Button>
                   <Button variant="outlined" startIcon={<Star size={14} />} onClick={openRate}>
-                    Rate
+                    {selected.ratings?.some((r) => r.judged_by === user?.username) ? 'Rate again' : 'Rate'}
                   </Button>
                 </Stack>
               </Stack>
