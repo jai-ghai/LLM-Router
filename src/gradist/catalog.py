@@ -245,6 +245,7 @@ class ModelCatalog:
         optimize_for: OptimizeFor = "cost",
         needs: SkillNeeds | None = None,
         learned: Mapping[str, Mapping[str, SkillEvidence]] | None = None,
+        similar: Mapping[str, float] | None = None,
     ) -> Ranking:
         """Entries from `tier`, ranked by `optimize_for`, from the selection/provider/modality
         filter, with an optional quality floor layered on top.
@@ -336,7 +337,7 @@ class ModelCatalog:
                 ordered, how = _rank_by_mode(bucket, optimize_for, quality, quality_value)
                 return ordered, how, {}
             ordered, fits, how_fit = rank_by_fit(
-                bucket, needs.needs, self.scale, optimize_for, quality, quality_value, learned, needs.difficulty
+                bucket, needs.needs, self.scale, optimize_for, quality, quality_value, learned, needs.difficulty, similar
             )
             return ordered, how_fit, fits
 

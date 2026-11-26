@@ -640,6 +640,8 @@ export function Resolve({
                 <Shortlist decision={decision} />
               )}
 
+              {decision.signals?.similar_requests && <SimilarRequests decision={decision} />}
+
               {decision.signals?.moved_by_ratings && <MovedByRatings decision={decision} />}
 
               {sent && <RequestSent sent={sent} decision={decision} />}
@@ -905,7 +907,7 @@ function SkillNeedsPanel({ needs, requestId }: { needs: SkillNeeds; requestId: s
  * * a skill that ratings have moved (with "0.90→0.68, 1 rating" after it).
  */
 function describeFitParts(
-  parts: Partial<Record<Skill | 'capability' | 'price', number>> | undefined,
+  parts: Partial<Record<Skill | 'capability' | 'similar' | 'price', number>> | undefined,
   sources: Partial<Record<Skill, string>> | undefined,
   learned?: Partial<Record<Skill, { prior: number; value: number; ratings: number }>>,
 ): string {
@@ -924,6 +926,35 @@ function describeFitParts(
       return `${k} ${sign}${Math.abs(v ?? 0).toFixed(2)}${mark}`
     })
     .join(' · ')
+}
+
+/** Reviewed requests most like this one, and how their models were rated. Shows why it is off until it switches on. */
+function SimilarRequests({ decision }: { decision: Decision }) {
+  const similar = decision.signals!.similar_requests!
+  const votes = Object.entries(similar.votes).sort(([, a], [, b]) => b.vote - a.vote)
+  return (
+    <Box>
+      <SectionLabel>Similar reviewed requests</SectionLabel>
+      <Typography sx={{ fontSize: 12, color: similar.active ? PALETTE.textSecondary : PALETTE.textMuted }}>
+        {similar.status}
+      </Typography>
+      {similar.active && votes.length > 0 && (
+        <Stack spacing={0.25} sx={{ mt: 0.75 }}>
+          {votes.map(([model, v]) => (
+            <Typography key={model} sx={{ fontSize: 12.5, color: PALETTE.textSecondary }}>
+              <Mono size={12}>{model}</Mono> vote {v.vote >= 0 ? '+' : '−'}
+              {Math.abs(v.vote).toFixed(2)} from {v.neighbours} similar request{v.neighbours === 1 ? '' : 's'}
+            </Typography>
+          ))}
+          <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted }}>
+            Nearest:{' '}
+            {similar.neighbours.map((n) => `${n.model_id} ${n.score}/5 (similarity ${n.similarity.toFixed(2)})`).join(' · ')}.
+            Each vote adds 0.5 × vote to that model's fit as “similar”.
+          </Typography>
+        </Stack>
+      )}
+    </Box>
+  )
 }
 
 /** Every model in the tier that ratings have moved, with where it ranks now — even outside the top 8. */

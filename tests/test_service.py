@@ -371,6 +371,34 @@ def test_rating_by_request_id_checks_the_request_exists_and_belongs_to_you(tmp_p
     assert member.post("/v1/quality", json={"request_id": request_id, "rating": 3}).status_code == 403
 
 
+def test_similar_reviewed_requests_vote_in_the_fit_when_switched_on(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    catalog = ModelCatalog(
+        entries=(
+            CatalogEntry("cheap-english", "gemini", "small", cost=0.0001, multilingual=0.6, multilingual_source="measured"),
+            CatalogEntry("hindi-strong", "gemini", "small", cost=0.0003, multilingual=0.9, multilingual_source="measured"),
+        )
+    )
+    off = _authed_client(tmp_path / "auto", catalog=catalog)
+    off.put("/v1/rules", json={"rules": [{"when": {"task": "news"}, "tier": "small"}]})
+    status = off.post("/v1/resolve", data={"metadata": json.dumps({"task": "news"}), "text": "x"}).json()["signals"]["similar_requests"]
+    assert status["active"] is False and "reviewed requests" in status["status"]
+
+    monkeypatch.setenv("GRADIST_NEIGHBOURS", "on")
+    client = _authed_client(tmp_path / "on", catalog=catalog)
+    client.put("/v1/rules", json={"rules": [{"when": {"task": "news"}, "tier": "small"}]})
+    form = {"metadata": json.dumps({"task": "news"}), "text": "मुख्यमंत्री ने आज नई योजना की घोषणा की"}
+    first = client.post("/v1/resolve", data=form).json()
+    client.post("/v1/quality", json={"request_id": first["request_id"], "rating": 1})
+
+    again = client.post("/v1/resolve", data={**form, "text": "मुख्यमंत्री ने आज नई सड़क योजना की घोषणा की"}).json()
+    similar = again["signals"]["similar_requests"]
+    assert similar["active"] is True
+    assert similar["votes"]["hindi-strong"]["vote"] == -0.25
+    assert similar["neighbours"][0]["model_id"] == "hindi-strong"
+    loser = next(c for c in again["candidates"] if c["id"] == "hindi-strong")
+    assert loser["fit_parts"]["similar"] == -0.125
+
+
 def test_reviews_beyond_stars_are_stored_and_shown_on_the_request(tmp_path: Path) -> None:
     catalog = ModelCatalog(
         entries=(

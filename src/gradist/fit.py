@@ -19,7 +19,8 @@ Estimated values (fit on price and release date, not published) count at ESTIMAT
 Ratings of the model's real outputs then pull each skill toward what users saw (feedback.py).
 `q` and `λ` come from optimize_for: cost leans on price, accuracy on capability. The request's
 difficulty (skills.SkillNeeds) scales q by 0.5 + difficulty: an easy request halves the pull of
-capability, a hard one raises it by half; no difficulty signal leaves q as is.
+capability, a hard one raises it by half; no difficulty signal leaves q as is. When similar
+reviewed requests vote (neighbours.py), SIMILAR_WEIGHT × vote is added as the "similar" term.
 """
 
 from __future__ import annotations
@@ -30,6 +31,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from gradist.feedback import NOT_LEARNED, SkillEvidence, blend
+from gradist.neighbours import SIMILAR_WEIGHT
 from gradist.skills import SKILLS
 
 if TYPE_CHECKING:
@@ -157,12 +159,15 @@ def fit(
     rating: float | None = None,
     learned: Mapping[str, SkillEvidence] | None = None,
     difficulty: float | None = None,
+    similar: float | None = None,
 ) -> Fit:
     q, lam = MODE_WEIGHTS[mode]
     q *= difficulty_factor(difficulty)
     skills = model_skills(entry, scale, rating, learned)
     parts = {s: needs[s] * skills[s].trusted for s in SKILLS if needs.get(s, 0.0) > 0}
     parts["capability"] = q * skills["reasoning"].trusted
+    if similar:
+        parts["similar"] = SIMILAR_WEIGHT * similar
     parts["price"] = -lam * scale.price(entry.cost)
     return Fit(score=sum(parts.values()), parts=parts, skills=skills)
 
@@ -176,6 +181,7 @@ def rank_by_fit(
     quality_value: str | None = None,
     learned: Mapping[str, Mapping[str, SkillEvidence]] | None = None,
     difficulty: float | None = None,
+    similar: Mapping[str, float] | None = None,
 ) -> tuple[list[CatalogEntry], dict[str, Fit], str]:
     """Candidates best fit first (cost, then id, break ties), their fits, and a note on how."""
     fits = {
@@ -187,6 +193,7 @@ def rank_by_fit(
             quality.get((e.id, quality_value)) if quality and quality_value else None,
             (learned or {}).get(e.id),
             difficulty,
+            (similar or {}).get(e.id),
         )
         for e in candidates
     }
@@ -196,7 +203,9 @@ def rank_by_fit(
     weight = f"{q:g}" if difficulty is None else f"{q:g} × {difficulty_factor(difficulty):.2f} (difficulty {difficulty:.2f})"
     note = (
         f"ranked by fit to the request: Σ need × skill over {', '.join(needed) or 'no specific skills'}"
-        f" + {weight} × capability − {lam:g} × price ({mode})"
+        f" + {weight} × capability"
+        f"{f' + {SIMILAR_WEIGHT:g} × similar-request vote' if similar else ''}"
+        f" − {lam:g} × price ({mode})"
     )
     return ranked, fits, note
 

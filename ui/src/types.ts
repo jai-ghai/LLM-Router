@@ -169,7 +169,7 @@ export interface Decision {
     capability?: number | null
     capability_source?: string
     fit?: number
-    fit_parts?: Partial<Record<Skill | 'capability' | 'price', number>>
+    fit_parts?: Partial<Record<Skill | 'capability' | 'similar' | 'price', number>>
     skill_sources?: Partial<Record<Skill, string>>
     learned?: Partial<Record<Skill, { prior: number; value: number; ratings: number }>>
   }[]
@@ -188,6 +188,14 @@ export interface Decision {
     classifier_inputs?: ClassifierInputs
     screen_text?: ScreenText
     skill_needs?: SkillNeeds
+    /** Votes of similar reviewed requests; `active` false says why they are not used yet. */
+    similar_requests?: {
+      active: boolean
+      status: string
+      agreement: number | null
+      votes: Record<string, { vote: number; neighbours: number }>
+      neighbours: { similarity: number; model_id: string; score: number }[]
+    }
     /** Models in the tier whose skills ratings have moved, with their rank now (may be outside the top 8). */
     moved_by_ratings?: {
       id: string

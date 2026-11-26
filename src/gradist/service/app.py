@@ -80,9 +80,10 @@ from gradist.labels import (
     merge_labels,
     uncovered_examples,
 )
+from gradist.neighbours import NeighbourIndex, ReviewedRow, rows_from_reviews
 from gradist.ocr import ScreenReader, join_lines, merge_frame_lines
 from gradist.qc_risk import QcRiskHead
-from gradist.quality import QualityError, quality_lookup
+from gradist.quality import QualityError, QualityRating, quality_lookup
 from gradist.quality_head import TierQualityHead
 from gradist.resolve import Decision, resolve, validate_setup
 from gradist.reviews import NeedLabel, Preference, ReviewError
@@ -288,6 +289,7 @@ class AppState:
         self._screen_reader: ScreenReader | None = None
         skills_path = Path(os.environ.get("GRADIST_TASK_SKILLS") or "config/task_skills.yaml")
         self.task_skills = load_task_skills(skills_path) if skills_path.exists() else {}
+        self.neighbours = NeighbourIndex(HashingEmbedder(), os.environ.get("GRADIST_NEIGHBOURS") or "auto")
 
     def image_embedder(self) -> Dinov2Embedder:
         """Loaded once, on first use, so server startup does not pay for it when no example has
@@ -335,6 +337,8 @@ def _load_saved_models(state: AppState, store: Store) -> None:
             minilm = SentenceTransformerEmbedder(MINILM)
         except ImportError:
             minilm = None
+    if minilm is not None:
+        state.neighbours = NeighbourIndex(minilm, state.neighbours.mode)
     if minilm is not None and head_path.exists():
         state.quality_head = TierQualityHead.load(head_path, minilm)
     if minilm is not None and risk_path.exists():
@@ -702,6 +706,16 @@ def create_app(
         except QualityError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return {"status": "ok"}
+
+    def reviewed_rows(ratings: list[QualityRating]) -> list[ReviewedRow]:
+        """Ratings and comparisons given by request id, joined with that request's text."""
+        preferences = store.list_preferences()
+        ids = {r.request_id for r in ratings if r.request_id} | {p.request_id for p in preferences}
+        return rows_from_reviews(
+            [(r.request_id, r.model_id, r.rating) for r in ratings if r.request_id],
+            [(p.request_id, p.winner, p.loser, p.picked, p.other) for p in preferences],
+            store.history_texts(ids),
+        )
 
     def owned_history(request_id: str, user: User) -> dict[str, object]:
         entry = store.find_history(request_id)
@@ -1078,6 +1092,7 @@ def create_app(
         ratings = store.list_quality_ratings()
         quality_scores = quality_lookup(ratings, state.quality_field) if state.quality_field else None
         learned_skills = learn_skills(ratings)
+        similar_requests = state.neighbours.assess(text, reviewed_rows(ratings)) if state.catalog is not None else None
         risk = (
             state.qc_risk.risk(clean_metadata, text)
             if state.qc_risk is not None and state.qc_risk.applies_to(clean_metadata, text)
@@ -1112,6 +1127,7 @@ def create_app(
                 screen_text=screen_text,
                 skill_needs=skill_needs,
                 learned_skills=learned_skills,
+                similar_requests=similar_requests,
             )
         except (RuleError, ClassifierError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc

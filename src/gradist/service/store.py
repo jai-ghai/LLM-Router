@@ -220,6 +220,17 @@ class Store:
         entries.reverse()
         return entries[:limit]
 
+    def history_texts(self, request_ids: set[str]) -> dict[str, str]:
+        """Request text by id, for the requests in `request_ids` (one pass over the file)."""
+        if not request_ids:
+            return {}
+        texts: dict[str, str] = {}
+        for entry in _read_jsonl(self.history_path):
+            request_id = entry.get("request_id")
+            if request_id in request_ids:
+                texts[request_id] = str(entry.get("text") or "")
+        return texts
+
     def find_history(self, request_id: str) -> dict[str, object] | None:
         if not request_id or self.history_path.stat().st_size == 0:
             return None

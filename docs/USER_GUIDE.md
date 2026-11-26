@@ -94,14 +94,24 @@ To give a review:
 
 With 3 stars or fewer, **What went wrong?** lets you tick the skills the output got wrong.
 
-Two more reviews are collected for learning later. They are stored and shown on the request,
-but do not change picks yet:
+**Similar reviewed requests.** Ratings and comparisons also count for requests like the one
+reviewed, not only through skills. For a new request, the 5 most similar reviewed requests
+(similarity ≥ 0.3) vote for each model they rated: −1 (all 1/5) to +1 (all 5/5), shrunk when
+few agree. A comparison counts as 5 for the winner and 1 for the loser. The vote adds
+0.5 × vote to the fit as `similar`. It switches on by itself once 50 requests have been
+reviewed and, holding each one out, the votes agree with its review at least 60% of the time.
+Until then the Playground's **Similar reviewed requests** section says why it is off, e.g.
+`off: 12 of 50 reviewed requests`. `GRADIST_NEIGHBOURS=on` or `off` overrides that.
+
+Two more reviews are stored and shown on the request:
 
 - **Compare** (Request logs): run the request on the pick and on another model outside the
   router, then record which output was better, or "Same", and optionally where the difference
-  showed. The other model defaults to the runner-up from that request's shortlist.
+  showed. The other model defaults to the runner-up from that request's shortlist. Comparisons
+  feed the similar-request votes below.
 - **Correct these needs** (Playground, next to the needs): set what the request really needed,
-  per skill. The rules' values are kept alongside, so the correction can be learned.
+  per skill. The rules' values are kept alongside, so the correction can be learned. It does
+  not change picks yet.
 
 The decision returns `tier_scores`, the top-8 `candidates`, `pool_size` and `signals`. When the
 classifier decides, `signals.classifier_inputs` lists exactly what it read and the tier odds
@@ -135,6 +145,7 @@ Trained models (`classifier`, `quality_head`, `qc_risk`) are reloaded from `data
 | `GRADIST_ALLOW_READ_WITHOUT_AUTH` | no | `1` opens GET endpoints for monitoring |
 | `GRADIST_OCR`, `GRADIST_OCR_LANGS` | no | `1` turns on screen-text reading; languages default `hi,en` |
 | `GRADIST_TASK_SKILLS` | no | Skill needs per task, default `config/task_skills.yaml` |
+| `GRADIST_NEIGHBOURS` | no | Similar-request votes: `auto` (default), `on` or `off` |
 
 ## Integrate from another app
 

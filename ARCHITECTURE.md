@@ -112,9 +112,12 @@ flowchart TD
    and blends it with the catalog value, which counts as 3 ratings. The next pick ranks with the
    learned skills (marked `*` in the shortlist, with prior → learned and the rating count).
    Price-based speed is never learned, and ratings cannot grant video or audio support.
-   Three more reviews are collected for learners that are not built yet (`reviews.py`):
-   "What went wrong?" skills on a rating, comparisons of the pick with another model
-   (`preferences.jsonl`), and corrected needs (`need_labels.jsonl`). None of them affect picks yet.
+   Ratings and comparisons also feed similar-request votes (`neighbours.py`): the 5 most similar
+   reviewed requests vote for the models they rated, added to the fit as `similar`. In `auto`
+   mode this switches on only after 50 reviewed requests and a leave-one-out agreement of at
+   least 60%; the decision reports why it is off until then.
+   Two more reviews are collected for learners that are not built yet (`reviews.py`):
+   "What went wrong?" skills on a rating and corrected needs (`need_labels.jsonl`).
 
 ### Explainability
 
