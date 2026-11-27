@@ -159,6 +159,18 @@ def test_a_news_channel_clip_read_as_drama_stays_news() -> None:
     assert request_needs({**VIDEO, "channel_type": "gec"}, "", video=drama).difficulty == 0.35
 
 
+def test_an_easy_clip_is_flagged_only_when_nothing_makes_it_harder() -> None:
+    talk = clip(speech_share=0.9, content_type="talk", language="hi", language_confidence=0.9, duration_s=600.0)
+    assert request_needs(VIDEO, "", video=talk).easy_clip == "talk clip: one or two people speaking, few cuts; clear Hindi speech"
+    unsure = clip(speech_share=0.9, content_type="talk", language=None, language_confidence=0.5, duration_s=600.0)
+    assert request_needs(VIDEO, "", video=unsure).easy_clip is None
+    assert request_needs(VIDEO, "", video=talk, qc_risk=0.6).easy_clip is None
+    assert request_needs({**VIDEO, "channel_type": "news"}, "", video=talk).easy_clip is None
+    assert request_needs({**VIDEO, "language": "Odia"}, "", video=talk).easy_clip is None
+    long = clip(speech_share=0.9, content_type="talk", language="hi", language_confidence=0.9, duration_s=3600.0)
+    assert request_needs(VIDEO, "", video=long).easy_clip is None
+
+
 def test_the_profile_is_ignored_for_non_video_requests() -> None:
     needs = request_needs({}, "hello there", video=clip(speech_share=0.9, language="ta"))
     assert needs.needs["audio"] == 0.0

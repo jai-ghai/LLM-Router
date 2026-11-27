@@ -21,7 +21,9 @@ decision step in front of that — not the proxy itself.
 
 ## How a request is resolved
 
-1. **Rules** — metadata match → tier (+ optional per-rule `optimize_for`). Rules always win.
+1. **Rules** — metadata match → tier (+ optional per-rule `optimize_for`). Rules win over the
+   classifier; the only thing that moves a rule's tier is an easy video clip, one tier down (see
+   Video profile below).
 2. **Classifier** — requests with an image or domain metadata: gives P(needs at least each tier);
    `optimize_for` takes the highest tier whose chance clears its threshold (cost 70%, balanced
    50%, accuracy 30%). Metadata fields it was not trained on are listed in
@@ -90,6 +92,18 @@ be the whole catalog, a hand-picked list (`selected_models`) or a named task poo
   - the length counts as about 300 tokens a second toward the input size.
 
   **What's in this video** under the picker shows the reading.
+
+  An **easy clip** goes one tier below the tier the rule or classifier chose. A clip counts as
+  easy when:
+  - it is talk or drama and nothing makes it harder (no QC risk, figures, low-resource
+    language or news channel);
+  - Whisper is at least 70% sure of the spoken language;
+  - it is at most 30 minutes long.
+
+  For example, a `video_processing` rule set to `large` gives an easy Hindi serial `medium`.
+  The decision shows `eased from large` and says why. Easing never lowers a tier that QC risk
+  has just raised, and never goes below the lowest tier. `GRADIST_EASE_EASY_VIDEO=0` turns it
+  off.
 - **On-screen text** — with `GRADIST_OCR=1` (and the `ocr` extra installed) the frame is read with
   EasyOCR in Hindi + English (`GRADIST_OCR_LANGS` for others); lines are returned in
   `signals.screen_text`, cached in `data/ocr_cache.json`, and used in training
@@ -184,6 +198,7 @@ Trained models (`classifier`, `quality_head`, `qc_risk`) are reloaded from `data
 | `GRADIST_TASK_SKILLS` | no | Skill needs per task, default `config/task_skills.yaml` |
 | `GRADIST_NEIGHBOURS` | no | Similar-request votes: `auto` (default), `on` or `off` |
 | `GRADIST_FREE_MODELS_FOR_VIDEO` | no | `1` lets `:free` tiers be picked for video requests (off by default) |
+| `GRADIST_EASE_EASY_VIDEO` | no | `0` stops easy clips going one tier below the decided tier (on by default) |
 
 ## Integrate from another app
 

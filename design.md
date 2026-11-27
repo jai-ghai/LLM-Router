@@ -25,7 +25,7 @@ The "what": modules, data shapes, storage and API. The "how and why" is in
 | `capability.py` | Parse OpenRouter's public model list (price, context, image/video/audio support) — offline scripts only |
 | `quality.py` | Human quality ratings keyed by `GRADIST_QUALITY_FIELD` |
 | `labels.py` | Rule-derived seed labels for training |
-| `resolve.py` | The ladder: `resolve()` → `Decision`; `tier_by_need`, `has_domain_signal` |
+| `resolve.py` | The ladder: `resolve()` → `Decision`; `tier_by_need`, `has_domain_signal`; eases an `easy_clip` one tier down (`signals.eased_from`) unless QC risk raised it |
 | `llm_stub.py` | Placeholder for a future model-calling layer (raises; not wired) |
 | `service/app.py` | FastAPI app factory, `AppState`, all endpoints, `/v1/channels` directory, OCR wiring |
 | `service/main.py` | Builds the app from `GRADIST_*` environment variables |
@@ -80,6 +80,7 @@ The "what": modules, data shapes, storage and API. The "how and why" is in
 | `GRADIST_TASK_SKILLS` | no | Skill needs per task, default `config/task_skills.yaml` (skipped if missing) |
 | `GRADIST_NEIGHBOURS` | no | Similar-request votes: `auto` (default: on after 50 reviewed requests and ≥ 60% held-out agreement), `on`, `off` |
 | `GRADIST_FREE_MODELS_FOR_VIDEO` | no | `1` allows `:free` tiers for video requests (excluded by default) |
+| `GRADIST_EASE_EASY_VIDEO` | no | `0` turns off easing: by default a video whose needs carry `easy_clip` goes one tier below the decided tier |
 
 ## Storage (`GRADIST_DATA`, gitignored)
 

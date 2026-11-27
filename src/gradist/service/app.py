@@ -296,6 +296,7 @@ class AppState:
         self.task_skills = load_task_skills(skills_path) if skills_path.exists() else {}
         self.neighbours = NeighbourIndex(HashingEmbedder(), os.environ.get("GRADIST_NEIGHBOURS") or "auto")
         self.free_models_for_video = os.environ.get("GRADIST_FREE_MODELS_FOR_VIDEO") == "1"
+        self.ease_easy_video = os.environ.get("GRADIST_EASE_EASY_VIDEO", "1") != "0"
         self._video_profiler: VideoProfiler | None = None
 
     def video_profiler(self) -> VideoProfiler:
@@ -1194,6 +1195,7 @@ def create_app(
                 similar_requests=similar_requests,
                 deadline=deadline_literal,
                 free_models_for_video=state.free_models_for_video,
+                ease_easy_video=state.ease_easy_video,
             )
         except (RuleError, ClassifierError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc

@@ -687,6 +687,9 @@ export function Resolve({
                 </Typography>
                 <Stack direction="row" spacing={1} sx={{ mt: 1, alignItems: 'center', flexWrap: 'wrap' }}>
                   <StateTag label={decision.tier} tone={tierTone(decision.tier)} size="small" />
+                  {decision.signals?.eased_from && (
+                    <StateTag label={`eased from ${decision.signals.eased_from}: easy clip`} tone="default" size="small" />
+                  )}
                   <StateTag label={decision.optimize_for} tone="default" size="small" />
                   {decision.confidence != null && (
                     <StateTag label={`conf ${decision.confidence.toFixed(2)}`} tone="default" size="small" />

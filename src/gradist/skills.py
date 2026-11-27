@@ -92,6 +92,10 @@ EASY_CONTENT = {
     "drama": (0.35, "scripted dialogue, one scene at a time"),
 }
 """video_profile content type → (difficulty, why). Easy ones apply only when nothing harder does."""
+EASY_CLIP_LANGUAGE_CONFIDENCE = 0.7
+EASY_CLIP_MAX_SECONDS = 30 * 60
+"""An easy clip (talk / drama and nothing harder) may go one tier lower only when Whisper is
+this sure of the spoken language and the clip is at most this long."""
 VIDEO_TOKENS_PER_SECOND = 300
 """Frames at 1 fps plus the audio track, as multimodal APIs count a video (≈ 260 + 32 per second)."""
 LONG_INPUT_TOKENS = 32_000
@@ -116,6 +120,8 @@ class SkillNeeds:
     """Rough size of text + on-screen text (characters ÷ 4); models with a smaller window are dropped."""
     difficulty: float | None = None
     difficulty_reasons: list[str] = field(default_factory=list)
+    easy_clip: str | None = None
+    """Why this video is easy enough for one tier lower (resolve eases the tier), or None."""
 
     def as_signal(self) -> dict[str, object]:
         return {
@@ -125,6 +131,7 @@ class SkillNeeds:
             "input_tokens": self.input_tokens,
             "difficulty": None if self.difficulty is None else round(self.difficulty, 2),
             "difficulty_reasons": self.difficulty_reasons,
+            "easy_clip": self.easy_clip,
         }
 
 
@@ -280,6 +287,18 @@ def request_needs(
     # Only the request's own text: clocks, channel codes and prices read off the screen are not
     # figures the model has to keep straight.
     difficulty, difficulty_reasons = _difficulty(text, words, qc_risk, short_text_only, extra_difficulty, easy_difficulty)
+    easy_clip = None
+    if (
+        video is not None
+        and easy_difficulty
+        and difficulty == easy_difficulty[0][0]
+        and len(difficulty_reasons) == 1
+        and video.language is not None
+        and (video.language_confidence or 0.0) >= EASY_CLIP_LANGUAGE_CONFIDENCE
+        and duration <= EASY_CLIP_MAX_SECONDS
+    ):
+        spoken = INDIAN_LANGUAGES.get(video.language, ("English" if video.language == "en" else video.language, False))[0]
+        easy_clip = f"{easy_difficulty[0][1]}; clear {spoken} speech"
     return SkillNeeds(
         needs=needs,
         reasons=reasons,
@@ -287,6 +306,7 @@ def request_needs(
         input_tokens=round(tokens),
         difficulty=difficulty,
         difficulty_reasons=difficulty_reasons,
+        easy_clip=easy_clip,
     )
 
 

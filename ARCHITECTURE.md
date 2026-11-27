@@ -121,6 +121,12 @@ flowchart TD
    - the content type (news, music, reality, talk, drama, ads), from sound tags, scene changes
      and on-screen text density, sets the difficulty;
    - the duration feeds the input size.
+
+   An **easy clip** moves down one tier from the rule's or classifier's choice, so an easy
+   serial can reach a cheaper model family and not just the cheapest model in the rule's tier.
+   It is easy when it is talk or drama, nothing else raises its difficulty, Whisper is at least
+   70% sure of the language, and it runs 30 minutes or less. This is the one exception to "rules
+   win".
 6. **Feedback loop.** Every decision has a `request_id`, and history keeps that request's skill
    needs. A rating given with the `request_id` (Playground or Request logs) is stored with those
    needs; `feedback.py` turns all such ratings into per-model skill evidence, weighted by need,
@@ -179,7 +185,7 @@ cached retrains take ~2 minutes.
 |---|---|
 | Decide only, never call the model | Keeps the router provider-agnostic and keyless; the calling client (LiteLLM, LangChain, an SDK) is a separate, swappable layer. |
 | Abstract tiers, not model names, in the learned heads | Retraining is needed when the *task* changes, not when the model lineup changes; the catalog maps tiers to today's models. |
-| Rules always win | An operator must be able to pin a channel or task without retraining. |
+| Rules win (one exception) | An operator must be able to pin a channel or task without retraining. An easy video clip may go one tier below the rule; `GRADIST_EASE_EASY_VIDEO=0` restores strict rules. |
 | Separate heads for plain text vs. domain requests | Generic text quality is learnable from public scored outcomes; channel/video routing needs in-house labels. |
 | `optimize_for` as one dial for tier *and* model | One user-facing choice; the same intent applies to "move up a tier?" and "which model in it?". |
 | Frame for the classifier, profile for the needs | The browser extracts the classifier's frame. The clip itself is uploaded once to `/v1/video/profile` (optional `video` extra: PyAV, faster-whisper, AudioSet AST, all local) and cached by sha256, so every later request about the clip sends only the id. Content types come from transparent rules, not a trained model, until labelled clips exist. |

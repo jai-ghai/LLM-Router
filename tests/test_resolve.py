@@ -8,6 +8,7 @@ from gradist.features import HashingEmbedder, MetadataEncoder
 from gradist.labels import TierLabel
 from gradist.resolve import resolve, tier_by_need, validate_setup
 from gradist.rules import Rule, RuleError, RuleSet
+from gradist.skills import SKILLS, SkillNeeds
 from gradist.tiers import TierSpec, TierTable
 
 NEWS = ["parliament passed the budget bill", "the minister announced an election"]
@@ -316,3 +317,25 @@ def test_resolve_catalog_never_routes_unreviewed_even_if_selected() -> None:
     assert decision.model_name == "ready"
     assert decision.tier == "small"
     assert "task='video_processing'" in decision.reason
+
+
+def _easy(easy_clip: str | None = "talk clip; clear Hindi speech") -> SkillNeeds:
+    return SkillNeeds(needs={s: 0.0 for s in SKILLS}, difficulty=0.3, easy_clip=easy_clip)
+
+
+def test_an_easy_clip_goes_one_tier_below_the_rule() -> None:
+    rules = RuleSet(rules=(Rule.create({"task": "video_processing"}, "large"),))
+    meta = {"task": "video_processing", "modality": "video"}
+    eased = resolve(meta, "log it", rules, TIERS, skill_needs=_easy())
+    assert eased.tier == "medium"
+    assert eased.signals["eased_from"] == "large"
+    assert "easy clip (talk clip; clear Hindi speech) → eased 'large' to 'medium'" in eased.reason
+    assert resolve(meta, "log it", rules, TIERS, skill_needs=_easy(None)).tier == "large"
+    assert resolve(meta, "log it", rules, TIERS, skill_needs=_easy(), ease_easy_video=False).tier == "large"
+
+
+def test_easing_never_goes_below_the_lowest_tier() -> None:
+    rules = RuleSet(rules=(Rule.create({"task": "headline_similarity"}, "small"),))
+    decision = resolve({"task": "headline_similarity", "modality": "video"}, "x", rules, TIERS, skill_needs=_easy())
+    assert decision.tier == "small"
+    assert "eased_from" not in decision.signals

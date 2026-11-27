@@ -192,6 +192,8 @@ export interface Decision {
     skill_needs?: SkillNeeds
     video_profile?: VideoProfile
     deadline?: Deadline | null
+    /** The tier the ladder decided before an easy clip was eased one tier down. */
+    eased_from?: string
     /** Votes of similar reviewed requests; `active` false says why they are not used yet. */
     similar_requests?: {
       active: boolean
@@ -223,6 +225,8 @@ export interface SkillNeeds {
   /** How hard this request looks, 0–1; scales the capability weight by 0.5 + difficulty. Null = neutral. */
   difficulty?: number | null
   difficulty_reasons?: string[]
+  /** Why the clip is easy enough for one tier lower; null when it is not. */
+  easy_clip?: string | null
 }
 
 export type Deadline = 'now' | 'offline'

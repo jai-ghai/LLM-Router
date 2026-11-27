@@ -141,6 +141,7 @@ def resolve(
     similar_requests: NeighbourVotes | None = None,
     deadline: Deadline | None = None,
     free_models_for_video: bool = False,
+    ease_easy_video: bool = True,
 ) -> Decision:
     """Precedence: a matching rule wins outright, then the classifier, then the fallback tier.
 
@@ -164,6 +165,10 @@ def resolve(
     After that, `qc_risk` (when loaded) may raise — never lower — the tier of a tabson-shaped
     sub-story whose predicted chance of needing a QC fix is above its threshold. A matching rule
     is an operator's explicit decision and is never escalated.
+
+    With `ease_easy_video`, a video whose skill needs mark it as an easy clip (`easy_clip`: talk
+    or drama with nothing harder, clear speech) goes one tier below the decided one — rule or
+    classifier — unless QC risk just raised it or it is already the lowest tier.
 
     `min_confidence` is a trust threshold, not the classifier's own concern (ARCHITECTURE.md §1
     keeps "should this prediction be trusted" out of the classifier): a prediction below it is
@@ -293,6 +298,7 @@ def resolve(
             classifier_outcome = "no classifier configured"
             fallback_outcome = f"used '{tier}'"
 
+    escalated = False
     if (
         qc_risk is not None
         and qc_risk.threshold is not None
@@ -308,6 +314,15 @@ def resolve(
                 f"→ escalated '{tier}' to '{qc_risk.escalate_to}'"
             )
             tier = qc_risk.escalate_to
+            escalated = True
+
+    if ease_easy_video and not escalated and skill_needs is not None and skill_needs.easy_clip:
+        ranks = tiers.rank()
+        below = [t for t in ranks if ranks[t] == ranks[tier] - 1]
+        if below:
+            reason = f"{reason}; easy clip ({skill_needs.easy_clip}) → eased '{tier}' to '{below[0]}'"
+            signals["eased_from"] = tier
+            tier = below[0]
 
     if catalog is not None:
         ranking = catalog.pick_ranked(
