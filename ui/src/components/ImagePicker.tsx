@@ -24,14 +24,17 @@ export interface MediaInfo {
   /** Stills read for on-screen text (videos only), near-duplicates already dropped. */
   ocrFrames?: OcrFrame[]
   skippedAtSec?: number[]
+  /** The picked clip itself (videos only), for POST /v1/video/profile. */
+  sourceFile?: File
   sentName: string
   sentType: string
   sentBytes: number
 }
 
 /**
- * Thumbnail or video clip. Videos are never uploaded as-is — a mid-clip JPEG is
- * extracted in the browser and that still is what the router receives.
+ * Thumbnail or video clip. For a video, a mid-clip JPEG is extracted in the browser and
+ * that still is what the classifier receives; `sourceFile` lets the caller send the clip
+ * to /v1/video/profile.
  */
 export function ImagePicker({
   value,
@@ -43,6 +46,7 @@ export function ImagePicker({
   hint,
   sourceKind = null,
   sourceName = null,
+  videoNote,
 }: {
   value: File | null
   onChange: (file: File | null, meta?: MediaInfo | null) => void
@@ -54,6 +58,8 @@ export function ImagePicker({
   hint?: string
   sourceKind?: 'image' | 'video' | null
   sourceName?: string | null
+  /** Card mode: replaces the "clip stays in your browser" line under a picked video. */
+  videoNote?: string
 }) {
   const inputId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -102,6 +108,7 @@ export function ImagePicker({
           frameAtSec,
           ocrFrames,
           skippedAtSec,
+          sourceFile: file,
           sentName: still.name,
           sentType: still.type,
           sentBytes: still.size,
@@ -271,7 +278,7 @@ export function ImagePicker({
               ))}
               {media?.kind === 'video' && (
                 <Typography sx={{ fontSize: 11.5, color: 'text.secondary', opacity: 0.8 }}>
-                  The clip stays in your browser — only this frame is sent.
+                  {videoNote ?? 'The clip stays in your browser — only this frame is sent.'}
                 </Typography>
               )}
             </Stack>

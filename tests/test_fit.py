@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from gradist.catalog import CatalogEntry, ModelCatalog
-from gradist.fit import ESTIMATE_TRUST, describe_fit
+from gradist.fit import ESTIMATE_TRUST, CatalogScale, describe_fit, enough_skill, fit, model_skills
 from gradist.skills import SKILLS, SkillNeeds
 
 RANKS = {"small": 0, "medium": 1, "large": 2}
@@ -108,3 +108,69 @@ def test_a_human_rating_replaces_benchmark_capability() -> None:
     )
     assert ranking.ranked[0].id == "cheap-english"
     assert ranking.fits["cheap-english"].skills["reasoning"].source == "rating"
+
+
+def test_enough_skill_rises_with_difficulty() -> None:
+    assert enough_skill(None) == 1.0
+    assert enough_skill(0.0) == 0.4
+    assert enough_skill(1.0) == 1.0
+    assert enough_skill(0.5) == 0.7
+
+
+def test_an_easy_request_gives_a_mid_model_full_reasoning_credit() -> None:
+    scale = CatalogScale(top_capability=60.0)
+    mid = entry("mid", 0.0001, capability=30.0, capability_source="measured")
+    top = entry("top", 0.01, capability=60.0, capability_source="measured")
+    wanted = {"reasoning": 1.0}
+    assert fit(mid, wanted, scale, "balanced", difficulty=0.1).parts["reasoning"] == 1.0
+    assert fit(top, wanted, scale, "balanced", difficulty=0.1).parts["reasoning"] == 1.0
+    assert fit(mid, wanted, scale, "balanced").parts["reasoning"] == 0.5
+
+
+def test_a_batch_endpoint_is_never_fast() -> None:
+    scale = CatalogScale(top_capability=1.0)
+    skills = model_skills(entry("m:batch", 0.0001), scale)
+    assert skills["fast"].value == 0.0 and skills["fast"].source == "batch"
+    assert model_skills(entry("m", 0.0001), scale)["fast"].value > 0
+
+
+HEARING = ModelCatalog(
+    entries=(
+        entry("deaf-cheap", 0.0001, supports_video=True),
+        entry("hears", 0.001, supports_video=True, supports_audio=True),
+    )
+)
+
+
+def test_a_strong_audio_need_drops_models_that_cannot_hear() -> None:
+    ranking = HEARING.pick_ranked("small", RANKS, needs=needs(video=1.0, audio=0.7))
+    assert [e.id for e in ranking.ranked] == ["hears"]
+    assert ranking.note is not None and "cannot hear" in ranking.note
+    weak = HEARING.pick_ranked("small", RANKS, needs=needs(video=1.0, audio=0.5))
+    assert len(weak.ranked) == 2
+
+
+def test_the_audio_filter_never_empties_the_pool() -> None:
+    deaf = ModelCatalog(entries=(entry("deaf", 0.0001, supports_video=True),))
+    ranking = deaf.pick_ranked("small", RANKS, needs=needs(audio=1.0))
+    assert ranking.ranked[0].id == "deaf"
+    assert ranking.note is not None and "kept them all" in ranking.note
+
+
+BATCH = ModelCatalog(entries=(entry("m:batch", 0.0001), entry("m", 0.0002), entry("m:free", 0.0)))
+
+
+def test_deadline_now_drops_batch_endpoints() -> None:
+    assert "m:batch" in [e.id for e in BATCH.pick_ranked("small", RANKS, deadline="offline").ranked]
+    now = BATCH.pick_ranked("small", RANKS, deadline="now")
+    assert "m:batch" not in [e.id for e in now.ranked]
+    assert now.note is not None and "batch endpoint" in now.note
+    only_batch = ModelCatalog(entries=(entry("m:batch", 0.0001),))
+    assert only_batch.pick_ranked("small", RANKS, deadline="now").ranked[0].id == "m:batch"
+
+
+def test_exclude_free_drops_free_tiers() -> None:
+    assert BATCH.pick_ranked("small", RANKS).ranked[0].id == "m:free"
+    ranking = BATCH.pick_ranked("small", RANKS, exclude_free=True)
+    assert "m:free" not in [e.id for e in ranking.ranked]
+    assert ranking.note is not None and "free-tier" in ranking.note

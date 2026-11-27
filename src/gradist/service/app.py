@@ -33,6 +33,8 @@ from __future__ import annotations
 import dataclasses
 import json
 import os
+import shutil
+import tempfile
 import threading
 import uuid
 from collections import Counter
@@ -48,7 +50,9 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.requests import Request as StarletteRequest
 
 from gradist.catalog import (
+    VALID_DEADLINES,
     VALID_OPTIMIZE_FOR,
+    Deadline,
     ModelCatalog,
     OptimizeFor,
     entry_to_yaml_dict,
@@ -101,6 +105,7 @@ from gradist.service.store import Store, guess_image_ext
 from gradist.service.users_store import User, UserError, UsersStore
 from gradist.skills import load_task_skills, request_needs
 from gradist.tiers import UNREVIEWED_TIER, TierTable
+from gradist.video_profile import VideoProfile, VideoProfiler
 
 
 class RuleIn(BaseModel):
@@ -290,6 +295,19 @@ class AppState:
         skills_path = Path(os.environ.get("GRADIST_TASK_SKILLS") or "config/task_skills.yaml")
         self.task_skills = load_task_skills(skills_path) if skills_path.exists() else {}
         self.neighbours = NeighbourIndex(HashingEmbedder(), os.environ.get("GRADIST_NEIGHBOURS") or "auto")
+        self.free_models_for_video = os.environ.get("GRADIST_FREE_MODELS_FOR_VIDEO") == "1"
+        self._video_profiler: VideoProfiler | None = None
+
+    def video_profiler(self) -> VideoProfiler:
+        """Reads uploaded videos (video_profile.py); its models load on the first upload."""
+        with self._image_lock:
+            if self._video_profiler is None:
+                reader = None if os.environ.get("GRADIST_OCR") != "1" else self._screen_reader_unlocked()
+                self._video_profiler = VideoProfiler(
+                    self.store.root / "video_profiles",
+                    text_counter=reader.count_text if reader is not None else None,
+                )
+            return self._video_profiler
 
     def image_embedder(self) -> Dinov2Embedder:
         """Loaded once, on first use, so server startup does not pay for it when no example has
@@ -305,12 +323,13 @@ class AppState:
         if not self.ocr_enabled:
             return None
         with self._image_lock:
-            if self._screen_reader is None:
-                langs = tuple(
-                    s.strip() for s in os.environ.get("GRADIST_OCR_LANGS", "hi,en").split(",") if s.strip()
-                )
-                self._screen_reader = ScreenReader(langs, cache_path=self.store.root / "ocr_cache.json")
-            return self._screen_reader
+            return self._screen_reader_unlocked()
+
+    def _screen_reader_unlocked(self) -> ScreenReader:
+        if self._screen_reader is None:
+            langs = tuple(s.strip() for s in os.environ.get("GRADIST_OCR_LANGS", "hi,en").split(",") if s.strip())
+            self._screen_reader = ScreenReader(langs, cache_path=self.store.root / "ocr_cache.json")
+        return self._screen_reader
 
 
 MINILM = "sentence-transformers/all-MiniLM-L6-v2"
@@ -992,6 +1011,40 @@ def create_app(
             return {"engine": None, "lines": [], "frames_read": 0}
         return _read_frames(reader, [f.file.read() for f in frames])
 
+    @app.post("/v1/video/profile")
+    def profile_video(video: Annotated[UploadFile, File()], _: User = Depends(require_user)) -> dict[str, Any]:
+        """Read what is in a clip (speech, language, sounds, picture, on-screen text) once; pass the
+        returned profile_id to /v1/resolve for every request about that clip."""
+        try:
+            profiler = state.video_profiler()
+            suffix = Path(video.filename or "clip.mp4").suffix or ".mp4"
+            with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+                shutil.copyfileobj(video.file, tmp)
+            try:
+                profile = profiler.profile(Path(tmp.name))
+            finally:
+                Path(tmp.name).unlink(missing_ok=True)
+        except ImportError as exc:
+            raise HTTPException(
+                status_code=501, detail=f"video profiling needs the 'video' extra (pip install .[video]): {exc}"
+            ) from exc
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=f"could not read that video: {exc}") from exc
+        return {"profile_id": profile.id, "profile": profile.as_dict()}
+
+    @app.get("/v1/video/profile/{profile_id}")
+    def get_video_profile(profile_id: str, _: User = Depends(require_user)) -> dict[str, Any]:
+        profile = _saved_profile(profile_id)
+        return {"profile_id": profile.id, "profile": profile.as_dict()}
+
+    def _saved_profile(profile_id: str) -> VideoProfile:
+        if not profile_id.isalnum():
+            raise HTTPException(status_code=422, detail="'video_profile_id' must be the id /v1/video/profile returned")
+        profile = VideoProfiler(store.root / "video_profiles").load(profile_id)
+        if profile is None:
+            raise HTTPException(status_code=404, detail=f"no video profile '{profile_id}' — upload the clip to /v1/video/profile")
+        return profile
+
     @app.post("/v1/resolve")
     def do_resolve(
         metadata: Annotated[str, Form()],
@@ -1002,6 +1055,8 @@ def create_app(
         task: Annotated[str | None, Form()] = None,
         min_quality: Annotated[float | None, Form()] = None,
         optimize_for: Annotated[str, Form()] = "cost",
+        deadline: Annotated[str | None, Form()] = None,
+        video_profile_id: Annotated[str | None, Form()] = None,
         image: Annotated[UploadFile | None, File()] = None,
         ocr_frames: Annotated[list[UploadFile] | None, File()] = None,
         user: User = Depends(require_user),
@@ -1022,6 +1077,14 @@ def create_app(
             )
         # Membership check above is enough for mypy to narrow the form field to OptimizeFor.
         optimize_for_literal: OptimizeFor = optimize_for
+        deadline_literal: Deadline | None = None
+        if deadline:
+            if deadline not in VALID_DEADLINES:
+                raise HTTPException(
+                    status_code=422, detail=f"'deadline' must be one of {list(VALID_DEADLINES)!r}; got '{deadline}'"
+                )
+            deadline_literal = deadline
+        video_profile = _saved_profile(video_profile_id) if video_profile_id else None
         # None = "no filter / all models". A parsed empty list must stay empty (not collapse
         # to None), or an empty task pool would silently compete over the full catalog.
         selected: list[str] | None = None
@@ -1105,6 +1168,7 @@ def create_app(
             has_image=image_bytes is not None,
             qc_risk=risk,
             task_skills=state.task_skills,
+            video=video_profile,
         )
         try:
             decision = resolve(
@@ -1128,12 +1192,16 @@ def create_app(
                 skill_needs=skill_needs,
                 learned_skills=learned_skills,
                 similar_requests=similar_requests,
+                deadline=deadline_literal,
+                free_models_for_video=state.free_models_for_video,
             )
         except (RuleError, ClassifierError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         decision = dataclasses.replace(decision, request_id=uuid.uuid4().hex)
         if image_bytes or frame_bytes:
             decision.signals["screen_text"] = screen
+        if video_profile is not None:
+            decision.signals["video_profile"] = video_profile.as_dict()
         store.append_history(
             {
                 "request_id": decision.request_id,
@@ -1144,6 +1212,15 @@ def create_app(
                 "metadata": clean_metadata,
                 "text": text,
                 "has_image": image_bytes is not None,
+                "video": None
+                if video_profile is None
+                else {
+                    "profile_id": video_profile.id,
+                    "content_type": video_profile.content_type,
+                    "language": video_profile.language,
+                    "speech_share": video_profile.speech_share,
+                },
+                "deadline": deadline_literal,
                 "provider": provider,
                 "task": task_name,
                 "selected_models": selected,

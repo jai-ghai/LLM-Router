@@ -45,6 +45,18 @@ decision step in front of that — not the proxy itself.
    where measured, otherwise estimated from price and release date (shown with `~`); estimated
    skills count at 85%. Models marked `UNREVIEWED` are never selected.
 
+   Reasoning and writing count only up to what the request needs: 0.4 + 0.6 × difficulty of the
+   top capability (full scale when there is no difficulty signal). An easy clip therefore gives a
+   mid-range model the same credit as a frontier one, and price decides between them.
+
+   Three filters run before ranking. Each keeps every candidate, with a note, rather than leave
+   nothing to pick from:
+   - an audio need of 0.6 or more (speech or singing in the clip) drops models that cannot hear;
+   - `deadline=now` drops `:batch` endpoints (half price, but the answer can take hours);
+     `offline` keeps them. Batch endpoints never count as fast;
+   - for video, `:free` tiers are dropped (rate-limited, and the provider may keep the clip)
+     unless the API sets `GRADIST_FREE_MODELS_FOR_VIDEO=1`.
+
 `provider` accepts one or several comma-separated providers (`anthropic,google`). The scope can
 be the whole catalog, a hand-picked list (`selected_models`) or a named task pool (`task`).
 
@@ -52,9 +64,32 @@ be the whole catalog, a hand-picked list (`selected_models`) or a named task poo
 
 - **Metadata** — each trained field; unseen values fall into an "unknown" bucket.
 - **Text** — a sentence embedding (MiniLM).
-- **Image / video frame** — a 384-number DINOv2 fingerprint of the frame's look. A video is never
-  uploaded: the browser sends one still plus `modality=video`, which limits the pick to models
-  that accept video.
+- **Image / video frame** — a 384-number DINOv2 fingerprint of the frame's look. For a video the
+  browser sends one still plus `modality=video`, which limits the pick to models that accept
+  video.
+- **Video profile** — with the `video` extra installed, the Playground uploads the clip once to
+  `POST /v1/video/profile` while you fill in the form (the first clip loads the models, about a
+  minute; later clips take 30–90 s). The profile is cached by file hash in
+  `data/video_profiles/`, and the pick sends only its `video_profile_id`. It records:
+  - the share of the clip that is speech (Silero VAD);
+  - the spoken language (Whisper small, averaged over three speech windows; left out below 50%
+    confidence; Whisper has no Odia and hears it as Bengali);
+  - music, singing, laughter and crowd noise (an AudioSet tagger over six 10 s windows);
+  - scene changes per minute, black and frozen frames;
+  - on-screen text boxes per frame (with `GRADIST_OCR=1`);
+  - a content type: news, music, reality, talk, drama, ads or unknown.
+
+  How it changes the needs:
+  - speech of 15% or more sets the audio need to 0.5 + 0.5 × speech share, and singing sets it
+    to 1.0; a clip with no audio track needs no hearing;
+  - an Indian spoken language raises the Indian-language need (Punjabi, Odia, Assamese and
+    Nepali also add 0.6 difficulty);
+  - music (0.8), reality (0.7), news (0.5) and ads (0.4) raise difficulty, while talk (0.3) and
+    drama (0.35) lower it when nothing else does. A news channel's clip read as talk or drama
+    counts as news, because on-screen text alone does not separate a bulletin from a serial;
+  - the length counts as about 300 tokens a second toward the input size.
+
+  **What's in this video** under the picker shows the reading.
 - **On-screen text** — with `GRADIST_OCR=1` (and the `ocr` extra installed) the frame is read with
   EasyOCR in Hindi + English (`GRADIST_OCR_LANGS` for others); lines are returned in
   `signals.screen_text`, cached in `data/ocr_cache.json`, and used in training
@@ -122,8 +157,10 @@ the decision".
 
 ## Run locally
 
-1. Install: `pip install -e ".[service,embeddings,images,ocr]"` in a virtualenv, and `npm install`
-   in `ui/`.
+1. Install: `pip install -e ".[service,embeddings,images,ocr,video]"` in a virtualenv, and
+   `npm install` in `ui/`. The `video` extra (PyAV, faster-whisper) is only needed for video
+   profiles. Its models, Whisper small and the AudioSet tagger (about 1 GB), download on the
+   first clip.
 2. Create `.env` (gitignored) — see the table below. `ui/.env.local` must point `VITE_API_BASE`
    at `http://localhost:8000`.
 3. Create the first user: `python -m gradist.service.bootstrap --username <name>` (prompts for a
@@ -146,6 +183,7 @@ Trained models (`classifier`, `quality_head`, `qc_risk`) are reloaded from `data
 | `GRADIST_OCR`, `GRADIST_OCR_LANGS` | no | `1` turns on screen-text reading; languages default `hi,en` |
 | `GRADIST_TASK_SKILLS` | no | Skill needs per task, default `config/task_skills.yaml` |
 | `GRADIST_NEIGHBOURS` | no | Similar-request votes: `auto` (default), `on` or `off` |
+| `GRADIST_FREE_MODELS_FOR_VIDEO` | no | `1` lets `:free` tiers be picked for video requests (off by default) |
 
 ## Integrate from another app
 
@@ -159,6 +197,14 @@ curl -b cookies.txt -X POST http://localhost:8000/v1/resolve \
   -F 'text=summarise the bulletin' \
   -F 'image=@frame.jpg' \
   -F 'optimize_for=balanced'
+
+# Video: profile the clip once, then pass its id (and when the answer is needed) on each request.
+curl -b cookies.txt -X POST http://localhost:8000/v1/video/profile -F 'video=@clip.mp4'
+#   → {"profile_id": "3f9a…", "profile": {"content_type": "news", "language": "ta", …}}
+curl -b cookies.txt -X POST http://localhost:8000/v1/resolve \
+  -F 'metadata={"modality":"video","channel_type":"news"}' \
+  -F 'text=log the scenes' -F 'image=@frame.jpg' \
+  -F 'video_profile_id=3f9a…' -F 'deadline=offline'
 ```
 
 ```python
@@ -211,3 +257,10 @@ endpoints remain for scripted retraining.
   frame labels are needed before the image can choose a smaller tier.
 - One process = one data directory, catalog and rule set; run separate deployments for separate
   products.
+- The catalog has one Indian-language score per model, not one per language, so a Tamil clip and
+  a Hindi clip still compete on the same score.
+- Rules that set `optimize_for` (for example `headline_*` → cost) still override the mode a
+  video profile would suggest.
+- Video profiles need the `video` extra and CPU time (30–90 s a clip); the Vercel deployment
+  does not have them, so `/v1/video/profile` answers 501 there and the pick uses the frame and
+  metadata only.

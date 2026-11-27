@@ -1,6 +1,7 @@
 import type {
   AuthResponse,
   CatalogEntry,
+  Deadline,
   Decision,
   ExampleRow,
   HistoryEntry,
@@ -16,6 +17,7 @@ import type {
   TrainResult,
   UncoveredExample,
   UsersListResponse,
+  VideoProfile,
 } from './types'
 
 // Production builds default to same-origin, where vercel.json routes /v1 to the API.
@@ -177,6 +179,12 @@ export const api = {
     for (const frame of frames) form.append('frames', frame)
     return request<ScreenText>('/v1/ocr', { method: 'POST', body: form })
   },
+  /** Reads the clip once on the server; pass the returned profile_id with every resolve about it. */
+  profileVideo: (video: File) => {
+    const form = new FormData()
+    form.set('video', video)
+    return request<{ profile_id: string; profile: VideoProfile }>('/v1/video/profile', { method: 'POST', body: form })
+  },
   resolve: (
     input: ExampleInput & {
       providers?: string[]
@@ -186,10 +194,14 @@ export const api = {
       minQuality?: number
       optimizeFor?: OptimizeFor
       ocrFrames?: File[]
+      videoProfileId?: string
+      deadline?: Deadline
     },
   ) => {
     const form = toFormData(input)
     for (const frame of input.ocrFrames ?? []) form.append('ocr_frames', frame)
+    if (input.videoProfileId) form.set('video_profile_id', input.videoProfileId)
+    if (input.deadline) form.set('deadline', input.deadline)
     if (input.providers?.length) form.set('provider', input.providers.join(','))
     if (input.minConfidence !== undefined) form.set('min_confidence', String(input.minConfidence))
     if (input.selectedModels) form.set('selected_models', JSON.stringify(input.selectedModels))

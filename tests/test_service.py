@@ -306,6 +306,57 @@ def test_every_decision_reports_the_request_skill_needs(client: TestClient) -> N
     assert "modality=video (1.0)" in skill_needs["reasons"]["video"]
 
 
+def test_a_video_profile_feeds_the_skill_needs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from gradist.service import app as app_module
+    from gradist.video_profile import VideoProfile, VideoProfiler
+
+    class StubProfiler(VideoProfiler):
+        def _build(self, video: Path, profile_id: str) -> VideoProfile:
+            return VideoProfile(
+                id=profile_id, duration_s=60.0, has_audio=True, speech_share=0.9,
+                language="ta", language_confidence=0.95, content_type="talk",
+            )
+
+    monkeypatch.setattr(app_module, "VideoProfiler", StubProfiler)
+    client = _authed_client(tmp_path)
+    uploaded = client.post("/v1/video/profile", files={"video": ("clip.mp4", io.BytesIO(b"fake"), "video/mp4")})
+    assert uploaded.status_code == 200, uploaded.text
+    profile_id = uploaded.json()["profile_id"]
+    assert client.get(f"/v1/video/profile/{profile_id}").json()["profile"]["language"] == "ta"
+
+    client.put("/v1/rules", json={"rules": [{"when": {"task": "news"}, "tier": "small"}]})
+    body = client.post(
+        "/v1/resolve",
+        data={
+            "metadata": json.dumps({"task": "news", "modality": "video"}),
+            "text": "log the scenes",
+            "video_profile_id": profile_id,
+            "deadline": "now",
+        },
+    ).json()
+    needs = body["signals"]["skill_needs"]
+    assert needs["needs"]["hindi"] == 1.0
+    assert needs["needs"]["audio"] == pytest.approx(0.95)
+    assert needs["difficulty"] == 0.3
+    assert body["signals"]["video_profile"]["content_type"] == "talk"
+    logged = client.get("/v1/history").json()["history"][0]
+    assert logged["video"]["language"] == "ta" and logged["deadline"] == "now"
+
+
+@pytest.mark.parametrize(
+    ("form", "status"),
+    [
+        ({"deadline": "later"}, 422),
+        ({"video_profile_id": "../etc"}, 422),
+        ({"video_profile_id": "abc123"}, 404),
+    ],
+)
+def test_resolve_rejects_bad_deadline_and_profile_ids(client: TestClient, form: dict[str, str], status: int) -> None:
+    client.put("/v1/rules", json={"rules": [{"when": {"task": "news"}, "tier": "small"}]})
+    response = client.post("/v1/resolve", data={"metadata": json.dumps({"task": "news"}), "text": "x", **form})
+    assert response.status_code == status, response.text
+
+
 def test_a_hindi_request_picks_the_catalog_model_that_fits_best(tmp_path: Path) -> None:
     catalog = ModelCatalog(
         entries=(

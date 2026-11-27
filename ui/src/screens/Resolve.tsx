@@ -33,7 +33,17 @@ import { MetadataFieldsEditor } from '../components/MetadataFieldsEditor'
 import { Mono, PageHead, Panel, StateTag } from '../components/Primitives'
 import { SKILL_FAULTS, SKILL_LABELS, SkillPicker } from '../components/SkillPicker'
 import { PALETTE, TONE_SOFT, tierTone } from '../theme'
-import type { CatalogEntry, ClassifierInputs, Decision, OptimizeFor, Skill, SkillNeeds, TiersResponse } from '../types'
+import type {
+  CatalogEntry,
+  ClassifierInputs,
+  Deadline,
+  Decision,
+  OptimizeFor,
+  Skill,
+  SkillNeeds,
+  TiersResponse,
+  VideoProfile,
+} from '../types'
 
 /**
  * Playground — ladder (rules→classifier→fallback) or catalog task-pool pick.
@@ -74,6 +84,9 @@ export function Resolve({
   const [customPickerOpen, setCustomPickerOpen] = useState(false)
   const [ocrPrefetch, setOcrPrefetch] = useState<OcrPrefetch | null>(null)
   const prefetchRef = useRef<Promise<void> | null>(null)
+  const [deadline, setDeadline] = useState<Deadline>('now')
+  const [videoRead, setVideoRead] = useState<VideoRead | null>(null)
+  const videoReadRef = useRef<Promise<string | null> | null>(null)
 
   const COMMON_TASKS = [
     'video_processing',
@@ -108,6 +121,7 @@ export function Resolve({
     minConfidence,
     minQuality,
     optimizeFor,
+    deadline,
     scope,
     task,
     Array.from(customIds).sort(),
@@ -162,12 +176,38 @@ export function Resolve({
     setMinConfidence(0)
     setMinQuality(0)
     setOptimizeFor('cost')
+    setDeadline('now')
     setTask('')
     setScope('all')
     setCustomIds(new Set())
     setDecision(null)
     setError('')
     startOcrPrefetch(null)
+    startVideoRead(null)
+  }
+
+  /** Profile the clip (speech, language, sounds, picture) on the server while the form is filled in. */
+  function startVideoRead(clip: File | null) {
+    if (!clip) {
+      videoReadRef.current = null
+      setVideoRead(null)
+      return
+    }
+    const started = performance.now()
+    setVideoRead({ state: 'reading' })
+    const promise: Promise<string | null> = api
+      .profileVideo(clip)
+      .then((res) => {
+        if (videoReadRef.current === promise) {
+          setVideoRead({ state: 'ready', profile: res.profile, seconds: (performance.now() - started) / 1000 })
+        }
+        return res.profile_id
+      })
+      .catch((err: unknown) => {
+        if (videoReadRef.current === promise) setVideoRead({ state: 'failed', error: describeError(err) })
+        return null
+      })
+    videoReadRef.current = promise
   }
 
   /** Read on-screen text as soon as media is picked, so the pick itself does not wait on OCR. */
@@ -201,6 +241,7 @@ export function Resolve({
   function onMediaChange(file: File | null, meta?: MediaInfo | null) {
     setImage(file)
     startOcrPrefetch(file && meta ? (meta.ocrFrames?.map((f) => f.file) ?? [file]) : null)
+    startVideoRead(file && meta?.kind === 'video' ? (meta.sourceFile ?? null) : null)
     if (!file || !meta) {
       setMedia(null)
       setFromFilename(null)
@@ -280,6 +321,7 @@ export function Resolve({
       }
       const meta = { ...metadata }
       if (usePool && task) meta.task = task
+      const videoProfileId = videoReadRef.current ? await videoReadRef.current : null
       const request = {
         metadata: meta,
         text,
@@ -291,6 +333,8 @@ export function Resolve({
         minQuality: qualityField ? minQuality : undefined,
         optimizeFor,
         ocrFrames: media?.ocrFrames?.map((f) => f.file),
+        videoProfileId: videoProfileId ?? undefined,
+        deadline: catalogConfigured ? deadline : undefined,
       }
       const runKey = inputsKey
       setSent({ ...request, media })
@@ -501,7 +545,10 @@ export function Resolve({
                 onChange={onMediaChange}
                 sourceKind={mediaKind}
                 sourceName={media?.sourceName ?? null}
+                hint="Drop a file here or click to browse. A video gives the classifier one frame and is read once on the server for speech, language and sounds."
+                videoNote="The classifier gets this frame; the clip is also read once on the server for speech, language and sounds."
               />
+              {videoRead && <VideoReading read={videoRead} />}
               {fromFilename && (
                 <Typography sx={{ fontSize: 12, color: PALETTE.textMuted, mt: 0.75 }}>
                   From the file name: channel <Mono size={12}>{fromFilename.channelCode}</Mono>
@@ -554,6 +601,25 @@ export function Resolve({
                       aria-label="Minimum quality"
                     />
                   </Stack>
+                )}
+                {catalogConfigured && (
+                  <ToggleButtonGroup
+                    size="small"
+                    exclusive
+                    value={deadline}
+                    onChange={(_, v: Deadline | null) => {
+                      if (v) setDeadline(v)
+                    }}
+                    aria-label="Answer needed"
+                    sx={{ height: 32, '& .MuiToggleButton-root': { fontSize: 12, textTransform: 'none', px: 1.25, fontWeight: 600, lineHeight: 1 } }}
+                  >
+                    <ToggleButton value="now" title="Interactive: batch endpoints are left out">
+                      Answer now
+                    </ToggleButton>
+                    <ToggleButton value="offline" title="Overnight / bulk: half-price batch endpoints allowed">
+                      Offline
+                    </ToggleButton>
+                  </ToggleButtonGroup>
                 )}
                 <Typography sx={{ fontSize: 12.5, color: PALETTE.textMuted }}>
                   {catalogConfigured
@@ -740,12 +806,99 @@ interface SentRequest {
   image: File | null
   media: MediaInfo | null
   ocrFrames?: File[]
+  videoProfileId?: string
+  deadline?: Deadline
 }
+
+type VideoRead =
+  | { state: 'reading' }
+  | { state: 'ready'; profile: VideoProfile; seconds: number }
+  | { state: 'failed'; error: string }
 
 type OcrPrefetch =
   | { state: 'reading' | 'off'; frames: number }
   | { state: 'ready'; frames: number; lines: number; seconds: number }
   | { state: 'failed'; frames: number; error: string }
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  hi: 'Hindi', bn: 'Bengali', mr: 'Marathi', ta: 'Tamil', te: 'Telugu', gu: 'Gujarati', kn: 'Kannada',
+  ml: 'Malayalam', ur: 'Urdu', pa: 'Punjabi', or: 'Odia', as: 'Assamese', ne: 'Nepali', en: 'English',
+}
+
+function languageName(code: string): string {
+  return LANGUAGE_NAMES[code] ?? code
+}
+
+function shareText(share: number | null | undefined): string {
+  return share == null ? '—' : `${Math.round(share * 100)}%`
+}
+
+function describeProfileEffect(needs: SkillNeeds | undefined): string {
+  if (!needs) return '—'
+  const fromClip = (Object.entries(needs.reasons) as [Skill, string[]][])
+    .filter(([, why]) => why.some((r) => /speech|singing|spoken|no audio|min of video/.test(r)))
+    .map(([skill]) => SKILL_LABELS[skill] ?? skill)
+  const hard = needs.difficulty_reasons?.find((r) => / clip: |spoken /.test(r))
+  return [fromClip.length ? fromClip.join(', ') : 'none', hard ? `difficulty from ${hard}` : ''].filter(Boolean).join('; ')
+}
+
+const CONTENT_LABELS: Record<VideoProfile['content_type'], string> = {
+  news: 'News bulletin',
+  music: 'Music / songs',
+  reality: 'Reality / crowd show',
+  talk: 'Talk / interview',
+  drama: 'Drama / scripted',
+  ads: 'Ads / promos',
+  unknown: 'Unclear',
+}
+
+/** "What's in this video": the server-side profile the router uses for audio, language and difficulty. */
+function VideoReading({ read }: { read: VideoRead }) {
+  if (read.state === 'reading') {
+    return (
+      <Typography sx={{ fontSize: 12, color: PALETTE.textMuted, mt: 0.5 }}>
+        Reading the clip on the server (speech, language, sounds, cuts) — the first clip loads the models, about a minute.
+      </Typography>
+    )
+  }
+  if (read.state === 'failed') {
+    return (
+      <Typography sx={{ fontSize: 12, color: PALETTE.critical, mt: 0.5 }}>
+        Could not profile the clip ({read.error}); the pick will use the frame and metadata only.
+      </Typography>
+    )
+  }
+  const v = read.profile
+  const sounds = v.sounds
+  const facts: [string, string][] = [
+    ['Content', CONTENT_LABELS[v.content_type]],
+    ['Language', v.language ? `${languageName(v.language)} (${shareText(v.language_confidence)})` : v.has_audio ? `unsure (${shareText(v.language_confidence)})` : '—'],
+    ['Speech', v.has_audio ? shareText(v.speech_share) : 'no audio track'],
+    ['Music / singing', v.has_audio ? `${shareText(sounds.music)} / ${shareText(sounds.singing)}` : '—'],
+    ['Scene changes', v.scene_changes_per_min == null ? '—' : `${v.scene_changes_per_min.toFixed(1)} / min`],
+    ['On-screen text', v.text_boxes_per_frame == null ? 'not read (OCR off)' : `${v.text_boxes_per_frame.toFixed(1)} boxes / frame`],
+  ]
+  return (
+    <Box sx={{ mt: 1, p: 1.25, borderRadius: '8px', border: `1px solid ${PALETTE.hairline}` }}>
+      <Typography sx={{ fontSize: 11, fontWeight: 650, letterSpacing: '0.04em', textTransform: 'uppercase', color: PALETTE.textMuted, mb: 0.75 }}>
+        What's in this video · read in {read.seconds.toFixed(0)} s
+      </Typography>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(6, auto)' }, columnGap: 2.5, rowGap: 0.75 }}>
+        {facts.map(([k, val]) => (
+          <Box key={k} sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontSize: 11, color: PALETTE.textMuted }}>{k}</Typography>
+            <Typography sx={{ fontSize: 13, fontWeight: 600 }} noWrap title={val}>
+              {val}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+      {v.content_reasons.length > 0 && (
+        <Typography sx={{ fontSize: 11.5, color: PALETTE.textMuted, mt: 0.75 }}>Why: {v.content_reasons.join('; ')}</Typography>
+      )}
+    </Box>
+  )
+}
 
 function describePrefetch(p: OcrPrefetch): string {
   const frames = `${p.frames} frame${p.frames === 1 ? '' : 's'}`
@@ -1191,6 +1344,7 @@ function RequestSent({ sent, decision }: { sent: SentRequest; decision: Decision
     ['Optimise for', sent.optimizeFor],
     ['Min confidence', sent.minConfidence.toFixed(2)],
   ]
+  if (sent.deadline) rows.push(['Answer needed', sent.deadline === 'now' ? 'now — batch endpoints left out' : 'offline — batch endpoints allowed'])
   if (s.path) rows.push(['Decided by', s.path])
   if (s.metadata_used?.length) rows.push(['Metadata the model used', s.metadata_used.join(', ')])
   if (s.metadata_ignored?.length) rows.push(['Metadata it ignored', `${s.metadata_ignored.join(', ')} (not in its training data)`])
@@ -1212,7 +1366,19 @@ function RequestSent({ sent, decision }: { sent: SentRequest; decision: Decision
     } else if (m.width) {
       rows.push(['Image', `${m.width}×${m.height}`])
     }
-    rows.push(['Sent to the router', `${m.sentName} · ${m.sentType} · ${formatBytes(m.sentBytes)} — the video itself is never uploaded`])
+    rows.push([
+      'Sent to the router',
+      `${m.sentName} · ${m.sentType} · ${formatBytes(m.sentBytes)}` +
+        (s.video_profile ? ' plus the video profile id' : m.kind === 'video' ? ' — the clip was not profiled' : ''),
+    ])
+    if (s.video_profile) {
+      const v = s.video_profile
+      rows.push([
+        'Video profile',
+        `${v.content_type} · ${v.language ? languageName(v.language) : 'language unsure'} · speech ${shareText(v.speech_share)}` +
+          ` — raised the needs: ${describeProfileEffect(s.skill_needs)}`,
+      ])
+    }
     const screen = s.screen_text
     rows.push([
       m.ocrFrames && m.ocrFrames.length > 1 ? 'Text read from the frames' : 'Text read from the frame',

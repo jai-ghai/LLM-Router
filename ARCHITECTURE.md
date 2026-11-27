@@ -72,8 +72,11 @@ flowchart TD
     FB --> QC
     QC{"QC-risk head applies?<br/>text + channel_name"} -->|"top ~20% risk"| UP["Escalate to large"] --> TIER
     QC -->|otherwise| TIER
-    TIER --> POOL["Candidate pool: tier's catalog models<br/>∩ scope (all / picked / task pool)<br/>∩ providers ∩ modality (image / video)<br/>minus UNREVIEWED, minus below quality floor"]
-    POOL --> RANK["Rank inside tier by fit<br/>Σ need × skill + q·capability − λ·price<br/>q, λ from optimize_for"]
+    VP["Video profile (optional)<br/>POST /v1/video/profile:<br/>speech · language · sounds · cuts · text<br/>→ content type"] -.->|video_profile_id| NEEDS
+    IN --> NEEDS["Skill needs + difficulty<br/>(skills.py)"]
+    NEEDS --> POOL
+    TIER --> POOL["Candidate pool: tier's catalog models<br/>∩ scope (all / picked / task pool)<br/>∩ providers ∩ modality (image / video)<br/>minus UNREVIEWED, below quality floor,<br/>context too small, deaf when audio ≥ 0.6,<br/>batch when deadline=now, free for video"]
+    POOL --> RANK["Rank inside tier by fit<br/>Σ need × min(skill / enough) + q·capability − λ·price<br/>q, λ from optimize_for"]
     RANK --> OUT["Decision: model_name, tier, reason,<br/>tier_scores, candidates, pool_size, signals"]
 ```
 
@@ -105,7 +108,19 @@ flowchart TD
    as in the whole catalog. Capability is OpenRouter's Artificial Analysis intelligence index (91
    models measured); the other 262 are estimated from log price and release date, shown with
    `~`, and counted at 85%. Human quality ratings, keyed by `GRADIST_QUALITY_FIELD`, replace
-   capability where present.
+   capability where present. Reasoning and writing count only up to 0.4 + 0.6 × difficulty of
+   the top capability, so an easy request gives a mid-range model full credit and price decides.
+   Before ranking, an audio need of 0.6 or more drops models that cannot hear, `deadline=now`
+   drops `:batch` endpoints, and video requests drop `:free` tiers unless
+   `GRADIST_FREE_MODELS_FOR_VIDEO=1`. Each of these filters keeps the whole pool, with a note,
+   rather than empty it.
+   For video, the clip's **profile** (`video_profile.py`, read once per file and cached by
+   hash) makes the needs depend on the clip and not only on the request text:
+   - speech share and singing set the audio need;
+   - Whisper's spoken language sets the Indian-language need;
+   - the content type (news, music, reality, talk, drama, ads), from sound tags, scene changes
+     and on-screen text density, sets the difficulty;
+   - the duration feeds the input size.
 6. **Feedback loop.** Every decision has a `request_id`, and history keeps that request's skill
    needs. A rating given with the `request_id` (Playground or Request logs) is stored with those
    needs; `feedback.py` turns all such ratings into per-model skill evidence, weighted by need,
@@ -167,7 +182,7 @@ cached retrains take ~2 minutes.
 | Rules always win | An operator must be able to pin a channel or task without retraining. |
 | Separate heads for plain text vs. domain requests | Generic text quality is learnable from public scored outcomes; channel/video routing needs in-house labels. |
 | `optimize_for` as one dial for tier *and* model | One user-facing choice; the same intent applies to "move up a tier?" and "which model in it?". |
-| Video never uploaded | The browser extracts a single frame; only that frame and `modality=video` reach the API. |
+| Frame for the classifier, profile for the needs | The browser extracts the classifier's frame. The clip itself is uploaded once to `/v1/video/profile` (optional `video` extra: PyAV, faster-whisper, AudioSet AST, all local) and cached by sha256, so every later request about the clip sends only the id. Content types come from transparent rules, not a trained model, until labelled clips exist. |
 | EasyOCR, opt-in (`GRADIST_OCR=1`) | Apache-2.0, Devanagari + Latin, fully local; ~8 s/frame on CPU, so it is off unless asked for and results are cached. |
 | DINOv2 for images, MiniLM for text | Permissive licences, small enough for CPU; CLIP checkpoints without a clear licence were rejected. |
 | Flat files, single process | One deployment = one data directory, catalog and rule set; enough for the current load, trivial to back up. |
@@ -185,3 +200,8 @@ cached retrains take ~2 minutes.
 - **Capability is estimated for 262 of 353 models**; human ratings are the remedy for models
   that matter.
 - **No multi-tenant isolation**: run separate deployments for separate products.
+- **Video profiles are rule-based and CPU-bound** (30–90 s a clip). On 50 broadcast clips the
+  content type matched a manual grouping for most news and entertainment. On-screen text density
+  overlaps between bulletins and serials, so a news channel's clip read as drama is treated as
+  news. Whisper has no Odia model. The catalog has one Indian-language score per model, not one
+  per language.

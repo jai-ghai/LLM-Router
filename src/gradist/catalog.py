@@ -173,6 +173,33 @@ class CatalogEntry:
     `tier == UNREVIEWED` means the entry is never a pick() candidate (G5).
     """
 
+    @property
+    def is_batch(self) -> bool:
+        """A batch endpoint: half price, but the answer arrives minutes to hours later."""
+        return self.id.endswith(":batch")
+
+    @property
+    def is_free(self) -> bool:
+        """A free tier: rate-limited, and the provider may keep the inputs."""
+        return self.id.endswith(":free")
+
+
+Deadline = Literal["now", "offline"]
+VALID_DEADLINES: tuple[Deadline, ...] = ("now", "offline")
+AUDIO_REQUIRED = 0.6
+"""An audio need at or above this drops models that cannot hear: they would answer from frames alone."""
+
+
+def _narrow(
+    candidates: list[CatalogEntry], keep: list[CatalogEntry], dropped_note: str, empty_note: str
+) -> tuple[list[CatalogEntry], str | None]:
+    """`keep` when it is not empty (noting how many went), else every candidate with a note:
+    a filter that would leave nothing must not fail the request."""
+    if not keep:
+        return candidates, empty_note
+    dropped = len(candidates) - len(keep)
+    return keep, (dropped_note.format(n=dropped) if dropped else None)
+
 
 @dataclass(frozen=True)
 class Ranking:
@@ -246,6 +273,8 @@ class ModelCatalog:
         needs: SkillNeeds | None = None,
         learned: Mapping[str, Mapping[str, SkillEvidence]] | None = None,
         similar: Mapping[str, float] | None = None,
+        deadline: Deadline | None = None,
+        exclude_free: bool = False,
     ) -> Ranking:
         """Entries from `tier`, ranked by `optimize_for`, from the selection/provider/modality
         filter, with an optional quality floor layered on top.
@@ -269,6 +298,11 @@ class ModelCatalog:
         able to block every request.
 
         `optimize_for` orders the candidates; see `_rank_by_mode`.
+
+        With `needs`, an audio need of AUDIO_REQUIRED or more drops models that cannot hear.
+        `deadline="now"` drops batch endpoints; "offline" or None keeps them. `exclude_free`
+        drops free tiers. Each of these keeps every candidate, with a note, rather than leave
+        nothing to pick from.
 
         Entries with `tier == UNREVIEWED` are **always** excluded,
         even when listed in `selected`. An admin must assign a real tier before resolve()
@@ -317,20 +351,38 @@ class ModelCatalog:
 
         context_note: str | None = None
         if needs is not None and needs.input_tokens:
-            roomy = [e for e in candidates if e.context_length is None or e.context_length >= needs.input_tokens]
-            if roomy:
-                dropped = len(candidates) - len(roomy)
-                if dropped:
-                    context_note = (
-                        f"dropped {dropped} model(s) whose context window is smaller than the "
-                        f"~{needs.input_tokens:,} input tokens"
-                    )
-                candidates = roomy
-            else:
-                context_note = (
-                    f"no model's context window fits the ~{needs.input_tokens:,} input tokens — "
-                    "kept them all rather than failing the request"
-                )
+            candidates, context_note = _narrow(
+                candidates,
+                [e for e in candidates if e.context_length is None or e.context_length >= needs.input_tokens],
+                f"dropped {{n}} model(s) whose context window is smaller than the ~{needs.input_tokens:,} input tokens",
+                f"no model's context window fits the ~{needs.input_tokens:,} input tokens — "
+                "kept them all rather than failing the request",
+            )
+        audio_note: str | None = None
+        if needs is not None and needs.needs.get("audio", 0.0) >= AUDIO_REQUIRED:
+            candidates, audio_note = _narrow(
+                candidates,
+                [e for e in candidates if e.supports_audio],
+                "dropped {n} model(s) that cannot hear the audio this request needs",
+                "no model in the selection hears audio — kept them all rather than failing the request",
+            )
+        deadline_note: str | None = None
+        if deadline == "now":
+            candidates, deadline_note = _narrow(
+                candidates,
+                [e for e in candidates if not e.is_batch],
+                "dropped {n} batch endpoint(s): the answer is needed now",
+                "only batch endpoints are left — kept them although the answer is needed now",
+            )
+        free_note: str | None = None
+        if exclude_free:
+            candidates, free_note = _narrow(
+                candidates,
+                [e for e in candidates if not e.is_free],
+                "dropped {n} free-tier model(s) (rate-limited; inputs may be kept)",
+                "only free-tier models are left — kept them",
+            )
+        filter_note = _compose_note(context_note, audio_note, deadline_note, free_note)
 
         def rank(bucket: list[CatalogEntry]) -> tuple[list[CatalogEntry], str | None, dict[str, Fit]]:
             if needs is None:
@@ -347,7 +399,7 @@ class ModelCatalog:
         exact = [e for e in candidates if e.tier == tier]
         if exact:
             ranked, mode_note, fits = rank(exact)
-            return Ranking(ranked, _compose_note(quality_note, context_note, mode_note), pool_size, fits)
+            return Ranking(ranked, _compose_note(quality_note, filter_note, mode_note), pool_size, fits)
         above = [e for e in candidates if tier_rank.get(e.tier, -1) > wanted_rank]
         if above:
             # Pick the lowest-rank tier that's still above the decided one (G2: never
@@ -360,7 +412,7 @@ class ModelCatalog:
                 f"no '{tier}' model in the current selection; used '{ranked[0].tier}' model "
                 f"'{ranked[0].id}' instead — never downgraded below the decided tier"
             )
-            return Ranking(ranked, _compose_note(tier_note, quality_note, context_note, mode_note), pool_size, fits)
+            return Ranking(ranked, _compose_note(tier_note, quality_note, filter_note, mode_note), pool_size, fits)
         raise RuleError(
             f"no catalog model at tier '{tier}' or above is available in the current "
             "selection/provider/modality filters"

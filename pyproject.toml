@@ -34,6 +34,9 @@ embeddings = ["sentence-transformers>=3.0"]
 images = ["transformers>=4.40", "torch>=2.2", "pillow>=10"]
 # EasyOCR (Apache 2.0): reads on-screen text (Devanagari + Latin by default) from frames.
 ocr = ["easyocr>=1.7"]
+# Video profiles (video_profile.py): PyAV reads the audio track, faster-whisper (MIT) finds the
+# speech and its language; the AudioSet sound tagger comes from the images extra's transformers.
+video = ["av>=12", "faster-whisper>=1.0", "gradist[images]"]
 service = [
   "fastapi>=0.111",
   "uvicorn>=0.30",
@@ -80,6 +83,6 @@ files = ["src"]
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["sklearn.*", "sentence_transformers.*", "joblib.*", "transformers.*", "torch.*", "PIL.*", "easyocr.*"]
+module = ["sklearn.*", "sentence_transformers.*", "joblib.*", "transformers.*", "torch.*", "PIL.*", "easyocr.*", "av.*", "faster_whisper.*", "cv2.*"]
 ignore_missing_imports = true
 follow_imports = "skip"

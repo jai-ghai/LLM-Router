@@ -80,6 +80,19 @@ class ScreenReader:
                     self._cache[key] = [asdict(line) for line in self._run(image_bytes)]
         return [ScreenLine(**row) for row in self._cache[key]]
 
+    def count_text(self, image_bytes: bytes) -> int:
+        """How many text boxes the detector finds. Detection works for any script, so this
+        measures how text-heavy a frame is even where the recogniser cannot read it."""
+        import numpy as np
+        from PIL import Image
+
+        pixels = np.asarray(Image.open(io.BytesIO(image_bytes)).convert("RGB"))
+        with self._lock:
+            if self._reader is None:
+                self._reader = self._easyocr.Reader(list(self.langs), gpu=False, verbose=False)
+            horizontal, free = self._reader.detect(pixels)
+        return len(horizontal[0]) + len(free[0])
+
     def save_cache(self) -> None:
         if self._cache_path is not None:
             self._cache_path.write_text(json.dumps(self._cache, ensure_ascii=False), encoding="utf-8")

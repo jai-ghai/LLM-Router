@@ -64,6 +64,8 @@ export interface HistoryEntry {
   min_quality: number | null
   optimize_for_requested?: OptimizeFor
   optimize_for?: OptimizeFor
+  deadline?: Deadline | null
+  video?: { profile_id: string; content_type: string; language: string | null; speech_share: number | null } | null
   tier: string
   model_name: string
   confidence: number | null
@@ -188,6 +190,8 @@ export interface Decision {
     classifier_inputs?: ClassifierInputs
     screen_text?: ScreenText
     skill_needs?: SkillNeeds
+    video_profile?: VideoProfile
+    deadline?: Deadline | null
     /** Votes of similar reviewed requests; `active` false says why they are not used yet. */
     similar_requests?: {
       active: boolean
@@ -219,6 +223,28 @@ export interface SkillNeeds {
   /** How hard this request looks, 0–1; scales the capability weight by 0.5 + difficulty. Null = neutral. */
   difficulty?: number | null
   difficulty_reasons?: string[]
+}
+
+export type Deadline = 'now' | 'offline'
+
+/** What POST /v1/video/profile read from a clip; mirrors video_profile.VideoProfile. */
+export interface VideoProfile {
+  id: string
+  duration_s: number
+  has_audio: boolean
+  speech_share: number | null
+  speech_turns_per_min: number | null
+  /** Whisper language code, null when unsure or silent. */
+  language: string | null
+  language_confidence: number | null
+  sounds: Partial<Record<'speech' | 'music' | 'singing' | 'laughter' | 'crowd', number>>
+  scene_changes_per_min: number | null
+  black_share: number | null
+  frozen_share: number | null
+  text_boxes_per_frame: number | null
+  content_type: 'news' | 'music' | 'reality' | 'talk' | 'drama' | 'ads' | 'unknown'
+  content_reasons: string[]
+  timings: Record<string, number>
 }
 
 export interface ScreenText {

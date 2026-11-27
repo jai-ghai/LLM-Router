@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections.abc import Collection, Mapping
 from dataclasses import dataclass, field
 
-from gradist.catalog import ModelCatalog, OptimizeFor
+from gradist.catalog import Deadline, ModelCatalog, OptimizeFor
 from gradist.classifier import TierClassifier
 from gradist.feedback import SkillEvidence
 from gradist.fit import describe_fit
@@ -139,6 +139,8 @@ def resolve(
     skill_needs: SkillNeeds | None = None,
     learned_skills: Mapping[str, Mapping[str, SkillEvidence]] | None = None,
     similar_requests: NeighbourVotes | None = None,
+    deadline: Deadline | None = None,
+    free_models_for_video: bool = False,
 ) -> Decision:
     """Precedence: a matching rule wins outright, then the classifier, then the fallback tier.
 
@@ -150,6 +152,8 @@ def resolve(
     `learned_skills` (feedback.learn_skills) adjusts those skills by past ratings.
     `similar_requests` (neighbours.NeighbourIndex.assess) adds the votes of similar reviewed
     requests when it is active; its status is reported either way.
+    `deadline` "now" keeps batch endpoints out; video requests leave free tiers out unless
+    `free_models_for_video`.
 
     The classifier step has two models: requests with an image or domain metadata use the domain
     `classifier`; plain-text requests use `quality_head` when one is loaded (it predicts each
@@ -193,6 +197,7 @@ def resolve(
         "modality": modality or ("image" if image_bytes else "text"),
         "providers": providers,
         "selection_size": len(selected_models) if selected_models is not None else None,
+        "deadline": deadline,
     }
     if skill_needs is not None:
         signals["skill_needs"] = skill_needs.as_signal()
@@ -320,6 +325,8 @@ def resolve(
             needs=skill_needs,
             learned=learned_skills,
             similar=similar_requests.votes if similar_requests is not None and similar_requests.active else None,
+            deadline=deadline,
+            exclude_free=modality == "video" and not free_models_for_video,
         )
         entry, note = ranking.ranked[0], ranking.note
         winner_fit = ranking.fits.get(entry.id)

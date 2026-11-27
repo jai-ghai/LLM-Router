@@ -10,7 +10,7 @@ each scaled to 0–1 across the whole catalog:
 - reasoning / writing: capability ÷ the top capability in the catalog, or the human rating for
   this request's quality value when one exists (1–5 → 0–1)
 - long_input: context window on a log scale from 8K (0) to 1M tokens (1)
-- fast: cheapness, 1 − price
+- fast: cheapness, 1 − price; 0 for a batch endpoint, whose answer comes back hours later
 
 Price is on a fixed log scale, PRICE_FLOOR (0) to PRICE_CEILING (1) per 1K input tokens and
 rising past it, so a price gap weighs the same in a two-model task pool as in the whole catalog.
@@ -19,7 +19,10 @@ Estimated values (fit on price and release date, not published) count at ESTIMAT
 Ratings of the model's real outputs then pull each skill toward what users saw (feedback.py).
 `q` and `λ` come from optimize_for: cost leans on price, accuracy on capability. The request's
 difficulty (skills.SkillNeeds) scales q by 0.5 + difficulty: an easy request halves the pull of
-capability, a hard one raises it by half; no difficulty signal leaves q as is. When similar
+capability, a hard one raises it by half; no difficulty signal leaves q as is. Difficulty also
+sets how much reasoning / writing is enough: those skills count up to 0.4 + 0.6 × difficulty and
+no further, so on an easy request a cheaper model that clears the bar is not out-scored by
+headroom it will not use (a hard request, or none, keeps the bar at 1). When similar
 reviewed requests vote (neighbours.py), SIMILAR_WEIGHT × vote is added as the "similar" term.
 """
 
@@ -49,6 +52,7 @@ PRICE_FLOOR = 1e-5
 PRICE_CEILING = 0.1
 CONTEXT_FLOOR = 8_000
 CONTEXT_CEILING = 1_000_000
+QUALITY_SKILLS = ("reasoning", "writing")
 
 
 @dataclass(frozen=True)
@@ -123,7 +127,7 @@ def _catalog_skills(entry: CatalogEntry, scale: CatalogScale, rating: float | No
         "reasoning": quality,
         "long_input": long_input,
         "writing": quality,
-        "fast": SkillValue(max(1.0 - scale.price(entry.cost), 0.0), "price"),
+        "fast": SkillValue(0.0, "batch") if entry.is_batch else SkillValue(max(1.0 - scale.price(entry.cost), 0.0), "price"),
     }
 
 
@@ -151,6 +155,11 @@ def difficulty_factor(difficulty: float | None) -> float:
     return 1.0 if difficulty is None else 0.5 + min(max(difficulty, 0.0), 1.0)
 
 
+def enough_skill(difficulty: float | None) -> float:
+    """The reasoning / writing level past which more does not help this request."""
+    return 1.0 if difficulty is None else 0.4 + 0.6 * min(max(difficulty, 0.0), 1.0)
+
+
 def fit(
     entry: CatalogEntry,
     needs: Mapping[str, float],
@@ -164,7 +173,12 @@ def fit(
     q, lam = MODE_WEIGHTS[mode]
     q *= difficulty_factor(difficulty)
     skills = model_skills(entry, scale, rating, learned)
-    parts = {s: needs[s] * skills[s].trusted for s in SKILLS if needs.get(s, 0.0) > 0}
+    bar = enough_skill(difficulty)
+    parts = {
+        s: needs[s] * (min(skills[s].trusted / bar, 1.0) if s in QUALITY_SKILLS else skills[s].trusted)
+        for s in SKILLS
+        if needs.get(s, 0.0) > 0
+    }
     parts["capability"] = q * skills["reasoning"].trusted
     if similar:
         parts["similar"] = SIMILAR_WEIGHT * similar
